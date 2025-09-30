@@ -1,0 +1,13 @@
+﻿node_modules
+.next
+out
+.env*.local
+.vercel
+*.log
+.DS_Store
+
+crawler/.env
+
+crawler/.env
+
+crawler/__pycache__/
