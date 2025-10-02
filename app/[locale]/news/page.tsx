@@ -1,85 +1,75 @@
-import { createServerClient } from '@/lib/supabase/client'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { formatDistanceToNow } from 'date-fns'
-import { zhCN, enUS } from 'date-fns/locale'
 
-export default async function NewsPage({ params }: { params: { locale: string } }) {
-  const supabase = await createServerClient()
-  const { data: news } = await supabase
+export default async function NewsPage({
+  params: { locale }
+}: {
+  params: { locale: string }
+}) {
+  const supabase = await createClient()
+  
+  const { data: news, error } = await supabase
     .from('news')
     .select('*')
     .eq('status', 'published')
+    .eq('language', locale === 'zh' ? 'zh' : 'en')
     .order('published_at', { ascending: false })
-    .limit(20)
+    .limit(50)
 
-  const isZh = params.locale === 'zh'
-  const t = {
-    title: isZh ? 'AI 资讯' : 'AI News',
-    subtitle: isZh ? '最新的 AI 工具动态和行业资讯' : 'Latest AI tools updates and industry news',
-    readMore: isZh ? '阅读全文' : 'Read More',
-    noNews: isZh ? '暂无新闻' : 'No news yet'
+  if (error) {
+    return <div className="container mx-auto px-4 py-8">加载新闻失败</div>
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="border-b bg-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <Link href={`/${params.locale}`} className="text-2xl font-bold text-indigo-600">Jilo.ai</Link>
-          <Link href={params.locale === 'zh' ? '/en/news' : '/zh/news'} className="px-3 py-1 border rounded">
-            {params.locale === 'zh' ? 'EN' : '中文'}
-          </Link>
-        </div>
-      </header>
-
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl font-bold mb-4">{t.title}</h1>
-          <p className="text-xl text-gray-600 mb-12">{t.subtitle}</p>
-
-          {!news || news.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-lg border-2 border-dashed">
-              <p className="text-gray-500 text-lg">{t.noNews}</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {news.map((item: any) => {
-                const title = isZh && item.title_zh ? item.title_zh : item.title_en
-                const summary = isZh && item.summary_zh ? item.summary_zh : item.summary_en
-                const timeAgo = formatDistanceToNow(new Date(item.published_at), {
-                  addSuffix: true,
-                  locale: isZh ? zhCN : enUS
-                })
-
-                return (
-                  <article key={item.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition p-6">
-                    <div className="flex gap-6">
-                      {item.cover_image_url && (
-                        <div className="w-48 h-32 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                          <img src={item.cover_image_url} alt={title} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                          <span>{timeAgo}</span>
-                          {item.source && <span>• {item.source}</span>}
-                        </div>
-                        <h2 className="text-2xl font-bold mb-3 hover:text-indigo-600">
-                          <Link href={`/${params.locale}/news/${item.slug}`}>{title}</Link>
-                        </h2>
-                        <p className="text-gray-600 mb-4 line-clamp-2">{summary}</p>
-                        <Link href={`/${params.locale}/news/${item.slug}`} 
-                              className="text-indigo-600 hover:underline font-medium">
-                          {t.readMore} →
-                        </Link>
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          )}
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2">
+          {locale === 'zh' ? 'AI 新闻资讯' : 'AI News'}
+        </h1>
+        <p className="text-gray-600">
+          {locale === 'zh' 
+            ? '最新的 AI 行业动态、工具发布和深度分析' 
+            : 'Latest AI industry news, tool launches and in-depth analysis'}
+        </p>
       </div>
+
+      {news && news.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {news.map((item) => (
+            <Link 
+              key={item.id} 
+              href={`/${locale}/news/${item.slug}`}
+              className="block border rounded-lg p-4 hover:shadow-lg transition"
+            >
+              {item.image_url && (
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  className="w-full h-48 object-cover rounded mb-4"
+                />
+              )}
+              
+              <h2 className="text-xl font-bold mb-2 line-clamp-2">
+                {item.title}
+              </h2>
+              
+              <p className="text-gray-600 text-sm line-clamp-3 mb-4">
+                {item.summary}
+              </p>
+              
+              <div className="text-xs text-gray-500">
+                {new Date(item.published_at).toLocaleDateString(locale)}
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-gray-500">
+            {locale === 'zh' ? '暂无新闻' : 'No news available'}
+          </p>
+        </div>
+      )}
     </div>
   )
 }

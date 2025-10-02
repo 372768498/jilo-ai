@@ -1,16 +1,17 @@
-name: Daily Crawler
+name: Daily Crawler with News
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # 每天UTC 2点（北京时间10点）
-  workflow_dispatch:  # 手动触发
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -22,7 +23,7 @@ jobs:
           cd crawler
           pip install -r requirements.txt
       
-      - name: Run crawler
+      - name: Run tools crawler
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
@@ -30,3 +31,12 @@ jobs:
         run: |
           cd crawler
           python main.py
+      
+      - name: Run news crawler
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          cd crawler
+          python news_scraper.py
