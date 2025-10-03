@@ -1,5 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { CalendarDays, Clock } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default async function NewsPage({
   params: { locale }
@@ -7,67 +11,98 @@ export default async function NewsPage({
   params: { locale: string }
 }) {
   const supabase = await createClient()
+  const isZh = locale === 'zh'
   
+  // 移除 language 查询条件
   const { data: news, error } = await supabase
     .from('news')
     .select('*')
     .eq('status', 'published')
-    .eq('language', locale === 'zh' ? 'zh' : 'en')
     .order('published_at', { ascending: false })
     .limit(50)
 
   if (error) {
-    return <div className="container mx-auto px-4 py-8">加载新闻失败</div>
+    console.error('Error fetching news:', error)
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2">
-          {locale === 'zh' ? 'AI 新闻资讯' : 'AI News'}
+          {isZh ? 'AI 新闻资讯' : 'AI News'}
         </h1>
-        <p className="text-gray-600">
-          {locale === 'zh' 
-            ? '最新的 AI 行业动态、工具发布和深度分析' 
-            : 'Latest AI industry news, tool launches and in-depth analysis'}
+        <p className="text-muted-foreground">
+          {isZh 
+            ? '最新的 AI 行业动态、工具发布和深度分析'
+            : 'Latest AI industry news, tool launches and in-depth analysis'
+          }
         </p>
       </div>
 
       {news && news.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {news.map((item) => (
-            <Link 
-              key={item.id} 
-              href={`/${locale}/news/${item.slug}`}
-              className="block border rounded-lg p-4 hover:shadow-lg transition"
-            >
-              {item.image_url && (
-                <img
-                  src={item.image_url}
-                  alt={item.title}
-                  className="w-full h-48 object-cover rounded mb-4"
-                />
-              )}
-              
-              <h2 className="text-xl font-bold mb-2 line-clamp-2">
-                {item.title}
-              </h2>
-              
-              <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                {item.summary}
-              </p>
-              
-              <div className="text-xs text-gray-500">
-                {new Date(item.published_at).toLocaleDateString(locale)}
-              </div>
-            </Link>
-          ))}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {news.map((item) => {
+            const title = isZh ? item.title_zh : item.title_en
+            const summary = isZh ? item.summary_zh : item.summary_en
+            
+            return (
+              <Link key={item.id} href={`/${locale}/news/${item.slug}`}>
+                <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
+                  {item.image_url && (
+                    <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+                      <Image
+                        src={item.image_url}
+                        alt={title || ''}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+                  <CardContent className="p-4">
+                    {item.category && (
+                      <Badge variant="secondary" className="mb-2">
+                        {item.category}
+                      </Badge>
+                    )}
+                    
+                    <h2 className="text-lg font-semibold mb-2 line-clamp-2">
+                      {title}
+                    </h2>
+                    
+                    {summary && (
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-3">
+                        {summary}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <CalendarDays className="w-3 h-3" />
+                        <span>
+                          {new Date(item.published_at).toLocaleDateString(locale, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                      
+                      {item.views > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>{item.views} {isZh ? '阅读' : 'views'}</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-gray-500">
-            {locale === 'zh' ? '暂无新闻' : 'No news available'}
-          </p>
+        <div className="text-center py-12 text-muted-foreground">
+          {isZh ? '暂无新闻' : 'No news available'}
         </div>
       )}
     </div>
