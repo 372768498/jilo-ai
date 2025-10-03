@@ -133,7 +133,7 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
                 {params.locale === 'zh' ? '来源' : 'Source'}
               </p>
               
-                href={news.source_url}
+                <a href={news.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:underline flex items-center gap-1"
