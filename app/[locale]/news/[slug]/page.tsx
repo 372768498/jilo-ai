@@ -52,10 +52,8 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
     notFound()
   }
 
-  // 增加浏览量
   await supabase.rpc('increment_news_views', { news_id: news.id })
 
-  // 获取相关新闻
   const { data: relatedNews } = await supabase
     .from('news')
     .select('id, title, slug, image_url, published_at')
@@ -132,3 +130,54 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
           {news.source_url && (
             <div className="mt-8 p-4 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600 mb-2">
+                {params.locale === 'zh' ? '来源' : 'Source'}
+              </p>
+              
+                href={news.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline flex items-center gap-1"
+              >
+                {news.source || 'View Original'}
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            </div>
+          )}
+        </article>
+
+        {relatedNews && relatedNews.length > 0 && (
+          <div className="mt-16 max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6">
+              {params.locale === 'zh' ? '相关新闻' : 'Related News'}
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {relatedNews.map((item) => (
+                <Link key={item.id} href={`/${params.locale}/news/${item.slug}`}>
+                  <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                    {item.image_url && (
+                      <div className="relative h-48 w-full">
+                        <img
+                          src={item.image_url}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div className="p-4">
+                      <h3 className="font-semibold line-clamp-2 mb-2">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {new Date(item.published_at).toLocaleDateString(params.locale)}
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
