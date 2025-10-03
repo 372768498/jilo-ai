@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { unstable_setRequestLocale } from 'next-intl/server'
+
 import { Metadata } from 'next'
 import Image from 'next/image'
 
@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: ToolDetailPageProps): Promise
 }
 
 export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
-  unstable_setRequestLocale(params.locale)
+
   
   const supabase = await createClient()
   const isZh = params.locale === 'zh'
