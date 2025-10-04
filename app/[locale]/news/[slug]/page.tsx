@@ -138,7 +138,7 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
               <p className="text-sm text-gray-600 mb-2">
                 {isZh ? '来源' : 'Source'}
               </p>
-              
+              <a 
                 href={news.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
