@@ -10,11 +10,11 @@ export default async function HomePage({ params }: { params: { locale: string } 
   const isZh = params.locale === 'zh'
   
   // 获取特色工具 (前8个)
-  const { data: featuredTools } = await supabase
+const { data: featuredTools } = await supabase
     .from('tools')
     .select('*')
     .eq('status', 'published')
-    .order('clicks', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(8)
 
   // 获取最新新闻 (前4个)
