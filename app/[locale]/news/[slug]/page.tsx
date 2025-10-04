@@ -128,10 +128,12 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
             </div>
           )}
 
-          <div 
-            className="prose prose-lg max-w-none mb-8"
-            dangerouslySetInnerHTML={{ __html: news.content }}
-          />
+          {news.content && (
+            <div 
+              className="prose prose-lg max-w-none mb-8"
+              dangerouslySetInnerHTML={{ __html: news.content }}
+           />
+         )}
 
           {news.source_url && (
             <div className="mt-8 p-4 bg-gray-50 rounded-lg">
