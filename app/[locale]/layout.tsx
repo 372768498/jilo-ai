@@ -1,22 +1,18 @@
-﻿import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+﻿import { notFound } from 'next/navigation'
 
-const inter = Inter({ subsets: ['latin'] })
+const locales = ['en', 'zh']
 
-export const metadata: Metadata = {
-  title: 'Jilo.ai - Discover AI Tools',
-  description: 'Explore AI tools directory',
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }))
 }
 
-export default function RootLayout({
+export default function LocaleLayout({
   children,
+  params: { locale }
 }: {
   children: React.ReactNode
+  params: { locale: string }
 }) {
-  return (
-    <html>
-      <body className={inter.className}>{children}</body>
-    </html>
-  )
+  if (!locales.includes(locale)) notFound()
+  return <>{children}</>
 }
