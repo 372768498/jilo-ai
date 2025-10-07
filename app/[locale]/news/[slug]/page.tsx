@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { CalendarDays, ExternalLink, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import Navbar from '@/components/navbar'
 
 interface NewsDetailPageProps {
   params: {
@@ -44,7 +45,6 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
   const supabase = await createClient()
   const isZh = params.locale === 'zh'
   
-  // 移除 language 查询条件
   const { data: news, error } = await supabase
     .from('news')
     .select('*')
@@ -71,124 +71,127 @@ export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
   const summary = isZh ? news.summary_zh : news.summary_en
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8">
-        <Link href={`/${params.locale}/news`}>
-          <Button variant="ghost" className="mb-6">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            {isZh ? '返回新闻列表' : 'Back to News'}
-          </Button>
-        </Link>
+    <>
+      <Navbar locale={params.locale} />
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <Link href={`/${params.locale}/news`}>
+            <Button variant="ghost" className="mb-6">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              {isZh ? '返回新闻列表' : 'Back to News'}
+            </Button>
+          </Link>
 
-        <article className="max-w-4xl mx-auto">
-          <div className="mb-6">
-            {news.category && (
-              <Badge variant="secondary" className="mb-4">
-                {news.category}
-              </Badge>
-            )}
-            
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-              {title}
-            </h1>
-
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <CalendarDays className="w-4 h-4" />
-                <span>
-                  {new Date(news.published_at).toLocaleDateString(params.locale, {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </span>
-              </div>
-              
-              {news.views && (
-                <div className="flex items-center gap-1">
-                  <span>{news.views} views</span>
-                </div>
+          <article className="max-w-4xl mx-auto">
+            <div className="mb-6">
+              {news.category && (
+                <Badge variant="secondary" className="mb-4">
+                  {news.category}
+                </Badge>
               )}
-            </div>
-          </div>
+              
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+                {title}
+              </h1>
 
-          {news.image_url && (
-            <div className="relative w-full h-[400px] mb-8 rounded-lg overflow-hidden">
-              <img
-                src={news.image_url}
-                alt={title || ''}
-                className="w-full h-full object-cover"
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-1">
+                  <CalendarDays className="w-4 h-4" />
+                  <span>
+                    {new Date(news.published_at).toLocaleDateString(params.locale, {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+                
+                {news.views && (
+                  <div className="flex items-center gap-1">
+                    <span>{news.views} views</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {news.image_url && (
+              <div className="relative w-full h-[400px] mb-8 rounded-lg overflow-hidden">
+                <img
+                  src={news.image_url}
+                  alt={title || ''}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+
+            {summary && (
+              <div className="text-xl text-gray-600 mb-8 p-6 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                {summary}
+              </div>
+            )}
+
+            {news.content && (
+              <div 
+                className="prose prose-lg max-w-none mb-8"
+                dangerouslySetInnerHTML={{ __html: news.content }}
               />
-            </div>
-          )}
+            )}
 
-          {summary && (
-            <div className="text-xl text-gray-600 mb-8 p-6 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-              {summary}
-            </div>
-          )}
+            {news.source_url && (
+              <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600 mb-2">
+                  {isZh ? '来源' : 'Source'}
+                </p>
+                <a 
+                  href={news.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline flex items-center gap-1"
+                >
+                  {news.source || 'View Original'}
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            )}
+          </article>
 
-          {news.content && (
-            <div 
-              className="prose prose-lg max-w-none mb-8"
-              dangerouslySetInnerHTML={{ __html: news.content }}
-           />
-         )}
-
-          {news.source_url && (
-            <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">
-                {isZh ? '来源' : 'Source'}
-              </p>
-              <a 
-                href={news.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline flex items-center gap-1"
-              >
-                {news.source || 'View Original'}
-                <ExternalLink className="w-4 h-4" />
-              </a>
-            </div>
-          )}
-        </article>
-
-        {relatedNews && relatedNews.length > 0 && (
-          <div className="mt-16 max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6">
-              {isZh ? '相关新闻' : 'Related News'}
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              {relatedNews.map((item) => {
-                const relatedTitle = isZh ? item.title_zh : item.title_en
-                return (
-                  <Link key={item.id} href={`/${params.locale}/news/${item.slug}`}>
-                    <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                      {item.image_url && (
-                        <div className="relative h-48 w-full">
-                          <img
-                            src={item.image_url}
-                            alt={relatedTitle || ''}
-                            className="w-full h-full object-cover"
-                          />
+          {relatedNews && relatedNews.length > 0 && (
+            <div className="mt-16 max-w-4xl mx-auto">
+              <h2 className="text-2xl font-bold mb-6">
+                {isZh ? '相关新闻' : 'Related News'}
+              </h2>
+              <div className="grid md:grid-cols-3 gap-6">
+                {relatedNews.map((item) => {
+                  const relatedTitle = isZh ? item.title_zh : item.title_en
+                  return (
+                    <Link key={item.id} href={`/${params.locale}/news/${item.slug}`}>
+                      <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                        {item.image_url && (
+                          <div className="relative h-48 w-full">
+                            <img
+                              src={item.image_url}
+                              alt={relatedTitle || ''}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="p-4">
+                          <h3 className="font-semibold line-clamp-2 mb-2">
+                            {relatedTitle}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {new Date(item.published_at).toLocaleDateString(params.locale)}
+                          </p>
                         </div>
-                      )}
-                      <div className="p-4">
-                        <h3 className="font-semibold line-clamp-2 mb-2">
-                          {relatedTitle}
-                        </h3>
-                        <p className="text-sm text-gray-500">
-                          {new Date(item.published_at).toLocaleDateString(params.locale)}
-                        </p>
                       </div>
-                    </div>
-                  </Link>
-                )
-              })}
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
