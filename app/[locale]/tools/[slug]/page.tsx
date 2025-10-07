@@ -28,9 +28,6 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
     notFound()
   }
 
-  // 更新点击数
-  await supabase.rpc('increment_tool_clicks', { tool_id: tool.id })
-
   const name = isZh ? tool.name_zh : tool.name_en
   const tagline = isZh ? tool.tagline_zh : tool.tagline_en
   const description = isZh ? tool.description_zh : tool.description_en
@@ -46,14 +43,9 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
         </Link>
 
         <div className="max-w-4xl mx-auto">
-          {/* 工具头部 */}
           <div className="flex items-start gap-6 mb-8">
             {tool.logo_url && (
-              <img 
-                src={tool.logo_url} 
-                alt={name || ''} 
-                className="w-24 h-24 rounded-2xl object-cover shadow-lg"
-              />
+              <img src={tool.logo_url} alt={name || ''} className="w-24 h-24 rounded-2xl object-cover shadow-lg" />
             )}
             <div className="flex-1">
               <h1 className="text-4xl font-bold mb-2">{name || tool.name_en}</h1>
@@ -64,16 +56,12 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
                 {tool.pricing_type && (
                   <Badge variant="secondary">{tool.pricing_type}</Badge>
                 )}
-               {tool.categories && tool.categories.length > 0 && tool.categories.map((cat: string) => (
-                 <Badge key={cat} variant="outline">{cat}</Badge>
+                {tool.categories && Array.isArray(tool.categories) && tool.categories.map((cat: string) => (
+                  <Badge key={cat} variant="outline">{cat}</Badge>
                 ))}
               </div>
               <div className="flex gap-3">
-                
-                  href={tool.affiliate_url || tool.official_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={tool.affiliate_url || tool.official_url} target="_blank" rel="noopener noreferrer">
                   <Button size="lg">
                     {isZh ? '访问官网' : 'Visit Website'}
                     <ExternalLink className="w-4 h-4 ml-2" />
@@ -83,7 +71,6 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
             </div>
           </div>
 
-          {/* 工具描述 */}
           {description && (
             <Card className="mb-8">
               <CardHeader>
@@ -95,32 +82,23 @@ export default async function ToolDetailPage({ params }: ToolDetailPageProps) {
             </Card>
           )}
 
-          {/* 统计信息 */}
           <div className="grid md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{tool.clicks || 0}</div>
-                <p className="text-sm text-muted-foreground">
-                  {isZh ? '访问次数' : 'Visits'}
-                </p>
+                <p className="text-sm text-muted-foreground">{isZh ? '访问次数' : 'Visits'}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{tool.pricing_type || 'N/A'}</div>
-                <p className="text-sm text-muted-foreground">
-                  {isZh ? '定价类型' : 'Pricing'}
-                </p>
+                <p className="text-sm text-muted-foreground">{isZh ? '定价类型' : 'Pricing'}</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-6">
-                <div className="text-2xl font-bold">
-                  {tool.categories?.length || 0}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {isZh ? '分类标签' : 'Categories'}
-                </p>
+                <div className="text-2xl font-bold">{Array.isArray(tool.categories) ? tool.categories.length : 0}</div>
+                <p className="text-sm text-muted-foreground">{isZh ? '分类标签' : 'Categories'}</p>
               </CardContent>
             </Card>
           </div>
