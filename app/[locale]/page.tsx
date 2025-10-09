@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/navbar'
+import SearchBar from '@/components/search-bar'
 
 export default async function HomePage({ params }: { params: { locale: string } }) {
   const supabase = await createClient()
@@ -38,6 +39,11 @@ export default async function HomePage({ params }: { params: { locale: string } 
                 ? '精选最新、最实用的AI工具,帮助您提升工作效率' 
                 : 'Curated collection of the latest and most useful AI tools to boost your productivity'}
             </p>
+
+            <div className="mb-8">
+              <SearchBar locale={params.locale} />
+            </div>
+            
             <div className="flex gap-4 justify-center">
               <Link href={`/${params.locale}/tools`}>
                 <Button size="lg">
