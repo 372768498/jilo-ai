@@ -14,16 +14,21 @@ export default async function NewsPage({
   const supabase = await createClient()
   const isZh = locale === 'zh'
   
+  // 🔧 修复: 添加语言筛选
   const { data: news, error } = await supabase
     .from('news')
     .select('*')
     .eq('status', 'published')
+    .eq('language', locale) // ✅ 按语言筛选
     .order('published_at', { ascending: false })
     .limit(50)
 
   if (error) {
     console.error('Error fetching news:', error)
   }
+
+  // 🔧 修复: 处理空数据情况
+  const filteredNews = news?.filter(item => item.published_at) || []
 
   return (
     <>
@@ -41,9 +46,10 @@ export default async function NewsPage({
           </p>
         </div>
 
-        {news && news.length > 0 ? (
+        {filteredNews && filteredNews.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {news.map((item) => {
+            {filteredNews.map((item) => {
+              // 🔧 修复: 使用正确的字段名
               const title = isZh ? item.title_zh : item.title_en
               const summary = isZh ? item.summary_zh : item.summary_en
               
@@ -81,11 +87,12 @@ export default async function NewsPage({
                         <div className="flex items-center gap-1">
                           <CalendarDays className="w-3 h-3" />
                           <span>
-                            {new Date(item.published_at).toLocaleDateString(locale, {
+                            {/* 🔧 修复: 确保日期正确显示 */}
+                            {item.published_at ? new Date(item.published_at).toLocaleDateString(locale, {
                               year: 'numeric',
                               month: 'short',
                               day: 'numeric'
-                            })}
+                            }) : (isZh ? '未知日期' : 'Unknown date')}
                           </span>
                         </div>
                         
