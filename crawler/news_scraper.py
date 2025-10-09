@@ -1,7 +1,7 @@
 ﻿import os
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import re
 from typing import List, Dict
@@ -36,6 +36,29 @@ class NewsAggregator:
             print(f"翻译失败: {e}")
             return text
     
+    def parse_date(self, date_str: str) -> str:
+        """解析日期字符串,返回ISO格式"""
+        try:
+            # 尝试多种日期格式
+            formats = [
+                '%Y-%m-%dT%H:%M:%S%z',
+                '%Y-%m-%d %H:%M:%S',
+                '%B %d, %Y',
+                '%d %B %Y',
+            ]
+            for fmt in formats:
+                try:
+                    dt = datetime.strptime(date_str, fmt)
+                    if dt.tzinfo is None:
+                        dt = dt.replace(tzinfo=timezone.utc)
+                    return dt.isoformat()
+                except:
+                    continue
+        except:
+            pass
+        # 如果无法解析,返回当前UTC时间
+        return datetime.now(timezone.utc).isoformat()
+    
     def scrape_techcrunch_ai(self) -> List[Dict]:
         news_list = []
         try:
@@ -52,6 +75,16 @@ class NewsAggregator:
                     summary_elem = article.find('p')
                     img_elem = article.find('img')
                     
+                    # 尝试获取发布时间
+                    date_elem = article.find('time')
+                    published_date = None
+                    if date_elem:
+                        date_str = date_elem.get('datetime') or date_elem.get_text(strip=True)
+                        published_date = self.parse_date(date_str)
+                    
+                    if not published_date:
+                        published_date = datetime.now(timezone.utc).isoformat()
+                    
                     if not title_elem or not link_elem:
                         continue
                     
@@ -61,7 +94,8 @@ class NewsAggregator:
                         'summary': summary_elem.get_text(strip=True)[:300] if summary_elem else '',
                         'image': img_elem.get('src', '') if img_elem else '',
                         'source': 'TechCrunch',
-                        'category': 'AI News'
+                        'category': 'AI News',
+                        'published_at': published_date
                     }
                     news_list.append(news_item)
                 except Exception as e:
@@ -91,8 +125,8 @@ class NewsAggregator:
                     'image_url': news['image'],
                     'category': news['category'],
                     'language': 'en',
-                    'status': 'draft',
-                    'published_at': datetime.now().isoformat()
+                    'status': 'published',
+                    'published_at': news['published_at']
                 }
                 
                 self.supabase.table('news').insert(en_data).execute()
@@ -111,8 +145,8 @@ class NewsAggregator:
                     'image_url': news['image'],
                     'category': news['category'],
                     'language': 'zh',
-                    'status': 'draft',
-                    'published_at': datetime.now().isoformat()
+                    'status': 'published',
+                    'published_at': news['published_at']
                 }
                 
                 self.supabase.table('news').insert(zh_data).execute()
