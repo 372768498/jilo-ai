@@ -30,3 +30,4 @@ jobs:
         run: |
           cd crawler
           python rss_news_crawler.py
+          
