@@ -9,50 +9,50 @@
                 if not existing_en.data:
                     en_slug = self.generate_slug(news['title'])
                     en_data = {
-                        'title': news['title'],
+                        'title_en': news['title'],  # ✅ 使用正确的字段名
                         'slug': en_slug,
-                        'summary': news['summary'],
-                        'content': f"<p>{news['summary']}</p>",
+                        'summary_en': news['summary'],  # ✅ 使用正确的字段名
+                        'content_en': f"<p>{news['summary']}</p>",  # ✅ 使用正确的字段名
                         'source_url': news['url'],
-                        'image_url': news['image'],
-                        'category': news['category'],
+                        'cover_image_url': news['image'],  # ✅ 使用正确的字段名
+                        'source': news['source'],  # ✅ 使用 source 而不是 category
                         'language': 'en',
                         'status': 'published',
                         'published_at': news['published_at']
                     }
                     
                     self.supabase.table('news').insert(en_data).execute()
-                    print(f"✅ 保存英文新闻: {news['title']}")
+                    print(f"✅ Saved English news: {news['title']}")
                 else:
-                    print(f"⏭️ 英文新闻已存在,跳过: {news['title']}")
+                    print(f"⏭️  English news exists, skipping: {news['title']}")
                 
                 # 保存中文新闻（如果不存在）
                 if not existing_zh.data:
-                    print(f"🔵 翻译中文新闻: {news['title']}")
+                    print(f"🔵 Translating to Chinese: {news['title']}")
                     zh_title = self.translate_to_chinese(news['title'])
                     zh_summary = self.translate_to_chinese(news['summary'])
                     zh_slug = self.generate_slug(zh_title)
                     
                     zh_data = {
-                        'title': zh_title,
+                        'title_zh': zh_title,  # ✅ 使用正确的字段名
                         'slug': zh_slug,
-                        'summary': zh_summary,
-                        'content': f"<p>{zh_summary}</p>",
+                        'summary_zh': zh_summary,  # ✅ 使用正确的字段名
+                        'content_zh': f"<p>{zh_summary}</p>",  # ✅ 使用正确的字段名
                         'source_url': news['url'],
-                        'image_url': news['image'],
-                        'category': news['category'],
+                        'cover_image_url': news['image'],  # ✅ 使用正确的字段名
+                        'source': news['source'],  # ✅ 使用 source 而不是 category
                         'language': 'zh',
                         'status': 'published',
                         'published_at': news['published_at']
                     }
                     
                     self.supabase.table('news').insert(zh_data).execute()
-                    print(f"✅ 保存中文新闻: {zh_title}")
+                    print(f"✅ Saved Chinese news: {zh_title}")
                 else:
-                    print(f"⏭️ 中文新闻已存在,跳过")
+                    print(f"⏭️  Chinese news exists, skipping")
                 
             except Exception as e:
-                print(f"❌ 保存新闻失败: {e}")
+                print(f"❌ Failed to save news: {e}")
                 import traceback
                 traceback.print_exc()
                 continue
