@@ -14,12 +14,12 @@ export default async function NewsPage({
   const supabase = await createClient()
   const isZh = locale === 'zh'
   
-  // 🔧 修复: 添加语言筛选
+  // 🔧 修复: 移除语言筛选，因为所有新闻都同时包含中英文内容
   const { data: news, error } = await supabase
     .from('news')
     .select('*')
     .eq('status', 'published')
-    .eq('language', locale) // ✅ 按语言筛选
+    // .eq('language', locale) // ❌ 删除这一行
     .order('published_at', { ascending: false })
     .limit(50)
 
@@ -49,17 +49,17 @@ export default async function NewsPage({
         {filteredNews && filteredNews.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNews.map((item) => {
-              // 🔧 修复: 使用正确的字段名
+              // 🔧 根据当前语言显示对应字段
               const title = isZh ? item.title_zh : item.title_en
               const summary = isZh ? item.summary_zh : item.summary_en
               
               return (
                 <Link key={item.id} href={`/${locale}/news/${item.slug}`}>
                   <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
-                    {item.image_url && (
+                    {item.cover_image_url && (
                       <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
                         <Image
-                          src={item.image_url}
+                          src={item.cover_image_url}
                           alt={title || ''}
                           fill
                           className="object-cover"
@@ -67,9 +67,9 @@ export default async function NewsPage({
                       </div>
                     )}
                     <CardContent className="p-4">
-                      {item.category && (
+                      {item.source && (
                         <Badge variant="secondary" className="mb-2">
-                          {item.category}
+                          {item.source}
                         </Badge>
                       )}
                       
@@ -87,7 +87,6 @@ export default async function NewsPage({
                         <div className="flex items-center gap-1">
                           <CalendarDays className="w-3 h-3" />
                           <span>
-                            {/* 🔧 修复: 确保日期正确显示 */}
                             {item.published_at ? new Date(item.published_at).toLocaleDateString(locale, {
                               year: 'numeric',
                               month: 'short',
