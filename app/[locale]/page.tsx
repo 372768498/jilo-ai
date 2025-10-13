@@ -168,10 +168,11 @@ export default async function HomePage({ params }: { params: { locale: string } 
                           )}
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>
-                              {new Date(news.published_at).toLocaleDateString(params.locale, {
+                              {news.published_at ? new Date(news.published_at).toLocaleDateString(params.locale, {
+                                year: 'numeric',  // ✅ 添加年份
                                 month: 'short',
                                 day: 'numeric'
-                              })}
+                              }) : 'Unknown date'}
                             </span>
                             {news.views && (
                               <>

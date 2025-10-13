@@ -83,25 +83,21 @@ export default async function NewsPage({
                         </p>
                       )}
                       
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <CalendarDays className="w-3 h-3" />
-                          <span>
-                            {item.published_at ? new Date(item.published_at).toLocaleDateString(locale, {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric'
-                            }) : (isZh ? '未知日期' : 'Unknown date')}
-                          </span>
-                        </div>
-                        
-                        {item.views > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{item.views} {isZh ? '阅读' : 'views'}</span>
-                          </div>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>
+                        {news.published_at ? new Date(news.published_at).toLocaleDateString(params.locale, {
+                          year: 'numeric',  // ✅ 添加年份
+                          month: 'short',
+                          day: 'numeric'
+                        }) : 'Unknown date'}
+                      </span>
+                      {news.views && (
+                        <>
+                          <span>•</span>
+                          <span>{news.views} {isZh ? '浏览' : 'views'}</span>
+                        </>
+                      )}
+                    </div>
                     </CardContent>
                   </Card>
                 </Link>
