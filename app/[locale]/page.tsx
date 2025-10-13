@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/navbar'
 import SearchBar from '@/components/search-bar'
+import ToolCategories from '@/components/tool-categories' // ✅ 新增
 
 export default async function HomePage({ params }: { params: { locale: string } }) {
   const supabase = await createClient()
@@ -15,6 +15,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
     .from('tools')
     .select('*')
     .eq('status', 'published')
+    .eq('is_featured', true) // ✅ 只显示精选工具
     .order('created_at', { ascending: false })
     .limit(8)
 
@@ -29,14 +30,15 @@ export default async function HomePage({ params }: { params: { locale: string } 
     <>
       <Navbar locale={params.locale} />
       <div className="min-h-screen bg-background">
+        {/* Hero 部分 */}
         <section className="bg-gradient-to-b from-blue-50 to-background py-20">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              {isZh ? '发现最好的AI工具' : 'Discover the Best AI Tools'}
+              {isZh ? '发现最佳的AI工具' : 'Discover the Best AI Tools'}
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               {isZh 
-                ? '精选最新、最实用的AI工具,帮助您提升工作效率' 
+                ? '精选最新、最实用的AI工具，帮助您提升工作效率' 
                 : 'Curated collection of the latest and most useful AI tools to boost your productivity'}
             </p>
 
@@ -44,7 +46,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
               <SearchBar locale={params.locale} />
             </div>
             
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-4 justify-center flex-wrap">
               <Link href={`/${params.locale}/tools`}>
                 <Button size="lg">
                   {isZh ? '浏览所有工具' : 'Browse All Tools'}
@@ -60,7 +62,15 @@ export default async function HomePage({ params }: { params: { locale: string } 
         </section>
 
         <div className="container mx-auto px-4 py-16">
-          <section className="mb-16">
+          {/* ✅ 新增：工具类别展示 */}
+          <ToolCategories 
+            locale={params.locale}
+            title={isZh ? '按类别划分的免费 AI 工具' : 'Browse AI Tools by Category'}
+            showAll={false}
+          />
+
+          {/* 精选工具部分 */}
+          <section className="mb-16 mt-16">
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-3xl font-bold mb-2">
@@ -124,6 +134,7 @@ export default async function HomePage({ params }: { params: { locale: string } 
             )}
           </section>
 
+          {/* 最新资讯部分 */}
           <section>
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -151,9 +162,9 @@ export default async function HomePage({ params }: { params: { locale: string } 
                     <Link key={news.id} href={`/${params.locale}/news/${news.slug}`}>
                       <Card className="hover:shadow-lg transition-shadow h-full">
                         <CardHeader>
-                          {news.category && (
+                          {news.source && (
                             <Badge variant="secondary" className="w-fit mb-2">
-                              {news.category}
+                              {news.source}
                             </Badge>
                           )}
                           <CardTitle className="text-xl line-clamp-2">
@@ -169,10 +180,10 @@ export default async function HomePage({ params }: { params: { locale: string } 
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <span>
                               {news.published_at ? new Date(news.published_at).toLocaleDateString(params.locale, {
-                                year: 'numeric',  // ✅ 添加年份
+                                year: 'numeric',
                                 month: 'short',
                                 day: 'numeric'
-                              }) : 'Unknown date'}
+                              }) : (isZh ? '未知日期' : 'Unknown date')}
                             </span>
                             {news.views && (
                               <>
