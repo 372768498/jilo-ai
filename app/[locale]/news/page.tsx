@@ -13,13 +13,12 @@ export default async function NewsPage({
 }) {
   const supabase = await createClient()
   const isZh = locale === 'zh'
-  
-  // 🔧 修复: 移除语言筛选，因为所有新闻都同时包含中英文内容
+
+  // 🔧 移除语言筛选，因为所有新闻都包含中英文内容
   const { data: news, error } = await supabase
     .from('news')
     .select('*')
     .eq('status', 'published')
-    // .eq('language', locale) // ❌ 删除这一行
     .order('published_at', { ascending: false })
     .limit(50)
 
@@ -27,7 +26,7 @@ export default async function NewsPage({
     console.error('Error fetching news:', error)
   }
 
-  // 🔧 修复: 处理空数据情况
+  // 🔧 处理空数据情况
   const filteredNews = news?.filter(item => item.published_at) || []
 
   return (
@@ -41,18 +40,16 @@ export default async function NewsPage({
           <p className="text-muted-foreground">
             {isZh 
               ? '最新的 AI 行业动态、工具发布和深度分析'
-              : 'Latest AI industry news, tool launches and in-depth analysis'
-            }
+              : 'Latest AI industry news, tool launches and in-depth analysis'}
           </p>
         </div>
 
-        {filteredNews && filteredNews.length > 0 ? (
+        {filteredNews.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredNews.map((item) => {
-              // 🔧 根据当前语言显示对应字段
               const title = isZh ? item.title_zh : item.title_en
               const summary = isZh ? item.summary_zh : item.summary_en
-              
+
               return (
                 <Link key={item.id} href={`/${locale}/news/${item.slug}`}>
                   <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer">
@@ -72,32 +69,34 @@ export default async function NewsPage({
                           {item.source}
                         </Badge>
                       )}
-                      
+
                       <h2 className="text-lg font-semibold mb-2 line-clamp-2">
                         {title}
                       </h2>
-                      
+
                       {summary && (
                         <p className="text-sm text-muted-foreground mb-3 line-clamp-3">
                           {summary}
                         </p>
                       )}
-                      
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>
-                        {news.published_at ? new Date(news.published_at).toLocaleDateString(params.locale, {
-                          year: 'numeric',  // ✅ 添加年份
-                          month: 'short',
-                          day: 'numeric'
-                        }) : 'Unknown date'}
-                      </span>
-                      {news.views && (
-                        <>
-                          <span>•</span>
-                          <span>{news.views} {isZh ? '浏览' : 'views'}</span>
-                        </>
-                      )}
-                    </div>
+
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>
+                          {item.published_at
+                            ? new Date(item.published_at).toLocaleDateString(locale, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : (isZh ? '未知日期' : 'Unknown date')}
+                        </span>
+                        {item.views && (
+                          <>
+                            <span>•</span>
+                            <span>{item.views} {isZh ? '浏览' : 'views'}</span>
+                          </>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </Link>
