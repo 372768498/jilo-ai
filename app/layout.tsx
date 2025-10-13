@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description: 'Explore AI tools directory',
   verification: {
     other: {
-      'impact-site': '076460b0-888b-4aa2-82d7-b54402456720'
+      'impact-site': '8b17145f-f60a-47b8-8ce5-c00d8dcf8092'  // ✅ 更新为新的验证码
     }
   }
 }
