@@ -1,197 +1,153 @@
-import { createClient } from '@/lib/supabase/server'
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { CalendarDays, ExternalLink, ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import Navbar from '@/components/navbar'
+// app/[locale]/news/[slug]/page.tsx
+import { supabase } from "@/lib/supabase";
+import type { Metadata } from "next";
+import Image from "next/image";
 
-interface NewsDetailPageProps {
-  params: {
-    locale: string
-    slug: string
-  }
+type PageProps = {
+  params: { locale: string; slug: string };
+};
+
+function coalesceByLocale(
+  locale: string,
+  en?: string | null,
+  zh?: string | null,
+  fallback?: string | null
+) {
+  const l = (locale || "en").toLowerCase();
+  if (l.startsWith("zh")) return zh || en || fallback || "";
+  return en || zh || fallback || "";
 }
 
-export async function generateMetadata({ params }: NewsDetailPageProps) {
-  const supabase = await createClient()
-  const isZh = params.locale === 'zh'
-  
-  const { data: news } = await supabase
-    .from('news')
-    .select('title_en, title_zh, summary_en, summary_zh, image_url')
-    .eq('slug', params.slug)
-    .single()
+async function getNews(slug: string) {
+  // 详情页直接读表，以便拿到 content_* 等完整字段
+  const { data, error } = await supabase
+    .from("news")
+    .select(
+      [
+        "slug",
+        "title_en", "title_zh",
+        "summary_en", "summary_zh",
+        "content_en", "content_zh",
+        "source", "source_url",
+        "cover_url", "cover_image_url",
+        "published_at", "updated_at", "created_at",
+        "tags_en", "tags_zh",
+        "meta_title_en", "meta_title_zh",
+        "meta_description_en", "meta_description_zh"
+      ].join(", ")
+    )
+    .eq("slug", slug)
+    .maybeSingle();
 
-  if (!news) {
-    return { title: 'News Not Found' }
-  }
+  if (error) throw error;
+  return data;
+}
 
-  const title = isZh ? news.title_zh : news.title_en
-  const summary = isZh ? news.summary_zh : news.summary_en
+// ————— SEO: 动态 Metadata —————
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const n = await getNews(params.slug);
+  if (!n) return {};
+
+  const title = coalesceByLocale(params.locale, n.meta_title_en, n.meta_title_zh) ||
+                coalesceByLocale(params.locale, n.title_en, n.title_zh) ||
+                "Jilo.ai News";
+
+  const description = coalesceByLocale(params.locale, n.meta_description_en, n.meta_description_zh) ||
+                      coalesceByLocale(params.locale, n.summary_en, n.summary_zh) || "";
+
+  const cover = (n.cover_url || n.cover_image_url) || "";
 
   return {
-    title: title,
-    description: summary,
+    title,
+    description,
     openGraph: {
-      title: title,
-      description: summary,
-      images: news.image_url ? [news.image_url] : [],
+      title,
+      description,
+      type: "article",
+      images: cover ? [{ url: cover }] : undefined,
+      publishedTime: n.published_at || undefined,
     },
-  }
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: cover ? [cover] : undefined,
+    },
+  };
 }
 
-export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
-  const supabase = await createClient()
-  const isZh = params.locale === 'zh'
-  
-  const { data: news, error } = await supabase
-    .from('news')
-    .select('*')
-    .eq('slug', params.slug)
-    .eq('status', 'published')
-    .single()
+export default async function NewsDetailPage({ params }: PageProps) {
+  const { locale, slug } = params;
+  const n = await getNews(slug);
 
-  if (error || !news) {
-    notFound()
+  if (!n) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16">
+        <h1 className="text-2xl font-semibold mb-2">{locale === "zh" ? "未找到该新闻" : "News not found"}</h1>
+      </div>
+    );
   }
 
-  await supabase.rpc('increment_news_views', { news_id: news.id })
+  const title = coalesceByLocale(locale, n.title_en, n.title_zh);
+  const summary = coalesceByLocale(locale, n.summary_en, n.summary_zh);
+  const content = coalesceByLocale(locale, n.content_en, n.content_zh);
+  const cover = (n.cover_url || n.cover_image_url) || "";
+  const published = n.published_at ? new Date(n.published_at).toISOString() : undefined;
+  const updated = n.updated_at ? new Date(n.updated_at).toISOString() : published;
 
-  const { data: relatedNews } = await supabase
-    .from('news')
-    .select('id, title_en, title_zh, slug, image_url, published_at')
-    .eq('category', news.category)
-    .eq('status', 'published')
-    .neq('id', news.id)
-    .order('published_at', { ascending: false })
-    .limit(3)
-
-  const title = isZh ? news.title_zh : news.title_en
-  const summary = isZh ? news.summary_zh : news.summary_en
+  // JSON-LD（Article）— author/publisher 均用 Jilo.ai
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": title,
+    "description": summary || undefined,
+    "image": cover ? [cover] : undefined,
+    "datePublished": published,
+    "dateModified": updated,
+    "author": { "@type": "Organization", "name": "Jilo.ai" },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Jilo.ai",
+      "logo": cover ? { "@type": "ImageObject", "url": cover } : undefined
+    },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": `https://www.jilo.ai/${locale}/news/${slug}` }
+  };
 
   return (
-    <>
-      <Navbar locale={params.locale} />
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 py-8">
-          <Link href={`/${params.locale}/news`}>
-            <Button variant="ghost" className="mb-6">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              {isZh ? '返回新闻列表' : 'Back to News'}
-            </Button>
-          </Link>
+    <div className="max-w-3xl mx-auto px-4 py-10">
+      <h1 className="text-3xl font-semibold mb-3">{title}</h1>
 
-          <article className="max-w-4xl mx-auto">
-            <div className="mb-6">
-              {news.category && (
-                <Badge variant="secondary" className="mb-4">
-                  {news.category}
-                </Badge>
-              )}
-              
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
-                {title}
-              </h1>
-
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-1">
-                  <CalendarDays className="w-4 h-4" />
-                  <span>
-                    {new Date(news.published_at).toLocaleDateString(params.locale, {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </span>
-                </div>
-                
-                {news.views && (
-                  <div className="flex items-center gap-1">
-                    <span>{news.views} views</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {news.image_url && (
-              <div className="relative w-full h-[400px] mb-8 rounded-lg overflow-hidden">
-                <img
-                  src={news.image_url}
-                  alt={title || ''}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-
-            {summary && (
-              <div className="text-xl text-gray-600 mb-8 p-6 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                {summary}
-              </div>
-            )}
-
-            {news.content && (
-              <div 
-                className="prose prose-lg max-w-none mb-8"
-                dangerouslySetInnerHTML={{ __html: news.content }}
-              />
-            )}
-
-            {news.source_url && (
-              <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-2">
-                  {isZh ? '来源' : 'Source'}
-                </p>
-                <a 
-                  href={news.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline flex items-center gap-1"
-                >
-                  {news.source || 'View Original'}
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-            )}
-          </article>
-
-          {relatedNews && relatedNews.length > 0 && (
-            <div className="mt-16 max-w-4xl mx-auto">
-              <h2 className="text-2xl font-bold mb-6">
-                {isZh ? '相关新闻' : 'Related News'}
-              </h2>
-              <div className="grid md:grid-cols-3 gap-6">
-                {relatedNews.map((item) => {
-                  const relatedTitle = isZh ? item.title_zh : item.title_en
-                  return (
-                    <Link key={item.id} href={`/${params.locale}/news/${item.slug}`}>
-                      <div className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
-                        {item.image_url && (
-                          <div className="relative h-48 w-full">
-                            <img
-                              src={item.image_url}
-                              alt={relatedTitle || ''}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="p-4">
-                          <h3 className="font-semibold line-clamp-2 mb-2">
-                            {relatedTitle}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            {new Date(item.published_at).toLocaleDateString(params.locale)}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="text-sm text-muted-foreground mb-4">
+        {published ? new Date(published).toISOString().slice(0,10) : ""}
+        {n.source ? ` · ${n.source}` : ""}
+        {n.source_url ? (
+          <>
+            {" · "}
+            <a href={n.source_url} target="_blank" rel="noopener noreferrer" className="underline">
+              {locale === "zh" ? "原文链接" : "Original"}
+            </a>
+          </>
+        ) : null}
       </div>
-    </>
-  )
+
+      {cover && (
+        // 用 img 以避免外域图片的 next/image 域名限制
+        <img src={cover} alt={title} className="w-full rounded-xl mb-6 object-cover" />
+      )}
+
+      {summary && <p className="text-base mb-4">{summary}</p>}
+
+      {/* 如果 content 是 HTML，就按 HTML 渲染；如果是纯文本，保持段落显示 */}
+      {content ? (
+        /<\/[a-z][\s\S]*>/i.test(content) ? (
+          <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: content }} />
+        ) : (
+          <div className="prose max-w-none whitespace-pre-line">{content}</div>
+        )
+      ) : null}
+
+      {/* JSON-LD */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+    </div>
+  );
 }

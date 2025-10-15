@@ -1,161 +1,116 @@
-import { createClient } from '@/lib/supabase/server'
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import Link from 'next/link'
-import Navbar from '@/components/navbar'
-import SearchBar from '@/components/search-bar'
-import ToolCategories from '@/components/tool-categories'
-import { FeaturedCarousel } from '@/components/featured-carousel'
-import HotToolsSection from '@/components/HotToolsSection'
+import { supabase } from "@/lib/supabase";
+import Link from "next/link";
+import Filters from "@/components/filters";
 
-export default async function HomePage({ params }: { params: { locale: string } }) {
-  const supabase = await createClient()
-  const isZh = params.locale === 'zh'
+type PageProps = {
+  params: { locale: string };
+  searchParams: {
+    page?: string;
+    pricing?: string | string[];
+    lang?: string | string[];
+    platform?: string | string[];
+    opensource?: string; // "1"
+    login?: string;      // "1"
+  };
+};
 
-  // 精选工具（推荐、用于轮播）
-  const { data: featuredToolsRaw } = await supabase
-    .from('tools')
-    .select('*')
-    .eq('status', 'published')
-    .eq('is_featured', true)
-    .order('created_at', { ascending: false })
-    .limit(8)
+function asArray(v?: string | string[]) {
+  if (!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
+function fmtDate(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(+d)) return "";
+  return d.toISOString().slice(0, 10);
+}
 
-  const featuredTools = (featuredToolsRaw || []).map(tool => ({
-    id: tool.id,
-    name_en: tool.name_en,
-    name_zh: tool.name_zh,
-    description_en: tool.description_en,
-    description_zh: tool.description_zh,
-    image_url: tool.logo_url || tool.image_url || '',
-    link: `/${params.locale}/tools/${tool.slug}`,
-  }))
+export default async function ToolsIndexPage({ params, searchParams }: PageProps) {
+  const locale = params?.locale || "en";
+  const page = Number(searchParams?.page || 1);
+  const pageSize = 24;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-  // 首页"最新资讯"区块
-  const { data: latestNews } = await supabase
-    .from('news')
-    .select('*')
-    .eq('status', 'published')
-    .order('published_at', { ascending: false })
-    .limit(4)
+  const pricing = asArray(searchParams.pricing);   // free | freemium | paid
+  const langs = asArray(searchParams.lang);        // en | zh ...
+  const plats = asArray(searchParams.platform);    // web | chrome | ios | android | vscode
+  const onlyOpenSource = searchParams.opensource === "1";
+  const onlyLogin = searchParams.login === "1";
+
+  // 基于视图的查询（只有当参数存在时才加过滤条件）
+  let query = supabase
+    .from("tools_simple")
+    .select(
+      "id, slug, name, short_desc, official_url, logo_url, pricing, languages, platforms, open_source, need_login, last_update_at",
+      { count: "exact" },
+    );
+
+  if (pricing.length) query = query.in("pricing", pricing);
+  if (langs.length) query = query.overlaps("languages", langs);
+  if (plats.length) query = query.overlaps("platforms", plats);
+  if (onlyOpenSource) query = query.eq("open_source", true);
+  if (onlyLogin) query = query.eq("need_login", true);
+
+  query = query.order("slug", { ascending: true }).range(from, to);
+
+  const { data, error, count } = await query;
+  if (error) console.error("[tools_simple] error:", error);
+  const items = data || [];
+  const total = count ?? items.length;
 
   return (
-    <>
-      <Navbar locale={params.locale} />
-      <div className="min-h-screen bg-background">
-        {/* Hero 区块 */}
-        <section className="bg-gradient-to-b from-blue-50 to-background py-20">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              {isZh ? '发现最佳的AI工具' : 'Discover the Best AI Tools'}
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              {isZh
-                ? '精选最新、最实用的AI工具,帮助您提升工作效率'
-                : 'Curated collection of the latest and most useful AI tools to boost your productivity'}
-            </p>
-            <div className="mb-8">
-              <SearchBar locale={params.locale} />
-            </div>
-            <div className="flex gap-4 justify-center flex-wrap">
-              <Link href={`/${params.locale}/tools`}>
-                <Button size="lg">
-                  {isZh ? '浏览所有工具' : 'Browse All Tools'}
-                </Button>
-              </Link>
-              <Link href={`/${params.locale}/news`}>
-                <Button size="lg" variant="outline">
-                  {isZh ? 'AI资讯' : 'AI News'}
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
+    <div className="max-w-6xl mx-auto px-4 py-10">
+      <h1 className="text-2xl font-semibold mb-4">{locale === "zh" ? "人工智能工具" : "AI Tools"}</h1>
 
-        {/* 精选推荐轮播图 */}
-        <FeaturedCarousel locale={params.locale} tools={featuredTools} />
+      <Filters />
 
-        <div className="container mx-auto px-4 py-16">
-          {/* AI 工具分类卡片 */}
-          <ToolCategories
-            locale={params.locale}
-            title={isZh ? '按类别划分的免费 AI 工具' : 'Browse AI Tools by Category'}
-            showAll={false}
-          />
+      <div className="text-sm text-muted-foreground mb-4">{total} {locale === "zh" ? "个结果" : "results"}</div>
 
-          {/* 热门工具区块 - 移除了 hotTools prop，组件内部自己获取数据 */}
-          <HotToolsSection locale={params.locale} />
-
-          {/* 最新资讯 */}
-          <section>
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-3xl font-bold mb-2">
-                  {isZh ? '最新资讯' : 'Latest News'}
-                </h2>
-                <p className="text-muted-foreground">
-                  {isZh ? 'AI行业最新动态' : 'Latest updates from the AI industry'}
-                </p>
-              </div>
-              <Link href={`/${params.locale}/news`}>
-                <Button variant="ghost">
-                  {isZh ? '查看全部' : 'View All'}
-                </Button>
-              </Link>
-            </div>
-
-            {latestNews && latestNews.length > 0 ? (
-              <div className="grid md:grid-cols-2 gap-6">
-                {latestNews.map((news) => {
-                  const title = isZh ? news.title_zh : news.title_en
-                  const summary = isZh ? news.summary_zh : news.summary_en
-
-                  return (
-                    <Link key={news.id} href={`/${params.locale}/news/${news.slug}`}>
-                      <div className="hover:shadow-lg transition-shadow h-full bg-white border rounded-xl">
-                        <div className="p-6 pb-2">
-                          {news.source && (
-                            <Badge variant="secondary" className="w-fit mb-2">
-                              {news.source}
-                            </Badge>
-                          )}
-                          <div className="text-xl font-bold mb-1 line-clamp-2">{title}</div>
-                        </div>
-                        <div className="p-6 pt-2">
-                          {summary && (
-                            <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
-                              {summary}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>
-                              {news.published_at ? new Date(news.published_at).toLocaleDateString(params.locale, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              }) : (isZh ? '未知日期' : 'Unknown date')}
-                            </span>
-                            {news.views && (
-                              <>
-                                <span>•</span>
-                                <span>{news.views} {isZh ? '浏览' : 'views'}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                {isZh ? '暂无新闻' : 'No news available'}
-              </div>
-            )}
-          </section>
+      {items.length === 0 ? (
+        <div className="text-muted-foreground">
+          {locale === "zh" ? "没有匹配的工具，请调整筛选条件。" : "No matching tools. Try clearing filters."}
         </div>
-      </div>
-    </>
-  )
+      ) : (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((t) => (
+            <div key={t.id} className="border rounded-2xl p-4 bg-white/60 hover:shadow-sm transition">
+              <div className="flex gap-3 items-start">
+                {t.logo_url ? (
+                  <img src={t.logo_url} alt={t.name} className="w-12 h-12 rounded-xl object-cover" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl border flex items-center justify-center text-xs">Logo</div>
+                )}
+                <div className="flex-1">
+                  <Link href={`/${locale}/tools/${t.slug}`} className="font-medium underline">
+                    {t.name}
+                  </Link>
+                  {t.short_desc && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{t.short_desc}</p>}
+                  <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                    {t.pricing && <span className="px-2 py-0.5 rounded-full border">{t.pricing}</span>}
+                    {Array.isArray(t.languages) && t.languages.slice(0, 2).map((x: string) => (
+                      <span key={x} className="px-2 py-0.5 rounded-full border">{x}</span>
+                    ))}
+                    {Array.isArray(t.platforms) && t.platforms.slice(0, 2).map((x: string) => (
+                      <span key={x} className="px-2 py-0.5 rounded-full border">{x}</span>
+                    ))}
+                    {t.open_source && <span className="px-2 py-0.5 rounded-full border">open-source</span>}
+                    {t.need_login && <span className="px-2 py-0.5 rounded-full border">login</span>}
+                  </div>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mt-3">
+                {locale === "zh" ? "最近更新：" : "Updated:"} {fmtDate(t.last_update_at)}
+              </div>
+              {t.official_url && (
+                <a href={t.official_url} target="_blank" rel="noopener noreferrer" className="text-sm underline mt-2 inline-block">
+                  {locale === "zh" ? "访问官网" : "Visit website"}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
