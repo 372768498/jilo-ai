@@ -7,11 +7,70 @@ import { CheckCircle2, XCircle } from "lucide-react";
 
 type PageProps = { params: { locale: string; slug: string } };
 
+// 通用英文→中文翻译映射
+const TRANSLATIONS: Record<string, string> = {
+  // Features
+  "Natural Language Understanding": "自然语言理解",
+  "Content Generation": "内容生成",
+  "Coding Assistance": "编程辅助",
+  "24/7 Availability": "全天候可用",
+  "Multi-Topic Support": "多主题支持",
+  "Interactive Conversations": "互动对话",
+  "Customizable Responses": "可自定义响应",
+  
+  // Common patterns
+  "AI-powered": "AI驱动",
+  "Machine Learning": "机器学习",
+  "Deep Learning": "深度学习",
+  "Neural Network": "神经网络",
+  "Real-time": "实时",
+  "Automated": "自动化",
+  "Advanced": "高级",
+  "Professional": "专业",
+  "Enterprise": "企业级",
+};
+
+// 智能翻译函数
+function smartTranslate(text: string): string {
+  // 如果有直接翻译，返回
+  if (TRANSLATIONS[text]) return TRANSLATIONS[text];
+  
+  // 否则返回原文（或者可以调用简单的关键词替换）
+  return text;
+}
+
+// 获取本地化文本
+function getLocalizedText(item: any, field: string, locale: string): string {
+  const isZh = locale === "zh";
+  
+  // 如果数据是双语格式 {en: "...", zh: "..."}
+  if (typeof item === "object" && ("en" in item || "zh" in item)) {
+    return isZh ? (item.zh || item.en) : item.en;
+  }
+  
+  // 如果数据有 _en 和 _zh 后缀
+  if (typeof item === "object" && (`${field}_en` in item)) {
+    return isZh ? (item[`${field}_zh`] || smartTranslate(item[`${field}_en`])) : item[`${field}_en`];
+  }
+  
+  // 如果是字符串，中文时尝试翻译
+  if (typeof item === "string") {
+    return isZh ? smartTranslate(item) : item;
+  }
+  
+  // 如果是对象，查找对应字段
+  if (typeof item === "object" && field in item) {
+    const value = item[field];
+    return isZh ? smartTranslate(value) : value;
+  }
+  
+  return item;
+}
+
 export default async function ToolDetailPage({ params }: PageProps) {
   const locale = params?.locale || "en";
   const slug = params?.slug;
 
-  // 🆕 使用正确的字段名
   const { data, error } = await supabase
     .from("tools")
     .select(`
@@ -35,7 +94,6 @@ export default async function ToolDetailPage({ params }: PageProps) {
 
   if (error || !data) return notFound();
 
-  // 🆕 根据语言选择字段
   const isZh = locale === "zh";
   const name = isZh ? data.name_zh : data.name_en;
   const tagline = isZh ? data.tagline_zh : data.tagline_en;
@@ -49,22 +107,24 @@ export default async function ToolDetailPage({ params }: PageProps) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    "name": name,
-    "applicationCategory": "AI Tool",
-    "operatingSystem": "Web",
-    "offers": {
+    name: name,
+    applicationCategory: "AI Tool",
+    operatingSystem: "Web",
+    offers: {
       "@type": "Offer",
-      "price": data.pricing_type === "free" ? "0" : undefined,
-      "priceCurrency": "USD"
+      price: data.pricing_type === "free" ? "0" : undefined,
+      priceCurrency: "USD",
     },
-    "url": `https://www.jilo.ai/${locale}/tools/${data.slug}`,
-    "description": metaDescription || description,
-    "image": data.logo_url || undefined,
-    "aggregateRating": data.rating ? {
-      "@type": "AggregateRating",
-      "ratingValue": data.rating,
-      "reviewCount": data.review_count || 0
-    } : undefined
+    url: `https://www.jilo.ai/${locale}/tools/${data.slug}`,
+    description: metaDescription || description,
+    image: data.logo_url || undefined,
+    aggregateRating: data.rating
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: data.rating,
+          reviewCount: data.review_count || 0,
+        }
+      : undefined,
   };
 
   return (
@@ -73,9 +133,13 @@ export default async function ToolDetailPage({ params }: PageProps) {
 
       {/* Breadcrumb */}
       <div className="text-sm mb-6 text-muted-foreground">
-        <Link href={`/${locale}`} className="hover:text-foreground">Home</Link>
+        <Link href={`/${locale}`} className="hover:text-foreground">
+          {isZh ? "首页" : "Home"}
+        </Link>
         {" / "}
-        <Link href={`/${locale}/tools`} className="hover:text-foreground">Tools</Link>
+        <Link href={`/${locale}/tools`} className="hover:text-foreground">
+          {isZh ? "工具" : "Tools"}
+        </Link>
         {" / "}
         <span className="text-foreground">{name}</span>
       </div>
@@ -91,9 +155,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
         )}
         <div className="flex-1">
           <h1 className="text-4xl font-bold mb-2">{name}</h1>
-          {tagline && (
-            <p className="text-xl text-muted-foreground mb-4">{tagline}</p>
-          )}
+          {tagline && <p className="text-xl text-muted-foreground mb-4">{tagline}</p>}
           <div className="flex gap-3">
             {data.official_url && (
               <a
@@ -102,7 +164,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
               >
-                Visit Website →
+                {isZh ? "访问网站" : "Visit Website"} →
               </a>
             )}
             {data.rating && (
@@ -111,7 +173,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
                 <span className="font-semibold">{data.rating}</span>
                 {data.review_count && (
                   <span className="text-sm text-muted-foreground">
-                    ({data.review_count} reviews)
+                    ({data.review_count} {isZh ? "评价" : "reviews"})
                   </span>
                 )}
               </div>
@@ -152,18 +214,23 @@ export default async function ToolDetailPage({ params }: PageProps) {
       {data.features && data.features.length > 0 && (
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6">
-            {isZh ? '核心功能' : 'Key Features'}
+            {isZh ? "核心功能" : "Key Features"}
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {data.features.map((feature: any, i: number) => (
-              <div key={i} className="p-5 border rounded-xl hover:shadow-md transition">
-                <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
-                  <span className="text-primary">✓</span>
-                  {feature.title}
-                </h3>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </div>
-            ))}
+            {data.features.map((feature: any, i: number) => {
+              const title = getLocalizedText(feature, "title", locale);
+              const desc = getLocalizedText(feature, "description", locale);
+              
+              return (
+                <div key={i} className="p-5 border rounded-xl hover:shadow-md transition">
+                  <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                    <span className="text-primary">✓</span>
+                    {title}
+                  </h3>
+                  <p className="text-muted-foreground">{desc}</p>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -172,7 +239,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
       {(data.pros || data.cons) && (
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6">
-            {isZh ? '优缺点分析' : 'Pros & Cons'}
+            {isZh ? "优缺点分析" : "Pros & Cons"}
           </h2>
           <div className="grid md:grid-cols-2 gap-6">
             {/* Pros */}
@@ -180,15 +247,18 @@ export default async function ToolDetailPage({ params }: PageProps) {
               <div className="p-6 border border-green-200 dark:border-green-800 rounded-xl bg-green-50 dark:bg-green-950/20">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2 text-green-700 dark:text-green-400">
                   <CheckCircle2 className="w-5 h-5" />
-                  {isZh ? '优点' : 'Pros'}
+                  {isZh ? "优点" : "Pros"}
                 </h3>
                 <ul className="space-y-2">
-                  {data.pros.map((pro: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-green-600 dark:text-green-400 mt-1">•</span>
-                      <span>{pro}</span>
-                    </li>
-                  ))}
+                  {data.pros.map((pro: any, i: number) => {
+                    const text = getLocalizedText(pro, "", locale);
+                    return (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-green-600 dark:text-green-400 mt-1">•</span>
+                        <span>{text}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -198,15 +268,18 @@ export default async function ToolDetailPage({ params }: PageProps) {
               <div className="p-6 border border-red-200 dark:border-red-800 rounded-xl bg-red-50 dark:bg-red-950/20">
                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2 text-red-700 dark:text-red-400">
                   <XCircle className="w-5 h-5" />
-                  {isZh ? '缺点' : 'Cons'}
+                  {isZh ? "缺点" : "Cons"}
                 </h3>
                 <ul className="space-y-2">
-                  {data.cons.map((con: string, i: number) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-red-600 dark:text-red-400 mt-1">•</span>
-                      <span>{con}</span>
-                    </li>
-                  ))}
+                  {data.cons.map((con: any, i: number) => {
+                    const text = getLocalizedText(con, "", locale);
+                    return (
+                      <li key={i} className="flex items-start gap-2">
+                        <span className="text-red-600 dark:text-red-400 mt-1">•</span>
+                        <span>{text}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -218,22 +291,27 @@ export default async function ToolDetailPage({ params }: PageProps) {
       {data.use_cases && data.use_cases.length > 0 && (
         <section className="mb-12">
           <h2 className="text-2xl font-bold mb-6">
-            {isZh ? '使用场景' : 'Use Cases'}
+            {isZh ? "使用场景" : "Use Cases"}
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
-            {data.use_cases.map((useCase: any, i: number) => (
-              <div key={i} className="p-5 border rounded-xl bg-secondary/30">
-                <div className="flex items-start gap-3">
-                  <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
-                    {i + 1}
-                  </span>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">{useCase.title}</h3>
-                    <p className="text-muted-foreground text-sm">{useCase.description}</p>
+            {data.use_cases.map((useCase: any, i: number) => {
+              const title = getLocalizedText(useCase, "title", locale);
+              const desc = getLocalizedText(useCase, "description", locale);
+              
+              return (
+                <div key={i} className="p-5 border rounded-xl bg-secondary/30">
+                  <div className="flex items-start gap-3">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <h3 className="font-semibold text-lg mb-1">{title}</h3>
+                      <p className="text-muted-foreground text-sm">{desc}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -241,16 +319,14 @@ export default async function ToolDetailPage({ params }: PageProps) {
       {/* Tool Info Grid */}
       <section className="mb-12">
         <h2 className="text-2xl font-bold mb-6">
-          {isZh ? '工具信息' : 'Tool Information'}
+          {isZh ? "工具信息" : "Tool Information"}
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div className="p-4 border rounded-lg">
             <div className="text-sm text-muted-foreground mb-1">
-              {isZh ? '定价' : 'Pricing'}
+              {isZh ? "定价" : "Pricing"}
             </div>
-            <div className="font-semibold capitalize">
-              {data.pricing_type || '-'}
-            </div>
+            <div className="font-semibold capitalize">{data.pricing_type || "-"}</div>
             {pricingDetails && (
               <div className="text-sm text-muted-foreground mt-1">{pricingDetails}</div>
             )}
@@ -259,7 +335,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
           {data.price_range && (
             <div className="p-4 border rounded-lg">
               <div className="text-sm text-muted-foreground mb-1">
-                {isZh ? '价格区间' : 'Price Range'}
+                {isZh ? "价格区间" : "Price Range"}
               </div>
               <div className="font-semibold">{data.price_range}</div>
             </div>
@@ -268,7 +344,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
           {data.updated_at && (
             <div className="p-4 border rounded-lg">
               <div className="text-sm text-muted-foreground mb-1">
-                {isZh ? '最后更新' : 'Last Updated'}
+                {isZh ? "最后更新" : "Last Updated"}
               </div>
               <div className="font-semibold">
                 {new Date(data.updated_at).toLocaleDateString(locale)}
@@ -281,15 +357,10 @@ export default async function ToolDetailPage({ params }: PageProps) {
       {/* Tags */}
       {((isZh && data.tags_zh) || (!isZh && data.tags_en)) && (
         <section>
-          <h2 className="text-2xl font-bold mb-4">
-            {isZh ? '标签' : 'Tags'}
-          </h2>
+          <h2 className="text-2xl font-bold mb-4">{isZh ? "标签" : "Tags"}</h2>
           <div className="flex flex-wrap gap-2">
             {(isZh ? data.tags_zh : data.tags_en)?.map((tag: string, i: number) => (
-              <span
-                key={i}
-                className="px-3 py-1 bg-secondary rounded-full text-sm"
-              >
+              <span key={i} className="px-3 py-1 bg-secondary rounded-full text-sm">
                 {tag}
               </span>
             ))}
