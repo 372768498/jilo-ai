@@ -9,7 +9,7 @@ type PageProps = { params: { locale: string; slug: string } };
 
 // 通用英文→中文翻译映射
 const TRANSLATIONS: Record<string, string> = {
-  // Features
+  // Feature Titles
   "Natural Language Understanding": "自然语言理解",
   "Content Generation": "内容生成",
   "Coding Assistance": "编程辅助",
@@ -17,6 +17,38 @@ const TRANSLATIONS: Record<string, string> = {
   "Multi-Topic Support": "多主题支持",
   "Interactive Conversations": "互动对话",
   "Customizable Responses": "可自定义响应",
+  
+  // Feature Descriptions
+  "ChatGPT can comprehend and respond to human language effectively.": "ChatGPT能够有效理解和回应人类语言。",
+  "Easily create articles, essays, and creative writing with AI support.": "借助AI支持轻松创建文章、论文和创意写作。",
+  "Get help with coding tasks, debugging, and programming concepts.": "获取编程任务、调试和编程概念方面的帮助。",
+  "Access assistance anytime, anywhere, without waiting for human help.": "随时随地获取帮助，无需等待人工支持。",
+  "Engage on a wide range of subjects, from science to pop culture.": "涵盖从科学到流行文化的广泛主题。",
+  "Enjoy seamless, back-and-forth dialogue with the AI.": "享受与AI的无缝双向对话。",
+  "Tailor tone and style based on user preferences.": "根据用户偏好定制语气和风格。",
+  
+  // Pros
+  "Offers instant responses to a variety of queries.": "为各种查询提供即时响应。",
+  "Enhances productivity with quick content generation.": "通过快速内容生成提高工作效率。",
+  "Available 24/7, providing assistance whenever needed.": "全天候可用，随时提供帮助。",
+  "Learns and adapts to user preferences over time.": "随着时间推移学习并适应用户偏好。",
+  
+  // Cons
+  "May provide inaccurate or misleading information at times.": "有时可能提供不准确或误导性信息。",
+  "Lacks deep understanding of some niche topics.": "对某些小众话题缺乏深入理解。",
+  "Responses can occasionally be repetitive or generic.": "响应有时可能重复或过于笼统。",
+  
+  // Use Case Titles
+  "Content Writing": "内容写作",
+  "Homework Help": "作业帮助",
+  "Customer Support": "客户支持",
+  "Language Learning": "语言学习",
+  
+  // Use Case Descriptions
+  "Use ChatGPT to brainstorm and draft articles or blog posts effortlessly.": "使用ChatGPT轻松构思和撰写文章或博客文章。",
+  "Get explanations and assistance with complex homework problems.": "获取复杂作业问题的解释和帮助。",
+  "Deploy ChatGPT for automated responses to customer inquiries.": "部署ChatGPT自动回复客户咨询。",
+  "Practice conversations in different languages with the chatbot.": "与聊天机器人练习不同语言的对话。",
   
   // Common patterns
   "AI-powered": "AI驱动",
