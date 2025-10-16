@@ -1,116 +1,184 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import Filters from "@/components/filters";
+import { Search } from "lucide-react";
 
 type PageProps = {
   params: { locale: string };
-  searchParams: {
-    page?: string;
-    pricing?: string | string[];
-    lang?: string | string[];
-    platform?: string | string[];
-    opensource?: string; // "1"
-    login?: string;      // "1"
-  };
 };
 
-function asArray(v?: string | string[]) {
-  if (!v) return [];
-  return Array.isArray(v) ? v : [v];
-}
-function fmtDate(iso?: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (isNaN(+d)) return "";
-  return d.toISOString().slice(0, 10);
-}
-
-export default async function ToolsIndexPage({ params, searchParams }: PageProps) {
+export default async function HomePage({ params }: PageProps) {
   const locale = params?.locale || "en";
-  const page = Number(searchParams?.page || 1);
-  const pageSize = 24;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  const pricing = asArray(searchParams.pricing);   // free | freemium | paid
-  const langs = asArray(searchParams.lang);        // en | zh ...
-  const plats = asArray(searchParams.platform);    // web | chrome | ios | android | vscode
-  const onlyOpenSource = searchParams.opensource === "1";
-  const onlyLogin = searchParams.login === "1";
-
-  // 基于视图的查询（只有当参数存在时才加过滤条件）
-  let query = supabase
+  
+  // 获取精选工具（前6个）
+  const { data: featuredTools } = await supabase
     .from("tools_simple")
-    .select(
-      "id, slug, name, short_desc, official_url, logo_url, pricing, languages, platforms, open_source, need_login, last_update_at",
-      { count: "exact" },
-    );
+    .select("id, slug, name, short_desc, logo_url, pricing")
+    .order("slug", { ascending: true })
+    .limit(6);
 
-  if (pricing.length) query = query.in("pricing", pricing);
-  if (langs.length) query = query.overlaps("languages", langs);
-  if (plats.length) query = query.overlaps("platforms", plats);
-  if (onlyOpenSource) query = query.eq("open_source", true);
-  if (onlyLogin) query = query.eq("need_login", true);
+  // 获取最新新闻（前3条）
+  const { data: latestNews } = await supabase
+    .from("news_simple")
+    .select("slug, title, summary, cover_url, published_at")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(3);
 
-  query = query.order("slug", { ascending: true }).range(from, to);
-
-  const { data, error, count } = await query;
-  if (error) console.error("[tools_simple] error:", error);
-  const items = data || [];
-  const total = count ?? items.length;
+  const t = locale === "zh" ? {
+    hero_title: "发现最好的 AI 工具",
+    hero_subtitle: "探索精选的人工智能工具，提升您的工作效率",
+    search_placeholder: "搜索 AI 工具...",
+    browse_all: "浏览所有工具",
+    featured_tools: "精选工具",
+    latest_news: "最新资讯",
+    view_all_news: "查看全部新闻",
+    about_title: "关于我们",
+    about_desc: "Jilo.ai 致力于为用户提供最全面、最新的人工智能工具目录。我们精心筛选和评测各类 AI 工具，帮助您找到最适合的解决方案。",
+    updated: "更新于",
+    visit: "访问官网"
+  } : {
+    hero_title: "Discover the Best AI Tools",
+    hero_subtitle: "Explore curated AI tools to boost your productivity",
+    search_placeholder: "Search AI tools...",
+    browse_all: "Browse All Tools",
+    featured_tools: "Featured Tools",
+    latest_news: "Latest News",
+    view_all_news: "View All News",
+    about_title: "About Us",
+    about_desc: "Jilo.ai is dedicated to providing the most comprehensive and up-to-date directory of AI tools. We carefully curate and review various AI solutions to help you find the perfect fit for your needs.",
+    updated: "Updated",
+    visit: "Visit website"
+  };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
-      <h1 className="text-2xl font-semibold mb-4">{locale === "zh" ? "人工智能工具" : "AI Tools"}</h1>
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-b from-blue-50 to-white py-20 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {t.hero_title}
+          </h1>
+          <p className="text-xl text-gray-600 mb-8">{t.hero_subtitle}</p>
+          
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder={t.search_placeholder}
+                className="w-full pl-12 pr-4 py-4 rounded-full border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-lg"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const query = e.currentTarget.value;
+                    window.location.href = `/${locale}/tools?search=${encodeURIComponent(query)}`;
+                  }
+                }}
+              />
+            </div>
+          </div>
 
-      <Filters />
-
-      <div className="text-sm text-muted-foreground mb-4">{total} {locale === "zh" ? "个结果" : "results"}</div>
-
-      {items.length === 0 ? (
-        <div className="text-muted-foreground">
-          {locale === "zh" ? "没有匹配的工具，请调整筛选条件。" : "No matching tools. Try clearing filters."}
+          <Link 
+            href={`/${locale}/tools`}
+            className="inline-block bg-blue-600 text-white px-8 py-4 rounded-full font-semibold hover:bg-blue-700 transition"
+          >
+            {t.browse_all} →
+          </Link>
         </div>
-      ) : (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((t) => (
-            <div key={t.id} className="border rounded-2xl p-4 bg-white/60 hover:shadow-sm transition">
-              <div className="flex gap-3 items-start">
-                {t.logo_url ? (
-                  <img src={t.logo_url} alt={t.name} className="w-12 h-12 rounded-xl object-cover" />
+      </section>
+
+      {/* Featured Tools Section */}
+      <section className="max-w-6xl mx-auto px-4 py-16">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold">{t.featured_tools}</h2>
+          <Link href={`/${locale}/tools`} className="text-blue-600 hover:underline">
+            {t.browse_all} →
+          </Link>
+        </div>
+        
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {featuredTools?.map((tool) => (
+            <Link 
+              key={tool.id} 
+              href={`/${locale}/tools/${tool.slug}`}
+              className="border rounded-2xl p-6 bg-white hover:shadow-lg transition group"
+            >
+              <div className="flex items-start gap-4">
+                {tool.logo_url ? (
+                  <img src={tool.logo_url} alt={tool.name} className="w-16 h-16 rounded-xl object-cover" />
                 ) : (
-                  <div className="w-12 h-12 rounded-xl border flex items-center justify-center text-xs">Logo</div>
+                  <div className="w-16 h-16 rounded-xl border-2 flex items-center justify-center text-gray-400">
+                    Logo
+                  </div>
                 )}
                 <div className="flex-1">
-                  <Link href={`/${locale}/tools/${t.slug}`} className="font-medium underline">
-                    {t.name}
-                  </Link>
-                  {t.short_desc && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{t.short_desc}</p>}
-                  <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                    {t.pricing && <span className="px-2 py-0.5 rounded-full border">{t.pricing}</span>}
-                    {Array.isArray(t.languages) && t.languages.slice(0, 2).map((x: string) => (
-                      <span key={x} className="px-2 py-0.5 rounded-full border">{x}</span>
-                    ))}
-                    {Array.isArray(t.platforms) && t.platforms.slice(0, 2).map((x: string) => (
-                      <span key={x} className="px-2 py-0.5 rounded-full border">{x}</span>
-                    ))}
-                    {t.open_source && <span className="px-2 py-0.5 rounded-full border">open-source</span>}
-                    {t.need_login && <span className="px-2 py-0.5 rounded-full border">login</span>}
-                  </div>
+                  <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition">
+                    {tool.name}
+                  </h3>
+                  {tool.short_desc && (
+                    <p className="text-sm text-gray-600 line-clamp-2">{tool.short_desc}</p>
+                  )}
+                  {tool.pricing && (
+                    <span className="inline-block mt-2 px-3 py-1 text-xs rounded-full border bg-gray-50">
+                      {tool.pricing}
+                    </span>
+                  )}
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground mt-3">
-                {locale === "zh" ? "最近更新：" : "Updated:"} {fmtDate(t.last_update_at)}
-              </div>
-              {t.official_url && (
-                <a href={t.official_url} target="_blank" rel="noopener noreferrer" className="text-sm underline mt-2 inline-block">
-                  {locale === "zh" ? "访问官网" : "Visit website"}
-                </a>
-              )}
-            </div>
+            </Link>
           ))}
         </div>
-      )}
+      </section>
+
+      {/* Latest News Section */}
+      <section className="bg-gray-50 py-16 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-3xl font-bold">{t.latest_news}</h2>
+            <Link href={`/${locale}/news`} className="text-blue-600 hover:underline">
+              {t.view_all_news} →
+            </Link>
+          </div>
+          
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
+            {latestNews?.map((news) => (
+              <Link
+                key={news.slug}
+                href={`/${locale}/news/${news.slug}`}
+                className="bg-white rounded-2xl overflow-hidden hover:shadow-lg transition group"
+              >
+                {news.cover_url && (
+                  <img 
+                    src={news.cover_url} 
+                    alt={news.title || ""} 
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                )}
+                <div className="p-6">
+                  <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition line-clamp-2">
+                    {news.title}
+                  </h3>
+                  {news.summary && (
+                    <p className="text-sm text-gray-600 line-clamp-3 mb-3">{news.summary}</p>
+                  )}
+                  {news.published_at && (
+                    <div className="text-xs text-gray-400">
+                      {new Date(news.published_at).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US")}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="max-w-4xl mx-auto px-4 py-16 text-center">
+        <h2 className="text-3xl font-bold mb-6">{t.about_title}</h2>
+        <p className="text-lg text-gray-600 leading-relaxed">
+          {t.about_desc}
+        </p>
+      </section>
     </div>
   );
 }
