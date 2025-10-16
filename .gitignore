@@ -11,3 +11,4 @@ crawler/.env
 crawler/.env
 
 crawler/__pycache__/
+.vercel

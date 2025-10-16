@@ -1,7 +1,7 @@
 // app/compare/page.tsx
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import CompareTable from "@/components/CompareTable";
@@ -30,7 +30,7 @@ function readLocal(): string[] {
   }
 }
 
-export default function ComparePage() {
+function CompareContent() {
   const sp = useSearchParams();
   const [slugs, setSlugs] = useState<string[]>([]);
   const [tools, setTools] = useState<Tool[]>([]);
@@ -90,5 +90,18 @@ export default function ComparePage() {
         <div className="text-muted-foreground">No data.</div>
       )}
     </div>
+  );
+}
+
+export default function ComparePage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <h1 className="text-2xl font-semibold mb-4">Compare tools</h1>
+        <div className="text-muted-foreground">Loading…</div>
+      </div>
+    }>
+      <CompareContent />
+    </Suspense>
   );
 }

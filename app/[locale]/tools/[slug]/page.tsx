@@ -62,41 +62,33 @@ const TRANSLATIONS: Record<string, string> = {
   "Enterprise": "企业级",
 };
 
-// 智能翻译函数
-function smartTranslate(text: string): string {
-  // 如果有直接翻译，返回
-  if (TRANSLATIONS[text]) return TRANSLATIONS[text];
-  
-  // 否则返回原文（或者可以调用简单的关键词替换）
-  return text;
-}
-
-// 获取本地化文本
+// 获取本地化文本（支持双语格式）
 function getLocalizedText(item: any, field: string, locale: string): string {
   const isZh = locale === "zh";
   
   // 如果数据是双语格式 {en: "...", zh: "..."}
-  if (typeof item === "object" && ("en" in item || "zh" in item)) {
-    return isZh ? (item.zh || item.en) : item.en;
+  if (typeof item === "object" && item !== null) {
+    if ("en" in item && "zh" in item) {
+      return isZh ? (item.zh || item.en) : item.en;
+    }
+    
+    // 如果数据有 _en 和 _zh 后缀
+    if (`${field}_en` in item && `${field}_zh` in item) {
+      return isZh ? (item[`${field}_zh`] || item[`${field}_en`]) : item[`${field}_en`];
+    }
+    
+    // 如果有直接的字段（旧格式）
+    if (field in item) {
+      return item[field];
+    }
   }
   
-  // 如果数据有 _en 和 _zh 后缀
-  if (typeof item === "object" && (`${field}_en` in item)) {
-    return isZh ? (item[`${field}_zh`] || smartTranslate(item[`${field}_en`])) : item[`${field}_en`];
-  }
-  
-  // 如果是字符串，中文时尝试翻译
+  // 如果是字符串，直接返回
   if (typeof item === "string") {
-    return isZh ? smartTranslate(item) : item;
+    return item;
   }
   
-  // 如果是对象，查找对应字段
-  if (typeof item === "object" && field in item) {
-    const value = item[field];
-    return isZh ? smartTranslate(value) : value;
-  }
-  
-  return item;
+  return "";
 }
 
 export default async function ToolDetailPage({ params }: PageProps) {
