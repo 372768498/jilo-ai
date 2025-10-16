@@ -1,6 +1,16 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { ArrowRight, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import SearchBar from "@/components/search-bar";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
+import CategoryScrollBar from "@/components/category-scroll-bar";
+import TrendingTools from "@/components/trending-tools";
+import QuickDiscovery from "@/components/quick-discovery";
+import AdSlot from "@/components/ad-slot";
 
 type PageProps = {
   params: { locale: string };
@@ -8,177 +18,419 @@ type PageProps = {
 
 export default async function HomePage({ params }: PageProps) {
   const locale = params?.locale || "en";
+  const isZh = locale === "zh";
   
-  // 获取精选工具（前6个）
-  const { data: featuredTools } = await supabase
+  // 获取今日热门工具（16个）
+  const { data: trendingTools } = await supabase
     .from("tools_simple")
     .select("id, slug, name, short_desc, logo_url, pricing")
-    .order("slug", { ascending: true })
-    .limit(6);
+    .order("slug", { ascending: false })
+    .limit(16);
 
-  // 获取最新新闻（前3条）
-  const { data: latestNews } = await supabase
-    .from("news_simple")
-    .select("slug, title, summary, cover_url, published_at")
-    .order("published_at", { ascending: false, nullsFirst: false })
+  // Quick Discovery 数据（8个分类，每个3个工具）
+  const { data: newestTools } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .order("slug", { ascending: false })
     .limit(3);
 
-  const t = locale === "zh" ? {
+  const { data: popularTools } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .order("slug", { ascending: true })
+    .range(3, 5);
+
+  const { data: featuredToolsQuick } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .range(6, 8);
+
+  const { data: freeTools } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .eq("pricing", "free")
+    .limit(3);
+
+  const { data: trendingToolsQuick } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .range(9, 11);
+
+  const { data: updatedTools } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .range(12, 14);
+
+  const { data: communityTools } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .range(15, 17);
+
+  const { data: specialTools } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, logo_url")
+    .range(18, 20);
+
+  // 获取精选工具（24个）
+  const { data: featuredTools } = await supabase
+    .from("tools_simple")
+    .select("id, slug, name, short_desc, logo_url, pricing, platforms")
+    .order("slug", { ascending: true })
+    .limit(24);
+
+  // 获取最新新闻（20条，去重）
+  const { data: latestNews } = await supabase
+    .from("news_simple")
+    .select("id, slug, title, title_zh, summary, summary_zh, source, source_url, cover_url, published_at")
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .limit(20);
+
+  // 去重（以防万一）
+  const uniqueNews = latestNews?.filter((news, index, self) =>
+    index === self.findIndex((n) => n.id === news.id)
+  );
+
+  const t = isZh ? {
     hero_title: "发现最好的 AI 工具",
-    hero_subtitle: "探索精选的人工智能工具，提升您的工作效率",
+    hero_subtitle: "1000+ AI工具，每日更新",
     search_placeholder: "搜索 AI 工具...",
     browse_all: "浏览所有工具",
-    featured_tools: "精选工具",
-    latest_news: "最新资讯",
-    view_all_news: "查看全部新闻",
-    about_title: "关于我们",
-    about_desc: "Jilo.ai 致力于为用户提供最全面、最新的人工智能工具目录。我们精心筛选和评测各类 AI 工具，帮助您找到最适合的解决方案。",
-    updated: "更新于",
-    visit: "访问官网"
+    featured_tools: "✨ 精选工具",
+    latest_news: "📰 AI 头条",
+    view_all_news: "查看全部",
+    view_all_tools: "查看全部",
+    hand_picked: "精心挑选的优质 AI 工具",
+    stay_updated: "紧跟 AI 行业最新动态",
+    why_choose: "💎 为什么选择 Jilo.ai",
+    reasons: [
+      { icon: "📅", title: "每日更新", desc: "持续收录最新 AI 工具" },
+      { icon: "🎯", title: "精准分类", desc: "16+ 核心分类" },
+      { icon: "🆓", title: "完全免费", desc: "无需注册即可使用" },
+      { icon: "⭐", title: "专业评测", desc: "编辑团队精心筛选" }
+    ]
   } : {
     hero_title: "Discover the Best AI Tools",
-    hero_subtitle: "Explore curated AI tools to boost your productivity",
+    hero_subtitle: "1000+ AI Tools, Updated Daily",
     search_placeholder: "Search AI tools...",
     browse_all: "Browse All Tools",
-    featured_tools: "Featured Tools",
-    latest_news: "Latest News",
-    view_all_news: "View All News",
-    about_title: "About Us",
-    about_desc: "Jilo.ai is dedicated to providing the most comprehensive and up-to-date directory of AI tools. We carefully curate and review various AI solutions to help you find the perfect fit for your needs.",
-    updated: "Updated",
-    visit: "Visit website"
+    featured_tools: "✨ Featured Tools",
+    latest_news: "📰 AI Headlines",
+    view_all_news: "View All",
+    view_all_tools: "View All",
+    hand_picked: "Hand-picked quality AI tools",
+    stay_updated: "Stay updated with AI trends",
+    why_choose: "💎 Why Choose Jilo.ai",
+    reasons: [
+      { icon: "📅", title: "Daily Updates", desc: "Fresh AI tools every day" },
+      { icon: "🎯", title: "Precise Categories", desc: "16+ core categories" },
+      { icon: "🆓", title: "Totally Free", desc: "No registration required" },
+      { icon: "⭐", title: "Expert Reviews", desc: "Curated by our team" }
+    ]
+  };
+
+  // 辅助函数：根据语言获取标题
+  const getTitle = (news: any) => {
+    if (isZh) {
+      return news.title_zh || news.title;
+    }
+    return news.title;
+  };
+
+  // 辅助函数：根据语言获取摘要
+  const getSummary = (news: any) => {
+    if (isZh) {
+      return news.summary_zh || news.summary;
+    }
+    return news.summary;
+  };
+
+  // 辅助函数：生成新闻占位图标和颜色
+  const getNewsPlaceholder = (index: number) => {
+    const icons = ["🔥", "⚡", "✨", "💡", "🚀", "🎯", "💻", "🤖", "📱", "🎨"];
+    const gradients = [
+      "from-red-500 to-orange-500",
+      "from-orange-500 to-yellow-500",
+      "from-yellow-500 to-amber-500",
+      "from-blue-400 to-purple-500",
+      "from-purple-400 to-pink-500",
+      "from-green-400 to-teal-500",
+      "from-indigo-400 to-blue-500",
+      "from-pink-400 to-red-500",
+      "from-teal-400 to-cyan-500",
+      "from-cyan-400 to-blue-500",
+    ];
+    return {
+      icon: icons[index % icons.length],
+      gradient: gradients[index % gradients.length]
+    };
   };
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-b from-blue-50 to-white py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            {t.hero_title}
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">{t.hero_subtitle}</p>
+    <>
+      <Navbar locale={locale} />
+      
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
+        {/* Hero Section - 居中布局 */}
+        <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+          <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10" />
           
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder={t.search_placeholder}
-                className="w-full pl-12 pr-4 py-4 rounded-full border-2 border-gray-200 focus:border-blue-500 focus:outline-none text-lg"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const query = e.currentTarget.value;
-                    window.location.href = `/${locale}/tools?search=${encodeURIComponent(query)}`;
-                  }
-                }}
-              />
-            </div>
-          </div>
-
-          <Link 
-            href={`/${locale}/tools`}
-            className="inline-block bg-blue-600 text-white px-8 py-4 rounded-full font-semibold hover:bg-blue-700 transition"
-          >
-            {t.browse_all} →
-          </Link>
-        </div>
-      </section>
-
-      {/* Featured Tools Section */}
-      <section className="max-w-6xl mx-auto px-4 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-3xl font-bold">{t.featured_tools}</h2>
-          <Link href={`/${locale}/tools`} className="text-blue-600 hover:underline">
-            {t.browse_all} →
-          </Link>
-        </div>
-        
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-          {featuredTools?.map((tool) => (
-            <Link 
-              key={tool.id} 
-              href={`/${locale}/tools/${tool.slug}`}
-              className="border rounded-2xl p-6 bg-white hover:shadow-lg transition group"
-            >
-              <div className="flex items-start gap-4">
-                {tool.logo_url ? (
-                  <img src={tool.logo_url} alt={tool.name} className="w-16 h-16 rounded-xl object-cover" />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl border-2 flex items-center justify-center text-gray-400">
-                    Logo
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition">
-                    {tool.name}
-                  </h3>
-                  {tool.short_desc && (
-                    <p className="text-sm text-gray-600 line-clamp-2">{tool.short_desc}</p>
-                  )}
-                  {tool.pricing && (
-                    <span className="inline-block mt-2 px-3 py-1 text-xs rounded-full border bg-gray-50">
-                      {tool.pricing}
-                    </span>
-                  )}
+          <div className="max-w-7xl mx-auto px-4 py-16">
+            <div className="max-w-3xl mx-auto text-center">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 leading-tight">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+                  {t.hero_title}
+                </span>
+              </h1>
+              <p className="text-xl text-slate-600 mb-8">{t.hero_subtitle}</p>
+              
+              {/* 统计数据 - 横向排列 */}
+              <div className="flex justify-center gap-8 mb-8">
+                <div>
+                  <div className="text-3xl font-bold text-slate-900">72+</div>
+                  <div className="text-sm text-slate-600">Tools</div>
+                </div>
+                <div>
+                  <div className="text-3xl font-bold text-slate-900">10K+</div>
+                  <div className="text-sm text-slate-600">Users</div>
+                </div>
+                <div>
+                  <TrendingUp className="inline w-8 h-8 text-green-500 mx-auto" />
+                  <div className="text-sm text-slate-600">Daily</div>
                 </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+              
+              <SearchBar locale={locale} placeholder={t.search_placeholder} />
+              
+              <div className="flex gap-4 justify-center mt-6">
+                <Button asChild size="lg" className="rounded-full shadow-lg h-12 px-8">
+                  <Link href={`/${locale}/tools`}>
+                    {t.browse_all}
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="rounded-full h-12 px-8">
+                  <Link href={`/${locale}/news`}>
+                    {t.latest_news}
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      {/* Latest News Section */}
-      <section className="bg-gray-50 py-16 px-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">{t.latest_news}</h2>
-            <Link href={`/${locale}/news`} className="text-blue-600 hover:underline">
-              {t.view_all_news} →
-            </Link>
+        {/* Category Scroll Bar */}
+        <CategoryScrollBar locale={locale} />
+
+        {/* Trending Tools */}
+        <TrendingTools locale={locale} tools={trendingTools || []} />
+
+        {/* Quick Discovery */}
+        <QuickDiscovery 
+          locale={locale}
+          newest={newestTools || []}
+          popular={popularTools || []}
+          featured={featuredToolsQuick || []}
+          free={freeTools || []}
+          trending={trendingToolsQuick || []}
+          updated={updatedTools || []}
+          community={communityTools || []}
+          special={specialTools || []}
+        />
+
+        {/* 广告位 - Skool 社群 */}
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <AdSlot type="banner" height="h-28" locale={locale} />
+        </div>
+
+        {/* Featured Tools Section */}
+        <section className="max-w-7xl mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-bold mb-1">{t.featured_tools}</h2>
+              <p className="text-sm text-slate-600">{t.hand_picked}</p>
+            </div>
+            <Button asChild variant="ghost" className="group hidden md:flex">
+              <Link href={`/${locale}/tools`}>
+                {t.view_all_tools}
+                <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </Button>
           </div>
           
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
-            {latestNews?.map((news) => (
-              <Link
-                key={news.slug}
-                href={`/${locale}/news/${news.slug}`}
-                className="bg-white rounded-2xl overflow-hidden hover:shadow-lg transition group"
-              >
-                {news.cover_url && (
-                  <img 
-                    src={news.cover_url} 
-                    alt={news.title || ""} 
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                )}
-                <div className="p-6">
-                  <h3 className="font-semibold text-lg mb-2 group-hover:text-blue-600 transition line-clamp-2">
-                    {news.title}
-                  </h3>
-                  {news.summary && (
-                    <p className="text-sm text-gray-600 line-clamp-3 mb-3">{news.summary}</p>
-                  )}
-                  {news.published_at && (
-                    <div className="text-xs text-gray-400">
-                      {new Date(news.published_at).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US")}
+          <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {featuredTools?.map((tool) => (
+              <Card key={tool.id} className="group hover:shadow-lg transition-all hover:-translate-y-0.5 border hover:border-blue-200">
+                <CardHeader className="pb-2 pt-3 px-3">
+                  <div className="flex items-start gap-2">
+                    {tool.logo_url ? (
+                      <img src={tool.logo_url} alt={tool.name} className="w-10 h-10 rounded-lg object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-slate-400 font-semibold text-sm">
+                        {tool.name?.charAt(0)}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-sm group-hover:text-blue-600 transition line-clamp-1">
+                        <Link href={`/${locale}/tools/${tool.slug}`}>
+                          {tool.name}
+                        </Link>
+                      </CardTitle>
+                      {tool.pricing && (
+                        <Badge variant="secondary" className="mt-1 text-xs">
+                          {tool.pricing}
+                        </Badge>
+                      )}
                     </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-3 pb-3 pt-0">
+                  {tool.short_desc && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {tool.short_desc}
+                    </p>
                   )}
-                </div>
-              </Link>
+                </CardContent>
+              </Card>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* About Section */}
-      <section className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h2 className="text-3xl font-bold mb-6">{t.about_title}</h2>
-        <p className="text-lg text-gray-600 leading-relaxed">
-          {t.about_desc}
-        </p>
-      </section>
-    </div>
+        {/* Latest News - 列表式布局 */}
+        <section className="bg-slate-50 py-12 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold mb-1">{t.latest_news}</h2>
+                <p className="text-sm text-slate-600">{t.stay_updated}</p>
+              </div>
+              <Button asChild variant="ghost" className="group">
+                <Link href={`/${locale}/news`}>
+                  {t.view_all_news}
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </Button>
+            </div>
+            
+            {/* 新闻列表 */}
+            <Card className="border-2 overflow-hidden">
+              <div className="divide-y">
+                {latestNews?.slice(0, 10).map((news, index) => {
+                  const { icon, gradient } = getNewsPlaceholder(index);
+                  const newsTitle = getTitle(news);
+                  const newsSummary = getSummary(news);
+
+                  return (
+                    <Link
+                      key={news.slug}
+                      href={`/${locale}/news/${news.slug}`}
+                      className="block hover:bg-blue-50/50 transition-colors group"
+                    >
+                      <div className="flex items-center gap-4 p-4">
+                        {/* 排名徽章 */}
+                        <div className="flex-shrink-0">
+                          {index < 3 ? (
+                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} text-white flex items-center justify-center text-xl font-bold shadow-lg`}>
+                              {icon}
+                            </div>
+                          ) : (
+                            <div className={`w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex flex-col items-center justify-center`}>
+                              <div className="text-xs font-semibold opacity-60">No.</div>
+                              <div className="text-lg font-bold leading-none">{index + 1}</div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* 标题和元信息 */}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-base line-clamp-2 group-hover:text-blue-600 transition mb-2">
+                            {newsTitle}
+                          </h3>
+                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                            {news.published_at && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-slate-400">📅</span>
+                                {new Date(news.published_at).toLocaleDateString(isZh ? "zh-CN" : "en-US", {
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                            )}
+                            {news.source && (
+                              <Badge variant="secondary" className="text-xs">
+                                {news.source}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 箭头指示 */}
+                        <div className="flex-shrink-0 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all">
+                          <ArrowRight className="w-5 h-5" />
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+              
+              {/* 底部查看更多 */}
+              <div className="border-t bg-slate-50/50 p-4 text-center">
+                <Button asChild variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+                  <Link href={`/${locale}/news`}>
+                    {t.view_all_news} →
+                  </Link>
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        {/* Why Choose Us Section */}
+        <section className="max-w-7xl mx-auto px-4 py-12">
+          <h2 className="text-2xl font-bold text-center mb-8">{t.why_choose}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {t.reasons.map((reason, index) => (
+              <Card key={index} className="text-center p-4 hover:shadow-lg transition-shadow border-2 hover:border-blue-200">
+                <div className="text-3xl mb-3">{reason.icon}</div>
+                <h3 className="font-bold text-sm mb-1">{reason.title}</h3>
+                <p className="text-xs text-slate-600">{reason.desc}</p>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* 广告位 - 底部 */}
+        <div className="max-w-7xl mx-auto px-4 pb-12">
+          <AdSlot type="banner" height="h-32" locale={locale} />
+        </div>
+
+        {/* 最近更新滚动横幅 */}
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 py-4 border-y">
+          <div className="max-w-7xl mx-auto px-4">
+            <div className="flex items-center gap-4">
+              <Badge variant="default" className="flex-shrink-0">
+                {isZh ? "📢 最近更新" : "📢 Recent Updates"}
+              </Badge>
+              <div className="flex gap-6 overflow-x-auto scrollbar-hide">
+                {trendingTools?.slice(0, 10).map((tool) => (
+                  <Link
+                    key={tool.id}
+                    href={`/${locale}/tools/${tool.slug}`}
+                    className="flex items-center gap-2 flex-shrink-0 hover:text-blue-600 transition"
+                  >
+                    {tool.logo_url && (
+                      <img src={tool.logo_url} alt={tool.name} className="w-6 h-6 rounded object-cover" />
+                    )}
+                    <span className="text-sm font-medium whitespace-nowrap">{tool.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer locale={locale} />
+    </>
   );
 }
