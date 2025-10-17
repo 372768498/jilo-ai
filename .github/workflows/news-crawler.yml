@@ -1,21 +1,24 @@
-name: News Crawler
+name: Daily News Crawler
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时运行
-  workflow_dispatch:
+    # 每天 UTC 0:00, 6:00, 12:00, 18:00 运行（北京时间 8:00, 14:00, 20:00, 02:00）
+    - cron: '0 0,6,12,18 * * *'
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   crawl-news:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
+          cache: 'pip'
       
       - name: Install dependencies
         run: |
@@ -25,9 +28,16 @@ jobs:
       - name: Run news crawler
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           cd crawler
           python rss_news_crawler.py
-          
+      
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: crawler-logs
+          path: crawler/*.log
+          retention-days: 7
