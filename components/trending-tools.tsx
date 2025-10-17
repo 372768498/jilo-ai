@@ -11,6 +11,10 @@ type TrendingToolsProps = {
 export default function TrendingTools({ locale, tools }: TrendingToolsProps) {
   const isZh = locale === "zh";
 
+  // 获取本地化名称和描述
+  const getToolName = (tool: any) => isZh ? (tool.name_zh || tool.name_en) : tool.name_en;
+  const getToolDesc = (tool: any) => isZh ? (tool.tagline_zh || tool.tagline_en) : tool.tagline_en;
+
   return (
     <div className="bg-gradient-to-r from-orange-50 via-red-50 to-pink-50 py-6">
       <div className="max-w-7xl mx-auto px-4">
@@ -21,41 +25,44 @@ export default function TrendingTools({ locale, tools }: TrendingToolsProps) {
           </h2>
         </div>
         
-        {/* 2行，每行8个，可横向滚动 */}
+        {/* 2行，每行8个，固定宽度，可横向滚动 */}
         <div className="space-y-3">
+          {/* 第一行 */}
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {tools.slice(0, 8).map((tool) => (
               <Link
                 key={tool.id}
                 href={`/${locale}/tools/${tool.slug}`}
-                className="flex-shrink-0"
+                className="flex-shrink-0 w-56"
               >
-                <Card className="w-48 hover:shadow-lg transition-all hover:-translate-y-0.5 border hover:border-orange-300">
+                <Card className="h-full hover:shadow-lg transition-all hover:-translate-y-0.5 border hover:border-orange-300">
                   <CardContent className="p-3">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-start gap-2 mb-2">
                       {tool.logo_url ? (
                         <img 
                           src={tool.logo_url} 
-                          alt={tool.name} 
-                          className="w-10 h-10 rounded-lg object-cover"
+                          alt={getToolName(tool)} 
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
-                          {tool.name?.charAt(0)}
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {getToolName(tool)?.charAt(0)}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-xs truncate">{tool.name}</h3>
-                        {tool.pricing && (
-                          <Badge variant="secondary" className="text-xs mt-0.5">
-                            {tool.pricing}
+                        <h3 className="font-semibold text-sm line-clamp-1 mb-1">
+                          {getToolName(tool)}
+                        </h3>
+                        {tool.pricing_type && (
+                          <Badge variant="secondary" className="text-xs">
+                            {tool.pricing_type}
                           </Badge>
                         )}
                       </div>
                     </div>
-                    {tool.short_desc && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {tool.short_desc}
+                    {getToolDesc(tool) && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 h-8">
+                        {getToolDesc(tool)}
                       </p>
                     )}
                   </CardContent>
@@ -64,39 +71,42 @@ export default function TrendingTools({ locale, tools }: TrendingToolsProps) {
             ))}
           </div>
           
+          {/* 第二行 */}
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {tools.slice(8, 16).map((tool) => (
               <Link
                 key={tool.id}
                 href={`/${locale}/tools/${tool.slug}`}
-                className="flex-shrink-0"
+                className="flex-shrink-0 w-56"
               >
-                <Card className="w-48 hover:shadow-lg transition-all hover:-translate-y-0.5 border hover:border-orange-300">
+                <Card className="h-full hover:shadow-lg transition-all hover:-translate-y-0.5 border hover:border-orange-300">
                   <CardContent className="p-3">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-start gap-2 mb-2">
                       {tool.logo_url ? (
                         <img 
                           src={tool.logo_url} 
-                          alt={tool.name} 
-                          className="w-10 h-10 rounded-lg object-cover"
+                          alt={getToolName(tool)} 
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-sm">
-                          {tool.name?.charAt(0)}
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                          {getToolName(tool)?.charAt(0)}
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-xs truncate">{tool.name}</h3>
-                        {tool.pricing && (
-                          <Badge variant="secondary" className="text-xs mt-0.5">
-                            {tool.pricing}
+                        <h3 className="font-semibold text-sm line-clamp-1 mb-1">
+                          {getToolName(tool)}
+                        </h3>
+                        {tool.pricing_type && (
+                          <Badge variant="secondary" className="text-xs">
+                            {tool.pricing_type}
                           </Badge>
                         )}
                       </div>
                     </div>
-                    {tool.short_desc && (
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {tool.short_desc}
+                    {getToolDesc(tool) && (
+                      <p className="text-xs text-muted-foreground line-clamp-2 h-8">
+                        {getToolDesc(tool)}
                       </p>
                     )}
                   </CardContent>

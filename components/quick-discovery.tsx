@@ -20,6 +20,9 @@ export default function QuickDiscovery({
 }: QuickDiscoveryProps) {
   const isZh = locale === "zh";
 
+  // 获取本地化名称
+  const getToolName = (tool: any) => isZh ? (tool.name_zh || tool.name_en) : tool.name_en;
+
   const sections = [
     {
       title: isZh ? "最新收录" : "Newest",
@@ -97,16 +100,16 @@ export default function QuickDiscovery({
                     {tool.logo_url ? (
                       <img 
                         src={tool.logo_url} 
-                        alt={tool.name} 
+                        alt={getToolName(tool)} 
                         className="w-7 h-7 rounded object-cover"
                       />
                     ) : (
                       <div className="w-7 h-7 rounded bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-xs font-semibold">
-                        {tool.name?.charAt(0)}
+                        {getToolName(tool)?.charAt(0)}
                       </div>
                     )}
                     <p className="text-xs font-medium truncate group-hover:text-blue-600 transition flex-1">
-                      {tool.name}
+                      {getToolName(tool)}
                     </p>
                   </div>
                 </Link>
