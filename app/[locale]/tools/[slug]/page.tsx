@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import SeoJsonLd from "@/components/SeoJsonLd";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
 import Link from "next/link";
 import { CheckCircle2, XCircle } from "lucide-react";
 import type { Metadata } from "next";
@@ -400,6 +401,12 @@ export default async function ToolDetailPage({ params }: PageProps) {
         </section>
       )}
     </div>
+
+    {/* Contextual Discovery — 动态三层内链 */}
+    <div className="max-w-4xl mx-auto px-4 pb-8">
+      <ContextualDiscovery slug={slug} pageType="tool" locale={locale} />
+    </div>
+
     <Footer locale={locale} />
     </>
   );
