@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
+import { generateAlternativeSchema } from "@/lib/schema-generator";
 import fs from "fs";
 import path from "path";
 
@@ -187,48 +188,31 @@ export default function AlternativePage({ params }: PageProps) {
   const isZh = params.locale === 'zh';
   const content = getContent(params.slug);
 
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": isZh ? meta.title_zh : meta.title_en,
-    "description": isZh ? meta.description_zh : meta.description_en,
-    "datePublished": meta.lastUpdated,
-    "dateModified": meta.lastUpdated,
-    "author": { "@type": "Organization", "name": "Jilo.ai", "url": "https://jilo.ai" },
-    "publisher": { "@type": "Organization", "name": "Jilo.ai", "url": "https://jilo.ai" },
-    "mainEntityOfPage": `https://jilo.ai/${params.locale}/alternatives/${params.slug}`,
-  };
-
+  // Extract FAQs from content
   const faqItems = content?.match(/## FAQ[\s\S]*$/)?.[0]?.match(/### .+[\s\S]*?(?=###|$)/g) || [];
-  const faqSchema = faqItems.length > 0 ? {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": faqItems.map(faq => {
-      const lines = faq.trim().split('\n');
-      const question = lines[0].replace(/^### /, '').trim();
-      const answer = lines.slice(1).join(' ').replace(/<[^>]*>/g, '').trim();
-      return {
-        "@type": "Question",
-        "name": question,
-        "acceptedAnswer": { "@type": "Answer", "text": answer }
-      };
-    })
-  } : null;
+  const faqs = faqItems.map(faq => {
+    const lines = faq.trim().split('\n');
+    return {
+      question: lines[0].replace(/^### /, '').trim(),
+      answer: lines.slice(1).join(' ').replace(/<[^>]*>/g, '').trim(),
+    };
+  }).filter(f => f.question && f.answer);
+
+  // Protocol 4 unified Schema
+  const schemas = generateAlternativeSchema(params.slug, params.locale, {
+    description: isZh ? meta.description_zh : meta.description_en,
+    faqs,
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar locale={params.locale} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
-      {faqSchema && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />}
+      {schemas.map((schema, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      ))}
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href={`/${params.locale}`} className="hover:text-foreground">Home</Link>
-          <span>/</span>
-          <Link href={`/${params.locale}/alternatives`} className="hover:text-foreground">Alternatives</Link>
-          <span>/</span>
-          <span>{meta.tool}</span>
-        </div>
+        <ContextualBreadcrumbs slug={params.slug} pageType="alternative" locale={params.locale} />
 
         <div className="mb-8">
           <Badge className="mb-3">{meta.category}</Badge>

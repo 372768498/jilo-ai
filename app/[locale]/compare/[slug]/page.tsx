@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
+import { generateComparisonSchema } from "@/lib/schema-generator";
 import fs from "fs";
 import path from "path";
 
@@ -306,60 +307,14 @@ export default function ComparisonPage({ params }: PageProps) {
   const description = isZh ? meta.description_zh : meta.description_en;
   const content = getComparisonContent(slug, locale);
 
-  // FAQ Schema
+  // Extract FAQs for Schema
   const faqs = content ? extractFAQ(content) : [];
-  const faqSchema = faqs.length > 0 ? {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": faqs.map(faq => ({
-      "@type": "Question",
-      "name": faq.question,
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": faq.answer,
-      },
-    })),
-  } : null;
 
-  // SoftwareApplication Schema for both tools
-  const toolASchema = {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": meta.toolA,
-    "applicationCategory": "AI Tool",
-    "operatingSystem": "Web",
-    "url": `https://jilo.ai/${locale}/tools/${meta.toolA.toLowerCase().replace(/\s+/g, '-')}`,
-  };
-
-  const toolBSchema = {
-    "@context": "https://schema.org", 
-    "@type": "SoftwareApplication",
-    "name": meta.toolB,
-    "applicationCategory": "AI Tool",
-    "operatingSystem": "Web",
-    "url": `https://jilo.ai/${locale}/tools/${meta.toolB.toLowerCase().replace(/\s+/g, '-')}`,
-  };
-
-  // Article Schema
-  const articleSchema = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": title,
-    "description": description,
-    "datePublished": meta.lastUpdated,
-    "dateModified": meta.lastUpdated,
-    "author": {
-      "@type": "Organization",
-      "name": "Jilo.ai",
-      "url": "https://jilo.ai",
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "Jilo.ai", 
-      "url": "https://jilo.ai",
-    },
-    "mainEntityOfPage": `https://jilo.ai/${locale}/compare/${slug}`,
-  };
+  // Unified Schema from Protocol 4 generator
+  const schemas = generateComparisonSchema(slug, locale, {
+    description,
+    faqs: faqs.map(f => ({ question: f.question, answer: f.answer })),
+  });
 
   const t = isZh ? {
     home: "首页",
@@ -430,39 +385,18 @@ export default function ComparisonPage({ params }: PageProps) {
     <div className="min-h-screen bg-background">
       <Navbar locale={locale} />
       
-      {/* Schema.org JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(toolASchema) }}
-      />
-      <script
-        type="application/ld+json" 
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(toolBSchema) }}
-      />
-      {faqSchema && (
+      {/* Schema.org JSON-LD — Protocol 4 unified */}
+      {schemas.map((schema, i) => (
         <script
+          key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
-      )}
+      ))}
 
       <article className="max-w-6xl mx-auto px-4 py-8">
-        {/* 面包屑 */}
-        <nav className="text-sm mb-6 text-muted-foreground">
-          <Link href={`/${locale}`} className="hover:text-foreground">
-            {t.home}
-          </Link>
-          {" / "}
-          <Link href={`/${locale}/compare`} className="hover:text-foreground">
-            {t.compare}
-          </Link>
-          {" / "}
-          <span className="text-foreground">{meta.toolA} {t.vs} {meta.toolB}</span>
-        </nav>
+        {/* 面包屑 — Protocol 2 dynamic */}
+        <ContextualBreadcrumbs slug={slug} pageType="comparison" locale={locale} />
 
         {/* 头部对比 */}
         <header className="mb-10">

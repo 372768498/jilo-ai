@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
+import { generateBestListSchema } from "@/lib/schema-generator";
 import fs from "fs";
 import path from "path";
 
@@ -153,31 +154,20 @@ export default function BestToolPage({ params }: PageProps) {
   const isZh = params.locale === 'zh';
   const content = getContent(params.slug);
 
-  const schema = {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    "headline": isZh ? meta.title_zh : meta.title_en,
-    "description": isZh ? meta.description_zh : meta.description_en,
-    "datePublished": meta.lastUpdated,
-    "dateModified": meta.lastUpdated,
-    "author": { "@type": "Organization", "name": "Jilo.ai", "url": "https://jilo.ai" },
-    "publisher": { "@type": "Organization", "name": "Jilo.ai", "url": "https://jilo.ai" },
-    "mainEntityOfPage": `https://jilo.ai/${params.locale}/best/${params.slug}`,
-  };
+  // Protocol 4 unified Schema
+  const schemas = generateBestListSchema(params.slug, params.locale, {
+    description: isZh ? meta.description_zh : meta.description_en,
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar locale={params.locale} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      {schemas.map((s, i) => (
+        <script key={i} type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(s) }} />
+      ))}
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-          <Link href={`/${params.locale}`} className="hover:text-foreground">Home</Link>
-          <span>/</span>
-          <Link href={`/${params.locale}/best`} className="hover:text-foreground">Best Tools</Link>
-          <span>/</span>
-          <span>{meta.category}</span>
-        </div>
+        <ContextualBreadcrumbs slug={params.slug} pageType="best-list" locale={params.locale} />
 
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-3">
