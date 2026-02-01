@@ -19,6 +19,16 @@ const bestLists = [
   { slug: "best-ai-translation-tools", category: "Translation", icon: "🌐", count: 15, desc_en: "Best AI tools for translation and localization", desc_zh: "最佳AI翻译工具" },
   { slug: "best-ai-tools-for-education", category: "Education", icon: "🎓", count: 15, desc_en: "Best AI tools for learning, teaching, and education", desc_zh: "最佳AI教育工具" },
   { slug: "best-free-ai-tools", category: "Free Tools", icon: "🆓", count: 20, desc_en: "Best free AI tools — no credit card required", desc_zh: "最佳免费AI工具" },
+  { slug: "best-ai-chatbots", category: "Chatbots", icon: "💬", count: 15, desc_en: "Best AI chatbots for conversation and assistance", desc_zh: "最佳AI聊天机器人" },
+  { slug: "best-ai-image-generators", category: "Image Generation", icon: "🖼️", count: 15, desc_en: "Best AI image generators for art and design", desc_zh: "最佳AI图像生成器" },
+  { slug: "best-ai-marketing-tools", category: "Marketing", icon: "📢", count: 15, desc_en: "Best AI tools for marketing and growth", desc_zh: "最佳AI营销工具" },
+  { slug: "best-ai-productivity-tools", category: "Productivity", icon: "⚡", count: 15, desc_en: "Best AI tools to boost your workflow", desc_zh: "最佳AI效率工具" },
+  { slug: "best-ai-search-engines", category: "Search", icon: "🔍", count: 10, desc_en: "Best AI-powered search engines", desc_zh: "最佳AI搜索引擎" },
+  { slug: "best-ai-presentation-tools", category: "Presentations", icon: "📊", count: 10, desc_en: "Best AI tools for presentations", desc_zh: "最佳AI演示工具" },
+  { slug: "best-ai-music-generators", category: "Music", icon: "🎵", count: 10, desc_en: "Best AI music generation tools", desc_zh: "最佳AI音乐工具" },
+  { slug: "best-ai-meeting-assistants", category: "Meetings", icon: "🤝", count: 10, desc_en: "Best AI meeting assistants and note-takers", desc_zh: "最佳AI会议助手" },
+  { slug: "best-ai-tools-for-startups", category: "Startups", icon: "🚀", count: 15, desc_en: "Essential AI tools for startups", desc_zh: "创业必备AI工具" },
+  { slug: "best-ai-tools-for-developers", category: "Developers", icon: "👨‍💻", count: 15, desc_en: "Best AI tools for software developers", desc_zh: "开发者AI工具" },
 ];
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

@@ -141,7 +141,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // 最佳工具页（高优先级 — 程序化SEO核心）
-  const bestSlugs = ['best-ai-writing-tools', 'best-ai-coding-tools', 'best-ai-design-tools', 'best-ai-video-tools', 'best-ai-tools-for-business', 'best-ai-data-analysis-tools', 'best-ai-voice-tools', 'best-ai-translation-tools', 'best-ai-tools-for-education', 'best-free-ai-tools']
+  const bestSlugs = ['best-ai-writing-tools', 'best-ai-coding-tools', 'best-ai-design-tools', 'best-ai-video-tools', 'best-ai-tools-for-business', 'best-ai-data-analysis-tools', 'best-ai-voice-tools', 'best-ai-translation-tools', 'best-ai-tools-for-education', 'best-free-ai-tools', 'best-ai-chatbots', 'best-ai-image-generators', 'best-ai-marketing-tools', 'best-ai-productivity-tools', 'best-ai-search-engines', 'best-ai-presentation-tools', 'best-ai-music-generators', 'best-ai-meeting-assistants', 'best-ai-tools-for-startups', 'best-ai-tools-for-developers']
   const bestRoutes: MetadataRoute.Sitemap = []
   for (const locale of locales) {
     bestRoutes.push({

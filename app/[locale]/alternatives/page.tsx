@@ -19,6 +19,16 @@ const alternatives = [
   { slug: "perplexity-alternatives", tool: "Perplexity", category: "AI Search", count: 10, icon: "🔍", desc_en: "Best Perplexity alternatives for AI search", desc_zh: "最佳Perplexity替代方案" },
   { slug: "elevenlabs-alternatives", tool: "ElevenLabs", category: "AI Voice", count: 10, icon: "🎙️", desc_en: "Best ElevenLabs alternatives for AI voice", desc_zh: "最佳ElevenLabs替代方案" },
   { slug: "runway-alternatives", tool: "Runway", category: "AI Video", count: 10, icon: "🎬", desc_en: "Best Runway alternatives for AI video", desc_zh: "最佳Runway替代方案" },
+  { slug: "cursor-alternatives", tool: "Cursor", category: "AI Coding", count: 10, icon: "⌨️", desc_en: "Best Cursor alternatives for AI coding", desc_zh: "最佳Cursor替代方案" },
+  { slug: "deepseek-alternatives", tool: "DeepSeek", category: "AI Chatbots", count: 10, icon: "🧠", desc_en: "Best DeepSeek alternatives for AI reasoning", desc_zh: "最佳DeepSeek替代方案" },
+  { slug: "dall-e-alternatives", tool: "DALL-E", category: "AI Art", count: 10, icon: "🎨", desc_en: "Best DALL-E alternatives for AI image generation", desc_zh: "最佳DALL-E替代方案" },
+  { slug: "synthesia-alternatives", tool: "Synthesia", category: "AI Video", count: 10, icon: "🎥", desc_en: "Best Synthesia alternatives for AI video", desc_zh: "最佳Synthesia替代方案" },
+  { slug: "copy-ai-alternatives", tool: "Copy.ai", category: "AI Marketing", count: 10, icon: "📝", desc_en: "Best Copy.ai alternatives for copywriting", desc_zh: "最佳Copy.ai替代方案" },
+  { slug: "deepl-alternatives", tool: "DeepL", category: "AI Translation", count: 10, icon: "🌐", desc_en: "Best DeepL alternatives for translation", desc_zh: "最佳DeepL替代方案" },
+  { slug: "otter-ai-alternatives", tool: "Otter.ai", category: "AI Productivity", count: 10, icon: "🦦", desc_en: "Best Otter.ai alternatives for transcription", desc_zh: "最佳Otter.ai替代方案" },
+  { slug: "figma-alternatives", tool: "Figma", category: "AI Design", count: 10, icon: "🎨", desc_en: "Best Figma alternatives with AI features", desc_zh: "最佳Figma替代方案" },
+  { slug: "writesonic-alternatives", tool: "Writesonic", category: "AI Writing", count: 10, icon: "✍️", desc_en: "Best Writesonic alternatives for content", desc_zh: "最佳Writesonic替代方案" },
+  { slug: "descript-alternatives", tool: "Descript", category: "AI Video", count: 10, icon: "🎬", desc_en: "Best Descript alternatives for editing", desc_zh: "最佳Descript替代方案" },
 ];
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
