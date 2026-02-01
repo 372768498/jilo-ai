@@ -47,10 +47,11 @@ export async function generateVideo(
     // 估算成本（基于时长）
     const estimatedCost = duration === 4 ? 0.13 : duration === 8 ? 0.22 : 0.31;
 
+    const res = result as any;
     return {
-      videoUrl: result.video?.url || '',
+      videoUrl: res.video?.url || '',
       duration,
-      seed: result.seed,
+      seed: res.seed,
       cost: estimatedCost,
     };
   } catch (error: any) {

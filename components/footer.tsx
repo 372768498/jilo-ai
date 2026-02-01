@@ -29,12 +29,12 @@ export default function Footer({ locale }: FooterProps) {
       ]
     },
     about: {
-      title: "关于",
+      title: "更多",
       links: [
-        { name: "关于我们", href: "/about" },
-        { name: "联系我们", href: "/contact" },
-        { name: "隐私政策", href: "/privacy" },
-        { name: "服务条款", href: "/terms" },
+        { name: "深度评测", href: `/${locale}/reviews` },
+        { name: "工具对比", href: "/compare" },
+        { name: "推广合作", href: `/${locale}/promote` },
+        { name: "提交工具", href: "/submit" },
       ]
     }
   } : {
@@ -59,12 +59,12 @@ export default function Footer({ locale }: FooterProps) {
       ]
     },
     about: {
-      title: "About",
+      title: "More",
       links: [
-        { name: "About Us", href: "/about" },
-        { name: "Contact", href: "/contact" },
-        { name: "Privacy Policy", href: "/privacy" },
-        { name: "Terms of Service", href: "/terms" },
+        { name: "Reviews", href: `/${locale}/reviews` },
+        { name: "Compare Tools", href: "/compare" },
+        { name: "Promote Your Tool", href: `/${locale}/promote` },
+        { name: "Submit Tool", href: "/submit" },
       ]
     }
   };

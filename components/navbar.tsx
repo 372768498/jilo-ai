@@ -16,13 +16,19 @@ export default function Navbar({ locale }: NavbarProps) {
   const navigation = isZh ? [
     { name: "首页", href: `/${locale}` },
     { name: "AI 工具", href: `/${locale}/tools` },
-    { name: "AI 新闻", href: `/${locale}/news` },
-    { name: "提交工具", href: "/submit" },
+    { name: "对比", href: `/${locale}/compare` },
+    { name: "替代方案", href: `/${locale}/alternatives` },
+    { name: "最佳推荐", href: `/${locale}/best` },
+    { name: "评测", href: `/${locale}/reviews` },
+    { name: "新闻", href: `/${locale}/news` },
   ] : [
     { name: "Home", href: `/${locale}` },
     { name: "AI Tools", href: `/${locale}/tools` },
-    { name: "AI News", href: `/${locale}/news` },
-    { name: "Submit", href: "/submit" },
+    { name: "Compare", href: `/${locale}/compare` },
+    { name: "Alternatives", href: `/${locale}/alternatives` },
+    { name: "Best Tools", href: `/${locale}/best` },
+    { name: "Reviews", href: `/${locale}/reviews` },
+    { name: "News", href: `/${locale}/news` },
   ];
 
   return (

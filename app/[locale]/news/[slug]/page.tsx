@@ -1,5 +1,7 @@
 // app/[locale]/news/[slug]/page.tsx
 import { supabase } from "@/lib/supabase";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import type { Metadata } from "next";
 
 type PageProps = {
@@ -81,11 +83,15 @@ export default async function NewsDetailPage({ params }: PageProps) {
 
   if (!n) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16">
-        <h1 className="text-2xl font-semibold mb-2">
-          {locale === "zh" ? "未找到该新闻" : "News not found"}
-        </h1>
-      </div>
+      <>
+        <Navbar locale={locale} />
+        <div className="max-w-3xl mx-auto px-4 py-16">
+          <h1 className="text-2xl font-semibold mb-2">
+            {locale === "zh" ? "未找到该新闻" : "News not found"}
+          </h1>
+        </div>
+        <Footer locale={locale} />
+      </>
     );
   }
 
@@ -96,28 +102,40 @@ export default async function NewsDetailPage({ params }: PageProps) {
   const published = n.published_at ? new Date(n.published_at).toISOString() : undefined;
   const updated = n.updated_at ? new Date(n.updated_at).toISOString() : published;
 
-  // JSON-LD（Article）
+  // JSON-LD（NewsArticle Schema for GEO）
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": "NewsArticle",
     headline: title,
     description: summary || undefined,
     image: cover ? [cover] : undefined,
     datePublished: published,
     dateModified: updated,
-    author: { "@type": "Organization", name: "Jilo.ai" },
+    author: { 
+      "@type": "Organization", 
+      "name": "Jilo.ai",
+      "url": "https://jilo.ai"
+    },
     publisher: {
       "@type": "Organization",
       name: "Jilo.ai",
-      logo: cover ? { "@type": "ImageObject", url: cover } : undefined,
+      url: "https://jilo.ai",
+      logo: { 
+        "@type": "ImageObject", 
+        url: "https://jilo.ai/icon.png" 
+      },
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `https://www.jilo.ai/${locale}/news/${slug}`,
+      "@id": `https://jilo.ai/${locale}/news/${slug}`,
     },
+    url: `https://jilo.ai/${locale}/news/${slug}`,
+    wordCount: content ? Math.floor(content.length / (locale === 'zh' ? 2 : 5)) : 0,
   };
 
   return (
+    <>
+    <Navbar locale={locale} />
     <div className="max-w-3xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-semibold mb-3">{title}</h1>
 
@@ -165,5 +183,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
     </div>
+    <Footer locale={locale} />
+    </>
   );
 }

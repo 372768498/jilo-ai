@@ -2,4 +2,5 @@
 
 export * from './openai-client';
 export * from './fal-client';
-export * from './types';
+export type { Scene, VideoScript, VideoFormData, GenerationProgress, GeneratedVideo } from './types';
+export { PLATFORMS, DURATIONS, ASPECT_RATIOS, LANGUAGES } from './types';

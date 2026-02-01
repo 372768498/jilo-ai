@@ -5,10 +5,36 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import type { Metadata } from "next";
 
 type PageProps = {
   params: { locale: string };
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const isZh = params?.locale === 'zh';
+  const locale = params?.locale || 'en';
+  const altLocale = isZh ? 'en' : 'zh';
+
+  return {
+    title: isZh ? 'AI行业资讯 - 最新AI新闻动态' : 'AI News - Latest AI Industry Updates',
+    description: isZh
+      ? '追踪AI行业最新动态，了解人工智能领域的突破性进展、产品发布和行业趋势。'
+      : 'Stay updated with the latest AI industry news, breakthrough developments, product launches and trends.',
+    openGraph: {
+      title: isZh ? 'AI行业资讯 | Jilo.ai' : 'AI News | Jilo.ai',
+      description: isZh ? '追踪AI行业最新动态' : 'Latest AI industry updates',
+      url: `https://jilo.ai/${locale}/news`,
+    },
+    alternates: {
+      canonical: `https://jilo.ai/${locale}/news`,
+      languages: {
+        [locale]: `https://jilo.ai/${locale}/news`,
+        [altLocale]: `https://jilo.ai/${altLocale}/news`,
+      },
+    },
+  };
+}
 
 export default async function NewsListPage({ params }: PageProps) {
   const locale = params?.locale || "en";

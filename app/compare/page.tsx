@@ -5,6 +5,8 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import CompareTable from "@/components/CompareTable";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import Link from "next/link";
 
 type Tool = {
@@ -95,13 +97,17 @@ function CompareContent() {
 
 export default function ComparePage() {
   return (
-    <Suspense fallback={
-      <div className="max-w-5xl mx-auto px-4 py-10">
-        <h1 className="text-2xl font-semibold mb-4">Compare tools</h1>
-        <div className="text-muted-foreground">Loading…</div>
-      </div>
-    }>
-      <CompareContent />
-    </Suspense>
+    <>
+      <Navbar locale="en" />
+      <Suspense fallback={
+        <div className="max-w-5xl mx-auto px-4 py-10">
+          <h1 className="text-2xl font-semibold mb-4">Compare tools</h1>
+          <div className="text-muted-foreground">Loading…</div>
+        </div>
+      }>
+        <CompareContent />
+      </Suspense>
+      <Footer locale="en" />
+    </>
   );
 }

@@ -1,0 +1,23 @@
+{
+  "name": "game-video-generator",
+  "version": "1.0.0",
+  "description": "Game promotional video generator using FAL.AI SORA2",
+  "type": "module",
+  "main": "test_prison_battle.js",
+  "scripts": {
+    "test": "node test_prison_battle.js",
+    "test:quick": "node test_fal_sora2.js",
+    "prison": "node test_prison_battle.js"
+  },
+  "keywords": [
+    "fal-ai",
+    "sora-2",
+    "video-generation",
+    "game-marketing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@fal-ai/serverless-client": "^0.14.3"
+  }
+}

@@ -33,10 +33,25 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: 'PerplexityBot',  // Perplexity
         allow: '/',
       },
+      {
+        userAgent: 'Baiduspider',  // 百度
+        allow: '/',
+      },
+      {
+        userAgent: 'Bytespider',  // 字节/抖音
+        allow: '/',
+      },
+      {
+        userAgent: '360Spider',  // 360搜索
+        allow: '/',
+      },
+      {
+        userAgent: 'Sogou',  // 搜狗
+        allow: '/',
+      },
     ],
     sitemap: [
-      'https://www.jilo.ai/sitemap.xml',
-      'https://www.jilo.ai/zh/sitemap.xml',
+      'https://jilo.ai/sitemap.xml',
     ],
   }
 }

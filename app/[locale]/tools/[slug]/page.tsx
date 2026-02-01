@@ -2,65 +2,63 @@
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import SeoJsonLd from "@/components/SeoJsonLd";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 import Link from "next/link";
 import { CheckCircle2, XCircle } from "lucide-react";
+import type { Metadata } from "next";
 
 type PageProps = { params: { locale: string; slug: string } };
 
-// 通用英文→中文翻译映射
-const TRANSLATIONS: Record<string, string> = {
-  // Feature Titles
-  "Natural Language Understanding": "自然语言理解",
-  "Content Generation": "内容生成",
-  "Coding Assistance": "编程辅助",
-  "24/7 Availability": "全天候可用",
-  "Multi-Topic Support": "多主题支持",
-  "Interactive Conversations": "互动对话",
-  "Customizable Responses": "可自定义响应",
-  
-  // Feature Descriptions
-  "ChatGPT can comprehend and respond to human language effectively.": "ChatGPT能够有效理解和回应人类语言。",
-  "Easily create articles, essays, and creative writing with AI support.": "借助AI支持轻松创建文章、论文和创意写作。",
-  "Get help with coding tasks, debugging, and programming concepts.": "获取编程任务、调试和编程概念方面的帮助。",
-  "Access assistance anytime, anywhere, without waiting for human help.": "随时随地获取帮助，无需等待人工支持。",
-  "Engage on a wide range of subjects, from science to pop culture.": "涵盖从科学到流行文化的广泛主题。",
-  "Enjoy seamless, back-and-forth dialogue with the AI.": "享受与AI的无缝双向对话。",
-  "Tailor tone and style based on user preferences.": "根据用户偏好定制语气和风格。",
-  
-  // Pros
-  "Offers instant responses to a variety of queries.": "为各种查询提供即时响应。",
-  "Enhances productivity with quick content generation.": "通过快速内容生成提高工作效率。",
-  "Available 24/7, providing assistance whenever needed.": "全天候可用，随时提供帮助。",
-  "Learns and adapts to user preferences over time.": "随着时间推移学习并适应用户偏好。",
-  
-  // Cons
-  "May provide inaccurate or misleading information at times.": "有时可能提供不准确或误导性信息。",
-  "Lacks deep understanding of some niche topics.": "对某些小众话题缺乏深入理解。",
-  "Responses can occasionally be repetitive or generic.": "响应有时可能重复或过于笼统。",
-  
-  // Use Case Titles
-  "Content Writing": "内容写作",
-  "Homework Help": "作业帮助",
-  "Customer Support": "客户支持",
-  "Language Learning": "语言学习",
-  
-  // Use Case Descriptions
-  "Use ChatGPT to brainstorm and draft articles or blog posts effortlessly.": "使用ChatGPT轻松构思和撰写文章或博客文章。",
-  "Get explanations and assistance with complex homework problems.": "获取复杂作业问题的解释和帮助。",
-  "Deploy ChatGPT for automated responses to customer inquiries.": "部署ChatGPT自动回复客户咨询。",
-  "Practice conversations in different languages with the chatbot.": "与聊天机器人练习不同语言的对话。",
-  
-  // Common patterns
-  "AI-powered": "AI驱动",
-  "Machine Learning": "机器学习",
-  "Deep Learning": "深度学习",
-  "Neural Network": "神经网络",
-  "Real-time": "实时",
-  "Automated": "自动化",
-  "Advanced": "高级",
-  "Professional": "专业",
-  "Enterprise": "企业级",
-};
+// 动态 SEO Metadata
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { locale, slug } = params;
+  const isZh = locale === "zh";
+
+  const { data } = await supabase
+    .from("tools")
+    .select("name_en, name_zh, description_en, description_zh, meta_title_en, meta_title_zh, meta_description_en, meta_description_zh, logo_url, slug")
+    .eq("slug", slug)
+    .single();
+
+  if (!data) return {};
+
+  const name = isZh ? (data.name_zh || data.name_en) : data.name_en;
+  const description = isZh
+    ? (data.meta_description_zh || data.description_zh || data.description_en || '')
+    : (data.meta_description_en || data.description_en || '');
+  const title = isZh
+    ? (data.meta_title_zh || `${name} - AI工具评测与介绍`)
+    : (data.meta_title_en || `${name} - AI Tool Review & Overview`);
+  const altLocale = isZh ? 'en' : 'zh';
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://jilo.ai/${locale}/tools/${data.slug}`,
+      siteName: 'Jilo.ai',
+      type: 'article',
+      locale: isZh ? 'zh_CN' : 'en_US',
+      images: data.logo_url ? [{ url: data.logo_url, alt: name }] : undefined,
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+      images: data.logo_url ? [data.logo_url] : undefined,
+    },
+    alternates: {
+      canonical: `https://jilo.ai/${locale}/tools/${data.slug}`,
+      languages: {
+        [locale]: `https://jilo.ai/${locale}/tools/${data.slug}`,
+        [altLocale]: `https://jilo.ai/${altLocale}/tools/${data.slug}`,
+      },
+    },
+  };
+}
 
 // 获取本地化文本（支持双语格式）
 function getLocalizedText(item: any, field: string, locale: string): string {
@@ -127,31 +125,41 @@ export default async function ToolDetailPage({ params }: PageProps) {
   const metaTitle = isZh ? data.meta_title_zh : data.meta_title_en;
   const metaDescription = isZh ? data.meta_description_zh : data.meta_description_en;
 
-  // JSON-LD for SEO
+  // JSON-LD for SEO - Enhanced SoftwareApplication Schema
+  const getPrice = (pricingType: string) => {
+    if (pricingType?.toLowerCase() === "free" || pricingType?.toLowerCase() === "open-source") {
+      return "0";
+    }
+    return undefined;
+  };
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: name,
+    description: metaDescription || description,
     applicationCategory: "AI Tool",
     operatingSystem: "Web",
+    url: `https://jilo.ai/${locale}/tools/${data.slug}`,
+    image: data.logo_url || undefined,
     offers: {
       "@type": "Offer",
-      price: data.pricing_type === "free" ? "0" : undefined,
+      price: getPrice(data.pricing_type),
       priceCurrency: "USD",
     },
-    url: `https://www.jilo.ai/${locale}/tools/${data.slug}`,
-    description: metaDescription || description,
-    image: data.logo_url || undefined,
-    aggregateRating: data.rating
+    aggregateRating: data.rating && data.review_count
       ? {
           "@type": "AggregateRating",
-          ratingValue: data.rating,
-          reviewCount: data.review_count || 0,
+          ratingValue: data.rating.toString(),
+          bestRating: "5",
+          reviewCount: data.review_count,
         }
       : undefined,
   };
 
   return (
+    <>
+    <Navbar locale={locale} />
     <div className="max-w-5xl mx-auto px-4 py-10">
       <SeoJsonLd data={jsonLd} />
 
@@ -392,5 +400,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
         </section>
       )}
     </div>
+    <Footer locale={locale} />
+    </>
   );
 }

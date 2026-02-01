@@ -4,11 +4,37 @@ import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import type { Metadata } from "next";
 
 type PageProps = {
   params: { locale: string };
   searchParams: { category?: string };
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const isZh = params?.locale === 'zh';
+  const locale = params?.locale || 'en';
+  const altLocale = isZh ? 'en' : 'zh';
+
+  return {
+    title: isZh ? 'AI工具大全 - 发现最佳AI工具' : 'AI Tools Directory - Discover the Best AI Tools',
+    description: isZh
+      ? '浏览和发现最新最好的AI工具，涵盖写作、编程、设计、营销等多个领域。深度评测与对比分析。'
+      : 'Browse and discover the best AI tools across writing, coding, design, marketing and more. In-depth reviews and comparisons.',
+    openGraph: {
+      title: isZh ? 'AI工具大全 | Jilo.ai' : 'AI Tools Directory | Jilo.ai',
+      description: isZh ? '发现最佳AI工具，深度评测与对比' : 'Discover the best AI tools with in-depth reviews',
+      url: `https://jilo.ai/${locale}/tools`,
+    },
+    alternates: {
+      canonical: `https://jilo.ai/${locale}/tools`,
+      languages: {
+        [locale]: `https://jilo.ai/${locale}/tools`,
+        [altLocale]: `https://jilo.ai/${altLocale}/tools`,
+      },
+    },
+  };
+}
 
 export default async function ToolsListPage({ params, searchParams }: PageProps) {
   const locale = params?.locale || "en";
@@ -28,9 +54,6 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
     : allToolsList;
 
   const error = allError;
-
-  console.log("Filtered tools count:", toolsList?.length);
-  console.log("Selected category:", category);
 
   const toolsCount = allToolsList?.length || 0;
 

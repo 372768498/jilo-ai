@@ -3,6 +3,8 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
 
 export default function SubmitToolPage() {
   const [form, setForm] = useState({
@@ -62,6 +64,8 @@ export default function SubmitToolPage() {
   const PLATFORMS = ["web", "chrome", "ios", "android", "vscode"];
 
   return (
+    <>
+    <Navbar locale="en" />
     <div className="max-w-2xl mx-auto px-4 py-10">
       <h1 className="text-2xl font-semibold mb-2">Submit your AI tool</h1>
       <p className="text-sm text-muted-foreground mb-6">
@@ -160,9 +164,11 @@ export default function SubmitToolPage() {
           {busy ? "Submitting…" : "Submit"}
         </button>
 
-        {ok && <div className="text-emerald-600">Thanks! We’ll review your submission.</div>}
+        {ok && <div className="text-emerald-600">Thanks! We'll review your submission.</div>}
         {err && <div className="text-red-600">{err}</div>}
       </form>
     </div>
+    <Footer locale="en" />
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sparkles, TrendingUp, Award, DollarSign, Zap, Star, Clock, Gift } from "lucide-react";
@@ -98,11 +99,16 @@ export default function QuickDiscovery({
                 >
                   <div className="flex items-center gap-2">
                     {tool.logo_url ? (
-                      <img 
-                        src={tool.logo_url} 
-                        alt={getToolName(tool)} 
-                        className="w-7 h-7 rounded object-cover"
-                      />
+                      <div className="w-7 h-7 rounded overflow-hidden">
+                        <Image 
+                          src={tool.logo_url} 
+                          alt={getToolName(tool)} 
+                          width={28}
+                          height={28}
+                          className="object-cover"
+                          sizes="28px"
+                        />
+                      </div>
                     ) : (
                       <div className="w-7 h-7 rounded bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-xs font-semibold">
                         {getToolName(tool)?.charAt(0)}
