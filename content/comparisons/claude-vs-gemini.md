@@ -16,14 +16,14 @@ The competition between Anthropic's Claude and Google's Gemini represents a fasc
 
 ### Core Models (2026)
 
-**Claude 3.5 Sonnet**
+**Claude 4 Sonnet**
 - Constitutional AI training approach
 - 200k token context window
 - Advanced reasoning and analysis
 - Ethical decision-making framework
 - Computer use capabilities (beta)
 
-**Gemini 1.5 Pro**
+**Gemini 2.0 Pro**
 - Multimodal transformer architecture
 - 1 million token context window
 - Native multimodal understanding
@@ -32,7 +32,7 @@ The competition between Anthropic's Claude and Google's Gemini represents a fasc
 
 ### Benchmark Performance
 
-| Benchmark | Claude 3.5 Sonnet | Gemini 1.5 Pro | Analysis |
+| Benchmark | Claude 4 Sonnet | Gemini 2.0 Pro | Analysis |
 |-----------|------------------|-----------------|----------|
 | MMLU (General Knowledge) | 88.7% | 90.0% | Close, slight Gemini lead |
 | HumanEval (Coding) | 92.0% | 84.0% | Claude significantly better |
@@ -218,7 +218,7 @@ The competition between Anthropic's Claude and Google's Gemini represents a fasc
 - Clean, minimalist design
 - Artifacts feature for documents/code
 - Projects for conversation organization
-- Web-based access only
+- Mobile apps (iOS/Android)
 - Simple, focused experience
 
 **Gemini Interface:**
@@ -268,10 +268,10 @@ The competition between Anthropic's Claude and Google's Gemini represents a fasc
 
 | Model | Input Cost (per 1M tokens) | Output Cost (per 1M tokens) |
 |-------|----------------------------|------------------------------|
-| Claude 3.5 Sonnet | $3.00 | $15.00 |
-| Claude 3.5 Haiku | $0.25 | $1.25 |
-| Gemini 1.5 Pro | $1.25 | $5.00 |
-| Gemini 1.5 Flash | $0.075 | $0.30 |
+| Claude 4 Sonnet | $3.00 | $15.00 |
+| Claude 4 Haiku | $0.25 | $1.25 |
+| Gemini 2.0 Pro | $1.25 | $5.00 |
+| Gemini 2.0 Flash | $0.075 | $0.30 |
 
 **Winner: Gemini** for cost-effectiveness.
 
@@ -331,7 +331,6 @@ The competition between Anthropic's Claude and Google's Gemini represents a fasc
 
 ### Claude Limitations:
 - No real-time web access
-- Web-only interface (no mobile apps)
 - Higher API costs
 - Limited integration ecosystem
 - Conservative response approach

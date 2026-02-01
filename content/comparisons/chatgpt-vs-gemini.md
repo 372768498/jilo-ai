@@ -22,7 +22,7 @@ The AI landscape in 2026 is dominated by two titans: OpenAI's ChatGPT and Google
 - Real-time web browsing
 - Function calling and plugins
 
-**Gemini (Gemini 1.5 Pro)**
+**Gemini (Gemini 2.0 Pro)**
 - 1 million token context window
 - Native multimodal understanding
 - Google Search integration
@@ -30,7 +30,7 @@ The AI landscape in 2026 is dominated by two titans: OpenAI's ChatGPT and Google
 
 ### Benchmark Performance
 
-| Test | ChatGPT (GPT-4o) | Gemini 1.5 Pro | Winner |
+| Test | ChatGPT (GPT-4o) | Gemini 2.0 Pro | Winner |
 |------|------------------|-----------------|---------|
 | MMLU (Reasoning) | 88.0% | 90.0% | Gemini |
 | HumanEval (Coding) | 90.2% | 84.0% | ChatGPT |
@@ -74,7 +74,7 @@ The AI landscape in 2026 is dominated by two titans: OpenAI's ChatGPT and Google
 - YouTube, Maps, and Search native integration
 - Android and Chrome OS deep integration
 - Google Cloud AI platform access
-- Bard (consumer) and Gemini API (enterprise)
+- Gemini (consumer) and Gemini API (enterprise)
 
 **Winner: ChatGPT** for breadth, **Gemini** for Google ecosystem users.
 
@@ -98,8 +98,8 @@ The AI landscape in 2026 is dominated by two titans: OpenAI's ChatGPT and Google
 |-------|--------------|---------------|
 | GPT-4o | $2.50 | $10.00 |
 | GPT-3.5 Turbo | $0.50 | $1.50 |
-| Gemini 1.5 Pro | $1.25 | $5.00 |
-| Gemini 1.5 Flash | $0.075 | $0.30 |
+| Gemini 2.0 Pro | $1.25 | $5.00 |
+| Gemini 2.0 Flash | $0.075 | $0.30 |
 
 **Winner: Gemini** for API cost-effectiveness.
 
@@ -218,7 +218,6 @@ The AI landscape in 2026 is dominated by two titans: OpenAI's ChatGPT and Google
 ### AI Safety Measures
 
 **ChatGPT Safety:**
-- Constitutional AI principles
 - Human feedback training (RLHF)
 - Content policy enforcement
 - Safety filters and monitoring

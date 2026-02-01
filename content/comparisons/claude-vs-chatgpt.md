@@ -108,7 +108,7 @@ Claude by Anthropic and ChatGPT by OpenAI are the two dominant AI assistants in 
 
 | Plan | Price | Features |
 |------|-------|----------|
-| Free | $0/month | Limited daily usage, Claude 3.5 Sonnet |
+| Free | $0/month | Limited daily usage, Claude 4 Sonnet |
 | Pro | $20/month | 5x more usage, priority access, Projects |
 | Team | $25/user/month | Team billing, admin, early features |
 | Enterprise | Custom | SSO, SCIM, audit logs, 500K context |
@@ -162,4 +162,4 @@ Both offer strong enterprise features. Claude is often preferred in regulated in
 
 ### How do the free tiers compare?
 
-ChatGPT's free tier gives access to GPT-3.5 with limited GPT-4o usage. Claude's free tier provides access to Claude 3.5 Sonnet (its most capable model) with daily usage limits. For casual users, Claude's free tier arguably provides higher-quality responses per interaction.
+ChatGPT's free tier gives access to GPT-3.5 with limited GPT-4o usage. Claude's free tier provides access to Claude 4 Sonnet (its most capable model) with daily usage limits. For casual users, Claude's free tier arguably provides higher-quality responses per interaction.

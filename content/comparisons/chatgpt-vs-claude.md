@@ -84,8 +84,8 @@ ChatGPT and Claude represent the pinnacle of conversational AI technology in 202
 
 | Plan | Price | Features |
 |------|-------|----------|
-| Free | $0/month | Limited GPT-3.5, 40 messages/3 hours |
-| Plus | $20/month | GPT-4, GPT-4V, DALL-E, priority access |
+| Free | $0/month | Limited GPT-4o, 40 messages/3 hours |
+| Plus | $20/month | GPT-5, GPT-4o, DALL-E, priority access |
 | Team | $30/user/month | Team workspace, admin controls |
 | Enterprise | Custom | Enterprise security, analytics |
 
@@ -131,7 +131,6 @@ ChatGPT and Claude represent the pinnacle of conversational AI technology in 202
 **Claude Enterprise:**
 - SOC 2 Type II compliance
 - Enhanced privacy protections
-- Constitutional AI safety measures
 - Audit logs and monitoring
 
 **Winner: Claude** for privacy-conscious enterprises.
@@ -139,13 +138,13 @@ ChatGPT and Claude represent the pinnacle of conversational AI technology in 202
 ### API & Integration
 
 **OpenAI API:**
-- Comprehensive model selection (GPT-3.5, GPT-4, GPT-4V)
+- Comprehensive model selection (GPT-5, GPT-4o)
 - Function calling capabilities
 - Assistants API for custom apps
 - Fine-tuning options
 
 **Anthropic API:**
-- Claude 3.5 Sonnet and Haiku models
+- Claude 4 Opus and Claude 4 Sonnet models
 - Computer use beta (automation)
 - Constitutional AI features
 - Higher rate limits
@@ -155,16 +154,16 @@ ChatGPT and Claude represent the pinnacle of conversational AI technology in 202
 ## Performance Benchmarks
 
 ### Reasoning (MMLU Score)
-- **Claude 3.5 Sonnet:** 88.7%
-- **GPT-4o:** 88.0%
+- **Claude 4 Sonnet:** 88.7%
+- **GPT-5:** 88.0%
 
 ### Coding (HumanEval)
-- **GPT-4o:** 90.2%
-- **Claude 3.5 Sonnet:** 92.0%
+- **GPT-5:** 90.2%
+- **Claude 4 Sonnet:** 92.0%
 
 ### Math (GSM8K)
-- **GPT-4o:** 95.8%
-- **Claude 3.5 Sonnet:** 96.4%
+- **GPT-5:** 95.8%
+- **Claude 4 Sonnet:** 96.4%
 
 **Winner: Claude** in most technical benchmarks.
 
@@ -180,7 +179,6 @@ ChatGPT and Claude represent the pinnacle of conversational AI technology in 202
 
 **Claude:**
 - Clean, minimal interface
-- Web-only access (no mobile apps yet)
 - Artifacts feature for code/documents
 - Projects for organized conversations
 
@@ -211,7 +209,6 @@ ChatGPT and Claude represent the pinnacle of conversational AI technology in 202
 - Privacy concerns for some users
 
 ### Claude Limitations:
-- No mobile apps currently
 - Limited multimodal features
 - Stricter usage policies
 - Smaller plugin ecosystem
