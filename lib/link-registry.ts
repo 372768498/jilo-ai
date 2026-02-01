@@ -329,4 +329,6 @@ export const bestLists: Record<string, BestListEntity> = {
   "best-ai-translation-tools": { slug: "best-ai-translation-tools", category: "ai-translation", tools: ["deepl", "google-translate"] },
   "best-ai-tools-for-education": { slug: "best-ai-tools-for-education", category: "ai-education", tools: ["khan-academy-ai", "duolingo-max"] },
   "best-free-ai-tools": { slug: "best-free-ai-tools", category: "ai-chatbot", tools: ["chatgpt", "deepseek", "stable-diffusion", "codeium"] },
+  "best-ai-tools-for-startups": { slug: "best-ai-tools-for-startups", category: "ai-business", tools: ["chatgpt", "notion-ai", "jasper", "canva", "zapier"] },
+  "best-ai-tools-for-developers": { slug: "best-ai-tools-for-developers", category: "ai-coding", tools: ["github-copilot", "cursor", "claude", "codeium", "tabnine"] },
 };
