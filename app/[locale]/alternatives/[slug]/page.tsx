@@ -124,6 +124,86 @@ const alternativesMeta: Record<string, {
     count: 10,
     lastUpdated: "2026-02-01"
   },
+  "cursor-alternatives": {
+    tool: "Cursor",
+    title_en: "10 Best Cursor Alternatives for AI Coding in 2026",
+    title_zh: "2026年10个最佳Cursor替代方案",
+    description_en: "Find the best Cursor alternatives for AI-powered code editing and programming assistance.",
+    description_zh: "发现最佳Cursor替代方案。",
+    category: "AI Coding", count: 10, lastUpdated: "2026-02-01"
+  },
+  "deepseek-alternatives": {
+    tool: "DeepSeek",
+    title_en: "10 Best DeepSeek Alternatives in 2026",
+    title_zh: "2026年10个最佳DeepSeek替代方案",
+    description_en: "Compare the best DeepSeek alternatives for AI reasoning, coding, and conversation.",
+    description_zh: "发现最佳DeepSeek替代方案。",
+    category: "AI Chatbots", count: 10, lastUpdated: "2026-02-01"
+  },
+  "dall-e-alternatives": {
+    tool: "DALL-E",
+    title_en: "10 Best DALL-E Alternatives for AI Image Generation in 2026",
+    title_zh: "2026年10个最佳DALL-E替代方案",
+    description_en: "Discover the best DALL-E alternatives for AI art and image generation.",
+    description_zh: "发现最佳DALL-E替代方案。",
+    category: "AI Art", count: 10, lastUpdated: "2026-02-01"
+  },
+  "synthesia-alternatives": {
+    tool: "Synthesia",
+    title_en: "10 Best Synthesia Alternatives for AI Video in 2026",
+    title_zh: "2026年10个最佳Synthesia替代方案",
+    description_en: "Find the best Synthesia alternatives for AI avatar video creation.",
+    description_zh: "发现最佳Synthesia替代方案。",
+    category: "AI Video", count: 10, lastUpdated: "2026-02-01"
+  },
+  "copy-ai-alternatives": {
+    tool: "Copy.ai",
+    title_en: "10 Best Copy.ai Alternatives for AI Copywriting in 2026",
+    title_zh: "2026年10个最佳Copy.ai替代方案",
+    description_en: "Compare the best Copy.ai alternatives for marketing copy and content creation.",
+    description_zh: "发现最佳Copy.ai替代方案。",
+    category: "AI Marketing", count: 10, lastUpdated: "2026-02-01"
+  },
+  "deepl-alternatives": {
+    tool: "DeepL",
+    title_en: "10 Best DeepL Alternatives for AI Translation in 2026",
+    title_zh: "2026年10个最佳DeepL替代方案",
+    description_en: "Find the best DeepL alternatives for accurate AI-powered translation.",
+    description_zh: "发现最佳DeepL替代方案。",
+    category: "AI Translation", count: 10, lastUpdated: "2026-02-01"
+  },
+  "otter-ai-alternatives": {
+    tool: "Otter.ai",
+    title_en: "10 Best Otter.ai Alternatives for AI Transcription in 2026",
+    title_zh: "2026年10个最佳Otter.ai替代方案",
+    description_en: "Discover the best Otter.ai alternatives for AI meeting transcription and notes.",
+    description_zh: "发现最佳Otter.ai替代方案。",
+    category: "AI Productivity", count: 10, lastUpdated: "2026-02-01"
+  },
+  "figma-alternatives": {
+    tool: "Figma",
+    title_en: "10 Best Figma Alternatives with AI Features in 2026",
+    title_zh: "2026年10个最佳Figma替代方案",
+    description_en: "Find the best Figma alternatives for UI/UX design with AI capabilities.",
+    description_zh: "发现最佳Figma替代方案。",
+    category: "AI Design", count: 10, lastUpdated: "2026-02-01"
+  },
+  "writesonic-alternatives": {
+    tool: "Writesonic",
+    title_en: "10 Best Writesonic Alternatives for AI Writing in 2026",
+    title_zh: "2026年10个最佳Writesonic替代方案",
+    description_en: "Compare the best Writesonic alternatives for AI content writing and SEO.",
+    description_zh: "发现最佳Writesonic替代方案。",
+    category: "AI Writing", count: 10, lastUpdated: "2026-02-01"
+  },
+  "descript-alternatives": {
+    tool: "Descript",
+    title_en: "10 Best Descript Alternatives for AI Video/Audio Editing in 2026",
+    title_zh: "2026年10个最佳Descript替代方案",
+    description_en: "Find the best Descript alternatives for AI-powered video and audio editing.",
+    description_zh: "发现最佳Descript替代方案。",
+    category: "AI Video", count: 10, lastUpdated: "2026-02-01"
+  },
 };
 
 function getContent(slug: string): string | null {
