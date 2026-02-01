@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
 import fs from "fs";
 import path from "path";
 
@@ -256,23 +257,8 @@ export default function AlternativePage({ params }: PageProps) {
           </Card>
         )}
 
-        <div className="mt-12 p-6 bg-secondary/50 rounded-xl">
-          <h3 className="font-bold mb-3">
-            {isZh ? '探索更多' : 'Explore More'}
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(alternativesMeta)
-              .filter(([slug]) => slug !== params.slug)
-              .slice(0, 5)
-              .map(([slug, m]) => (
-                <Link key={slug} href={`/${params.locale}/alternatives/${slug}`}>
-                  <Badge variant="outline" className="hover:bg-primary/10 cursor-pointer">
-                    {m.tool} Alternatives
-                  </Badge>
-                </Link>
-              ))}
-          </div>
-        </div>
+        {/* Contextual Discovery — 动态三层内链 */}
+        <ContextualDiscovery slug={params.slug} pageType="alternative" locale={params.locale} />
       </main>
       <Footer locale={params.locale} />
     </div>

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
 import fs from "fs";
 import path from "path";
 
@@ -711,6 +712,11 @@ export default function ComparisonPage({ params }: PageProps) {
           </CardContent>
         </Card>
       </article>
+
+      {/* Contextual Discovery — 动态三层内链 */}
+      <div className="max-w-4xl mx-auto px-4 pb-8">
+        <ContextualDiscovery slug={slug} pageType="comparison" locale={locale} />
+      </div>
 
       <Footer locale={locale} />
     </div>
