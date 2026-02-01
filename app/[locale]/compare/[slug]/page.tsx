@@ -172,6 +172,86 @@ const comparisonMeta: Record<string, {
     popularity: "trending",
     views: "63K"
   },
+  "cursor-vs-github-copilot": {
+    toolA: "Cursor", toolB: "GitHub Copilot",
+    title_en: "Cursor vs GitHub Copilot: Best AI Coding Assistant (2026)",
+    title_zh: "Cursor vs GitHub Copilot: 最佳AI编程助手对比",
+    description_en: "Compare Cursor and GitHub Copilot for AI-powered coding, IDE integration, and developer productivity.",
+    description_zh: "对比Cursor和GitHub Copilot的AI编程能力。",
+    category: "AI Coding", lastUpdated: "2026-02-01",
+    logoA: "/logos/cursor.png", logoB: "/logos/github-copilot.png",
+    popularity: "hot", views: "95K"
+  },
+  "deepseek-vs-chatgpt": {
+    toolA: "DeepSeek", toolB: "ChatGPT",
+    title_en: "DeepSeek vs ChatGPT: Free Open-Source vs Premium AI (2026)",
+    title_zh: "DeepSeek vs ChatGPT: 免费开源vs付费AI对比",
+    description_en: "Compare DeepSeek and ChatGPT across reasoning, coding, pricing, and accessibility.",
+    description_zh: "对比DeepSeek和ChatGPT。",
+    category: "AI Chatbots", lastUpdated: "2026-02-01",
+    logoA: "/logos/deepseek.png", logoB: "/logos/chatgpt.png",
+    popularity: "hot", views: "120K"
+  },
+  "runway-vs-pika": {
+    toolA: "Runway", toolB: "Pika",
+    title_en: "Runway vs Pika: Best AI Video Generator (2026)",
+    title_zh: "Runway vs Pika: AI视频生成器对比",
+    description_en: "Compare Runway and Pika for AI video generation, editing features, and creative tools.",
+    description_zh: "对比Runway和Pika的AI视频生成能力。",
+    category: "AI Video", lastUpdated: "2026-02-01",
+    logoA: "/logos/runway.png", logoB: "/logos/pika.png",
+    popularity: "trending", views: "45K"
+  },
+  "elevenlabs-vs-murf": {
+    toolA: "ElevenLabs", toolB: "Murf AI",
+    title_en: "ElevenLabs vs Murf: Best AI Voice Generator (2026)",
+    title_zh: "ElevenLabs vs Murf: AI语音生成器对比",
+    description_en: "Compare ElevenLabs and Murf for text-to-speech, voice cloning, and audio production.",
+    description_zh: "对比ElevenLabs和Murf的AI语音能力。",
+    category: "AI Voice", lastUpdated: "2026-02-01",
+    logoA: "/logos/elevenlabs.png", logoB: "/logos/murf.png",
+    popularity: "trending", views: "38K"
+  },
+  "canva-vs-figma": {
+    toolA: "Canva", toolB: "Figma",
+    title_en: "Canva vs Figma: Best Design Tool with AI (2026)",
+    title_zh: "Canva vs Figma: AI设计工具对比",
+    description_en: "Compare Canva and Figma for design, collaboration, AI features, and pricing.",
+    description_zh: "对比Canva和Figma的设计能力。",
+    category: "AI Design", lastUpdated: "2026-02-01",
+    logoA: "/logos/canva.png", logoB: "/logos/figma.png",
+    popularity: "trending", views: "72K"
+  },
+  "deepl-vs-google-translate": {
+    toolA: "DeepL", toolB: "Google Translate",
+    title_en: "DeepL vs Google Translate: Best AI Translation Tool (2026)",
+    title_zh: "DeepL vs Google Translate: AI翻译工具对比",
+    description_en: "Compare DeepL and Google Translate for translation accuracy, language support, and features.",
+    description_zh: "对比DeepL和Google Translate的翻译能力。",
+    category: "AI Translation", lastUpdated: "2026-02-01",
+    logoA: "/logos/deepl.png", logoB: "/logos/google-translate.png",
+    popularity: "stable", views: "55K"
+  },
+  "midjourney-vs-leonardo": {
+    toolA: "Midjourney", toolB: "Leonardo AI",
+    title_en: "Midjourney vs Leonardo AI: AI Art Generation Compared (2026)",
+    title_zh: "Midjourney vs Leonardo AI: AI艺术生成对比",
+    description_en: "Compare Midjourney and Leonardo AI for image generation, fine-tuning, and creative workflows.",
+    description_zh: "对比Midjourney和Leonardo AI。",
+    category: "AI Art", lastUpdated: "2026-02-01",
+    logoA: "/logos/midjourney.png", logoB: "/logos/leonardo.png",
+    popularity: "trending", views: "41K"
+  },
+  "notion-ai-vs-obsidian": {
+    toolA: "Notion AI", toolB: "Obsidian",
+    title_en: "Notion AI vs Obsidian: Best AI Note-Taking Tool (2026)",
+    title_zh: "Notion AI vs Obsidian: AI笔记工具对比",
+    description_en: "Compare Notion AI and Obsidian for note-taking, knowledge management, and AI features.",
+    description_zh: "对比Notion AI和Obsidian。",
+    category: "AI Productivity", lastUpdated: "2026-02-01",
+    logoA: "/logos/notion.png", logoB: "/logos/obsidian.png",
+    popularity: "stable", views: "48K"
+  },
 };
 
 // 从内容文件获取对比内容

@@ -178,6 +178,104 @@ export const tools: Record<string, ToolEntity> = {
     competitors: ["murf", "play-ht", "resemble-ai"],
     pricing: "freemium", lastVerified: "2026-02-01", status: "active"
   },
+  "pika": {
+    slug: "pika", name: "Pika", url: "https://pika.art",
+    categories: ["ai-video"],
+    tags: ["video-generation", "creative", "easy"],
+    competitors: ["runway", "sora", "synthesia"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "sora": {
+    slug: "sora", name: "Sora", url: "https://openai.com/sora",
+    categories: ["ai-video"],
+    tags: ["video-generation", "openai", "text-to-video"],
+    competitors: ["runway", "pika", "synthesia"],
+    pricing: "paid", lastVerified: "2026-02-01", status: "active"
+  },
+  "synthesia": {
+    slug: "synthesia", name: "Synthesia", url: "https://synthesia.io",
+    categories: ["ai-video"],
+    tags: ["avatar", "presentation", "enterprise", "training"],
+    competitors: ["heygen", "runway", "descript"],
+    pricing: "paid", lastVerified: "2026-02-01", status: "active"
+  },
+  "murf": {
+    slug: "murf", name: "Murf AI", url: "https://murf.ai",
+    categories: ["ai-voice"],
+    tags: ["tts", "voiceover", "studio"],
+    competitors: ["elevenlabs", "play-ht", "resemble-ai"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "deepl": {
+    slug: "deepl", name: "DeepL", url: "https://deepl.com",
+    categories: ["ai-translation"],
+    tags: ["translation", "api", "accuracy", "european-languages"],
+    competitors: ["google-translate", "smartcat"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "codeium": {
+    slug: "codeium", name: "Codeium", url: "https://codeium.com",
+    categories: ["ai-coding"],
+    tags: ["coding", "autocomplete", "free", "ide"],
+    competitors: ["github-copilot", "cursor", "tabnine"],
+    pricing: "free", lastVerified: "2026-02-01", status: "active"
+  },
+  "copy-ai": {
+    slug: "copy-ai", name: "Copy.ai", url: "https://copy.ai",
+    categories: ["ai-writing", "ai-marketing"],
+    tags: ["copywriting", "marketing", "workflow"],
+    competitors: ["jasper", "writesonic", "chatgpt"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "adobe-firefly": {
+    slug: "adobe-firefly", name: "Adobe Firefly", url: "https://firefly.adobe.com",
+    categories: ["ai-design"],
+    tags: ["image-generation", "adobe", "commercial-safe"],
+    competitors: ["midjourney", "dall-e", "stable-diffusion"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "descript": {
+    slug: "descript", name: "Descript", url: "https://descript.com",
+    categories: ["ai-video", "ai-voice"],
+    tags: ["video-editing", "podcast", "transcription"],
+    competitors: ["runway", "otter-ai", "kapwing"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "heygen": {
+    slug: "heygen", name: "HeyGen", url: "https://heygen.com",
+    categories: ["ai-video"],
+    tags: ["avatar", "video-generation", "localization"],
+    competitors: ["synthesia", "runway", "descript"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "leonardo-ai": {
+    slug: "leonardo-ai", name: "Leonardo AI", url: "https://leonardo.ai",
+    categories: ["ai-design"],
+    tags: ["image-generation", "game-art", "fine-tuning"],
+    competitors: ["midjourney", "stable-diffusion", "dall-e"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "figma-ai": {
+    slug: "figma-ai", name: "Figma", url: "https://figma.com",
+    categories: ["ai-design"],
+    tags: ["ui-design", "collaboration", "prototyping", "ai-features"],
+    competitors: ["canva", "adobe-express", "sketch"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "tabnine": {
+    slug: "tabnine", name: "Tabnine", url: "https://tabnine.com",
+    categories: ["ai-coding"],
+    tags: ["coding", "autocomplete", "privacy", "on-premise"],
+    competitors: ["github-copilot", "cursor", "codeium"],
+    pricing: "freemium", lastVerified: "2026-02-01", status: "active"
+  },
+  "google-translate": {
+    slug: "google-translate", name: "Google Translate", url: "https://translate.google.com",
+    categories: ["ai-translation"],
+    tags: ["translation", "free", "130-languages", "google"],
+    competitors: ["deepl", "smartcat"],
+    pricing: "free", lastVerified: "2026-02-01", status: "active"
+  },
 };
 
 export const comparisons: Record<string, ComparisonEntity> = {
@@ -191,6 +289,14 @@ export const comparisons: Record<string, ComparisonEntity> = {
   "notion-ai-vs-chatgpt": { slug: "notion-ai-vs-chatgpt", tools: ["notion-ai", "chatgpt"], category: "ai-productivity" },
   "grammarly-vs-chatgpt": { slug: "grammarly-vs-chatgpt", tools: ["grammarly", "chatgpt"], category: "ai-writing" },
   "stable-diffusion-vs-midjourney": { slug: "stable-diffusion-vs-midjourney", tools: ["stable-diffusion", "midjourney"], category: "ai-design" },
+  "cursor-vs-github-copilot": { slug: "cursor-vs-github-copilot", tools: ["cursor", "github-copilot"], category: "ai-coding" },
+  "deepseek-vs-chatgpt": { slug: "deepseek-vs-chatgpt", tools: ["deepseek", "chatgpt"], category: "ai-chatbot" },
+  "runway-vs-pika": { slug: "runway-vs-pika", tools: ["runway", "pika"], category: "ai-video" },
+  "elevenlabs-vs-murf": { slug: "elevenlabs-vs-murf", tools: ["elevenlabs", "murf"], category: "ai-voice" },
+  "canva-vs-figma": { slug: "canva-vs-figma", tools: ["canva", "figma-ai"], category: "ai-design" },
+  "deepl-vs-google-translate": { slug: "deepl-vs-google-translate", tools: ["deepl", "google-translate"], category: "ai-translation" },
+  "midjourney-vs-leonardo": { slug: "midjourney-vs-leonardo", tools: ["midjourney", "leonardo-ai"], category: "ai-design" },
+  "notion-ai-vs-obsidian": { slug: "notion-ai-vs-obsidian", tools: ["notion-ai", "obsidian"], category: "ai-productivity" },
 };
 
 export const alternatives: Record<string, AlternativeEntity> = {
@@ -204,6 +310,12 @@ export const alternatives: Record<string, AlternativeEntity> = {
   "perplexity-alternatives": { slug: "perplexity-alternatives", baseTool: "perplexity", alternatives: ["chatgpt", "you-com", "phind"], category: "ai-search" },
   "elevenlabs-alternatives": { slug: "elevenlabs-alternatives", baseTool: "elevenlabs", alternatives: ["murf", "play-ht", "resemble-ai"], category: "ai-voice" },
   "runway-alternatives": { slug: "runway-alternatives", baseTool: "runway", alternatives: ["pika", "sora", "synthesia", "heygen"], category: "ai-video" },
+  "cursor-alternatives": { slug: "cursor-alternatives", baseTool: "cursor", alternatives: ["github-copilot", "codeium", "tabnine"], category: "ai-coding" },
+  "deepseek-alternatives": { slug: "deepseek-alternatives", baseTool: "deepseek", alternatives: ["chatgpt", "claude", "gemini"], category: "ai-chatbot" },
+  "dall-e-alternatives": { slug: "dall-e-alternatives", baseTool: "dall-e", alternatives: ["midjourney", "stable-diffusion", "adobe-firefly"], category: "ai-design" },
+  "synthesia-alternatives": { slug: "synthesia-alternatives", baseTool: "synthesia", alternatives: ["heygen", "runway", "descript"], category: "ai-video" },
+  "deepl-alternatives": { slug: "deepl-alternatives", baseTool: "deepl", alternatives: ["google-translate", "smartcat"], category: "ai-translation" },
+  "figma-alternatives": { slug: "figma-alternatives", baseTool: "figma-ai", alternatives: ["canva", "adobe-express"], category: "ai-design" },
 };
 
 export const bestLists: Record<string, BestListEntity> = {

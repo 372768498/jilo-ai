@@ -97,7 +97,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // 对比页（高优先级 — 程序化SEO核心）
-  const compareSlugs = ['chatgpt-vs-claude', 'chatgpt-vs-gemini', 'claude-vs-gemini', 'midjourney-vs-dall-e', 'chatgpt-vs-perplexity', 'github-copilot-vs-chatgpt', 'jasper-vs-chatgpt', 'notion-ai-vs-chatgpt', 'grammarly-vs-chatgpt', 'stable-diffusion-vs-midjourney']
+  const compareSlugs = ['chatgpt-vs-claude', 'chatgpt-vs-gemini', 'claude-vs-gemini', 'midjourney-vs-dall-e', 'chatgpt-vs-perplexity', 'github-copilot-vs-chatgpt', 'jasper-vs-chatgpt', 'notion-ai-vs-chatgpt', 'grammarly-vs-chatgpt', 'stable-diffusion-vs-midjourney', 'cursor-vs-github-copilot', 'deepseek-vs-chatgpt', 'runway-vs-pika', 'elevenlabs-vs-murf', 'canva-vs-figma', 'deepl-vs-google-translate', 'midjourney-vs-leonardo', 'notion-ai-vs-obsidian']
   const compareRoutes: MetadataRoute.Sitemap = []
   for (const locale of locales) {
     compareRoutes.push({
@@ -119,7 +119,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // 替代方案页（高优先级 — 程序化SEO核心）
-  const altSlugs = ['chatgpt-alternatives', 'midjourney-alternatives', 'grammarly-alternatives', 'notion-alternatives', 'jasper-alternatives', 'github-copilot-alternatives', 'canva-alternatives', 'perplexity-alternatives', 'elevenlabs-alternatives', 'runway-alternatives']
+  const altSlugs = ['chatgpt-alternatives', 'midjourney-alternatives', 'grammarly-alternatives', 'notion-alternatives', 'jasper-alternatives', 'github-copilot-alternatives', 'canva-alternatives', 'perplexity-alternatives', 'elevenlabs-alternatives', 'runway-alternatives', 'cursor-alternatives', 'deepseek-alternatives', 'dall-e-alternatives', 'synthesia-alternatives', 'deepl-alternatives', 'figma-alternatives']
   const altRoutes: MetadataRoute.Sitemap = []
   for (const locale of locales) {
     altRoutes.push({
