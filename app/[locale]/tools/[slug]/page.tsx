@@ -7,6 +7,7 @@ import Footer from "@/components/footer";
 import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
 import Link from "next/link";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { getAffiliateUrl, isAffiliateLink } from "@/lib/affiliate";
 import type { Metadata } from "next";
 
 type PageProps = { params: { locale: string; slug: string } };
@@ -189,16 +190,23 @@ export default async function ToolDetailPage({ params }: PageProps) {
         <div className="flex-1">
           <h1 className="text-4xl font-bold mb-2">{name}</h1>
           {tagline && <p className="text-xl text-muted-foreground mb-4">{tagline}</p>}
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
             {data.official_url && (
-              <a
-                href={data.affiliate_url || data.official_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
-              >
-                {isZh ? "访问网站" : "Visit Website"} →
-              </a>
+              <div className="relative group/aff">
+                <a
+                  href={getAffiliateUrl(slug, data.affiliate_url || data.official_url)}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+                >
+                  {isZh ? "访问网站" : "Visit Website"} →
+                </a>
+                {isAffiliateLink(slug) && (
+                  <span className="ml-2 text-xs text-muted-foreground" title={isZh ? "此链接为推广链接，我们可能会获得佣金" : "This is a sponsored link. We may earn a commission."}>
+                    {isZh ? "推广链接" : "Sponsored"}
+                  </span>
+                )}
+              </div>
             )}
             {data.rating && (
               <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg">

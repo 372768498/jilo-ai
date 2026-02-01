@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { ExternalLink, TrendingUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { getAffiliateUrl, isAffiliateLink } from '@/lib/affiliate'
 
 // 定义分类映射的类型
 type CategoryKey = 'recommend' | 'office' | 'chat' | 'image' | 'video' | 'code' | 'comic' | 'write' | 'audio' | 'other'
@@ -30,6 +31,7 @@ const TAB_KEYS: CategoryKey[] = ['recommend', 'office', 'chat', 'image', 'video'
 
 interface Tool {
   id: number
+  slug: string
   name: string
   description: string
   category: string
@@ -87,14 +89,15 @@ export default function HotToolsSection({ locale }: { locale: string }) {
   }, [activeTab, isZh])
 
   // 处理工具点击
-  async function handleToolClick(toolId: number, affiliateUrl: string) {
+  async function handleToolClick(toolId: number, toolSlug: string, affiliateUrl: string) {
     const supabase = createClient()
-    
+
     // 增加点击次数
     await supabase.rpc('increment_tool_clicks', { tool_id: toolId })
-    
-    // 跳转到affiliate链接
-    window.open(affiliateUrl, '_blank')
+
+    // 优先使用 lib/affiliate.ts 中的链接，再回退到数据库 affiliate_url
+    const url = getAffiliateUrl(toolSlug, affiliateUrl)
+    window.open(url, '_blank')
   }
 
   return (
@@ -142,7 +145,7 @@ export default function HotToolsSection({ locale }: { locale: string }) {
               <Card 
                 key={tool.id} 
                 className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-                onClick={() => handleToolClick(tool.id, tool.affiliate_url)}
+                onClick={() => handleToolClick(tool.id, tool.slug, tool.affiliate_url)}
               >
                 <CardContent className="p-6">
                   {/* Logo */}
@@ -178,10 +181,17 @@ export default function HotToolsSection({ locale }: { locale: string }) {
                     <Badge variant="secondary" className="text-xs">
                       {tool.category}
                     </Badge>
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      {tool.click_count || 0}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {isAffiliateLink(tool.slug) && (
+                        <span className="text-[10px] text-muted-foreground opacity-70" title={isZh ? "推广链接" : "Sponsored link"}>
+                          {isZh ? "推广" : "Ad"}
+                        </span>
+                      )}
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3" />
+                        {tool.click_count || 0}
+                      </span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
