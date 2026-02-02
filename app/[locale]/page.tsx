@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: isZh
-      ? 'Jilo.ai - 发现最佳AI工具 | AI工具导航与评测'
+      ? 'Jilo.ai - 发现最佳AI工具 | AI工具导航、评测与对比'
       : 'Jilo.ai - Discover & Compare the Best AI Tools',
     description: isZh
       ? '浏览70+精选AI工具，覆盖8大类别（写作、编程、设计、视频、商务等）。独立专业评测、工具对比、替代方案推荐，每日更新，完全免费。'

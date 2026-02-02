@@ -134,7 +134,7 @@ const categories = [
   { name: "AI Writing", name_zh: "AI写作工具", count: 2, icon: "✍️" },
   { name: "AI Coding", name_zh: "AI编程助手", count: 1, icon: "💻" },
   { name: "AI Search", name_zh: "AI搜索", count: 1, icon: "🔍" },
-  { name: "AI Productivity", name_zh: "AI生产力", count: 1, icon: "⚡" },
+  { name: "AI Productivity", name_zh: "AI效率工具", count: 1, icon: "⚡" },
 ];
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -144,8 +144,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: isZh 
-      ? 'AI 工具对比 | 找到最适合你的 AI 工具'
-      : 'AI Tool Comparisons | Find Your Perfect AI Tool',
+      ? 'AI工具对比 | 10+热门工具深度PK - Jilo.ai'
+      : 'AI Tool Comparisons | Find Your Perfect AI Tool - Jilo.ai',
     description: isZh
       ? '专业的AI工具对比分析，深度对比ChatGPT、Claude、Midjourney等热门工具的功能、价格和使用场景，帮您做出明智选择。'
       : 'Professional AI tool comparisons. Deep analysis of ChatGPT, Claude, Midjourney and more popular tools across features, pricing and use cases.',

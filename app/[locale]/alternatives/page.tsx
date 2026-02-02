@@ -34,9 +34,9 @@ const alternatives = [
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const isZh = params.locale === 'zh';
   return {
-    title: isZh ? 'AI 工具替代方案 | 热门工具平替推荐' : 'AI Tool Alternatives',
+    title: isZh ? 'AI工具替代方案 | 20+热门工具平替推荐 - Jilo.ai' : 'AI Tool Alternatives | Find Better Options - Jilo.ai',
     description: isZh
-      ? '精选20+热门AI工具的最佳替代方案，涵盖ChatGPT、Midjourney、Grammarly等，免费和付费选项全面对比，帮你找到性价比最高的选择。'
+      ? '精选20+热门AI工具的最佳替代方案，涵盖ChatGPT、Midjourney、Grammarly、Cursor等，免费和付费选项全面对比，帮你找到性价比最高的选择。'
       : 'Discover the best AI tool alternatives. Compare free and paid options for ChatGPT, Midjourney, Grammarly and more.',
   };
 }
