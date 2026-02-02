@@ -1,0 +1,90 @@
+# Jilo.ai — Full Documentation
+
+> Jilo.ai is a free AI tool directory that helps users discover, compare, and choose the best AI tools. Updated daily with 70+ curated tools across 8+ categories, expert reviews, side-by-side comparisons, and alternative recommendations.
+
+## Website Structure
+
+### Homepage
+- URL: https://jilo.ai/en
+- Description: Main landing page with search, trending tools, featured tools, AI news feed, and category navigation. Supports English and Chinese (https://jilo.ai/zh).
+
+### AI Tools Directory
+- URL: https://jilo.ai/en/tools
+- Description: Complete browsable directory of all 70+ AI tools. Filter by category (writing, coding, design, video, business), pricing type (free, freemium, paid), and sort by popularity, newest, or recently updated.
+- Individual tool pages: https://jilo.ai/en/tools/{tool-slug}
+- Each tool page includes: description, pricing details, features, pros/cons, use cases, and links to alternatives and comparisons.
+
+### Tool Comparisons
+- URL: https://jilo.ai/en/compare
+- Description: Side-by-side comparison pages for popular AI tools. Each comparison includes feature matrix, pricing comparison, use case recommendations, and verdict.
+- Individual comparison pages: https://jilo.ai/en/compare/{comparison-slug}
+- Popular comparisons:
+  - https://jilo.ai/en/reviews/perplexity-vs-google-vs-chatgpt-search — Perplexity vs Google vs ChatGPT Search
+  - https://jilo.ai/en/reviews/cursor-vs-github-copilot-vs-windsurf — Cursor vs GitHub Copilot vs Windsurf
+  - https://jilo.ai/en/reviews/claude-vs-gemini — Claude vs Gemini
+  - https://jilo.ai/en/reviews/chatgpt-vs-deepseek — ChatGPT vs DeepSeek
+
+### AI Tool Alternatives
+- URL: https://jilo.ai/en/alternatives
+- Description: Find alternatives to popular AI tools. Each page lists similar tools with feature comparisons and recommendations.
+- Individual pages: https://jilo.ai/en/alternatives/{tool-slug}
+
+### Best AI Tools Lists
+- URL: https://jilo.ai/en/best
+- Description: Curated "best of" lists organized by category and use case.
+- Individual pages: https://jilo.ai/en/best/{category-slug}
+- Example: https://jilo.ai/en/reviews/best-ai-agents — 10 Best AI Agents 2025
+
+### In-Depth Reviews
+- URL: https://jilo.ai/en/reviews
+- Description: Expert-written reviews with detailed analysis, scoring, screenshots, and recommendations.
+- Individual reviews: https://jilo.ai/en/reviews/{review-slug}
+
+### AI News
+- URL: https://jilo.ai/en/news
+- Description: Latest AI industry news aggregated from top sources, with summaries in English and Chinese.
+- Individual articles: https://jilo.ai/en/news/{news-slug}
+
+### AI Deals
+- URL: https://jilo.ai/en/deals
+- Description: Current promotions, discounts, and special offers on AI tools.
+
+### Weekly Digest
+- URL: https://jilo.ai/en/weekly
+- Description: Weekly roundup of the most notable AI tool launches, updates, and trends.
+- Individual digests: https://jilo.ai/en/weekly/{week-slug}
+
+## Tool Categories
+
+| Category | Description | Tool Count |
+|----------|-------------|------------|
+| Writing | AI writing assistants, copywriting, content generation | 12+ |
+| Coding | AI code editors, copilots, debugging tools | 15+ |
+| Design | AI image generators, graphic design, logo makers | 18+ |
+| Video | AI video editors, generators, effects tools | 8+ |
+| Business | AI analytics, automation, productivity tools | 10+ |
+| Marketing | AI marketing tools, SEO, social media | 5+ |
+| Education | AI learning tools, tutors, study aids | 3+ |
+| Audio | AI music, voice, podcast tools | 3+ |
+
+## Multilingual Support
+
+All pages are available in:
+- English: https://jilo.ai/en/...
+- Chinese: https://jilo.ai/zh/...
+
+## Key Features
+
+1. **Daily Updates**: New tools and reviews added every day
+2. **Independent Reviews**: No pay-for-placement; editorial integrity maintained
+3. **Use Case Organization**: Tools organized by what you need to accomplish
+4. **Free Access**: No registration, no paywalls, no hidden costs
+5. **Comparison Engine**: Side-by-side tool comparisons with feature matrices
+6. **Alternative Finder**: Discover alternatives to any popular AI tool
+7. **Bilingual Content**: Full English and Chinese support
+8. **Newsletter**: Weekly AI tool digest delivered to your inbox
+
+## Contact & Submission
+
+- Submit a tool: https://jilo.ai/submit
+- Promote your tool: https://jilo.ai/en/promote

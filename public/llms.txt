@@ -1,0 +1,45 @@
+# Jilo.ai
+
+> Jilo.ai is a free AI tool directory that helps users discover, compare, and choose the best AI tools for their needs. Updated daily with expert reviews across 8+ categories.
+
+## Core Value
+
+Jilo.ai curates 70+ AI tools organized by real use cases (writing, coding, design, video, business), providing independent expert reviews, side-by-side comparisons, and alternative recommendations — all completely free with no registration required.
+
+## Key Stats
+
+- 70+ curated AI tools
+- 8+ categories (Writing, Coding, Design, Video, Business, Marketing, etc.)
+- Daily updates with new tools and reviews
+- Bilingual support: English and Chinese
+- 10K+ active users
+
+## Main Sections
+
+- [AI Tools Directory](https://jilo.ai/en/tools): Browse all AI tools by category, pricing, and use case
+- [Tool Comparisons](https://jilo.ai/en/compare): Side-by-side comparisons of popular AI tools (e.g., ChatGPT vs DeepSeek, Cursor vs Copilot)
+- [AI Tool Alternatives](https://jilo.ai/en/alternatives): Find alternatives to popular AI tools
+- [Best AI Tools](https://jilo.ai/en/best): Curated lists of best AI tools by category
+- [In-Depth Reviews](https://jilo.ai/en/reviews): Expert reviews and analysis of AI tools
+- [AI News](https://jilo.ai/en/news): Latest AI industry news and updates
+- [AI Deals](https://jilo.ai/en/deals): Current deals and discounts on AI tools
+- [Weekly Digest](https://jilo.ai/en/weekly): Weekly roundup of AI tool trends
+
+## Categories
+
+- ✍️ Writing: Articles, blogs, copywriting (12+ tools)
+- 💻 Coding: Code generation, debugging, AI IDEs (15+ tools)
+- 🎨 Design: Images, logos, graphics (18+ tools)
+- 🎬 Video: Editing, effects, generation (8+ tools)
+- 💼 Business: Analysis, automation, insights (10+ tools)
+
+## Popular Comparisons
+
+- Perplexity vs Google vs ChatGPT Search
+- Cursor vs GitHub Copilot vs Windsurf
+- Claude vs Gemini
+- ChatGPT vs DeepSeek
+
+## Optional
+
+- [Full documentation](https://jilo.ai/llms-full.txt): Complete page listing with URLs and descriptions

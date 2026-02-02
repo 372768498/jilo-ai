@@ -1,0 +1,12 @@
+# Robots.txt for Jilo.ai
+# https://jilo.ai
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://jilo.ai/sitemap.xml
+
+# LLMs.txt - AI/LLM-friendly documentation
+# See https://llmstxt.org for the standard
+Llms-Txt: https://jilo.ai/llms.txt

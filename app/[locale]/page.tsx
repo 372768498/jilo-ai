@@ -29,8 +29,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       ? 'Jilo.ai - 发现最佳AI工具 | AI工具导航与评测'
       : 'Jilo.ai - Discover & Compare the Best AI Tools',
     description: isZh
-      ? '发现、对比和评测70+最佳AI工具，涵盖写作、编程、设计、营销等领域。每日更新，完全免费。'
-      : 'Discover, compare and review 70+ best AI tools across writing, coding, design, marketing and more. Updated daily, completely free.',
+      ? '浏览70+精选AI工具，覆盖8大类别（写作、编程、设计、视频、商务等）。独立专业评测、工具对比、替代方案推荐，每日更新，完全免费。'
+      : 'Browse 70+ curated AI tools across 8+ categories including writing, coding, design, video & business. Independent expert reviews, side-by-side comparisons, and alternatives — updated daily, 100% free.',
     openGraph: {
       title: isZh ? 'Jilo.ai - 发现最佳AI工具' : 'Jilo.ai - Discover & Compare AI Tools',
       description: isZh ? '70+ AI工具，每日更新' : '70+ AI Tools, Updated Daily',
