@@ -53,18 +53,19 @@ export default function Footer({ locale }: FooterProps) {
       title: "Resources",
       links: [
         { name: "AI News", href: `/${locale}/news` },
-        { name: "Submit Tool", href: "/submit" },
-        { name: "Weekly", href: "/weekly" },
+        { name: "AI Tool Deals", href: `/${locale}/deals` },
         { name: "Compare Tools", href: "/compare" },
+        { name: "Submit Tool", href: "/submit" },
       ]
     },
     about: {
-      title: "More",
+      title: "Popular Comparisons",
       links: [
-        { name: "Reviews", href: `/${locale}/reviews` },
-        { name: "Compare Tools", href: "/compare" },
-        { name: "Promote Your Tool", href: `/${locale}/promote` },
-        { name: "Submit Tool", href: "/submit" },
+        { name: "ChatGPT vs Claude", href: `/${locale}/compare/chatgpt-vs-claude` },
+        { name: "Cursor vs Copilot", href: `/${locale}/compare/cursor-vs-github-copilot` },
+        { name: "Jasper vs Copy.ai", href: `/${locale}/compare/jasper-vs-copy-ai` },
+        { name: "Semrush vs Surfer SEO", href: `/${locale}/compare/semrush-vs-surfer-seo` },
+        { name: "Midjourney vs DALL-E", href: `/${locale}/compare/midjourney-vs-dall-e` },
       ]
     }
   };
