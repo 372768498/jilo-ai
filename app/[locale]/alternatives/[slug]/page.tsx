@@ -204,6 +204,86 @@ const alternativesMeta: Record<string, {
     description_zh: "发现最佳Descript替代方案。",
     category: "AI Video", count: 10, lastUpdated: "2026-02-01"
   },
+  "semrush-alternatives": {
+    tool: "Semrush",
+    title_en: "10 Best Semrush Alternatives for SEO in 2026",
+    title_zh: "2026年10个最佳Semrush替代方案",
+    description_en: "Compare top Semrush alternatives including Ahrefs, Moz, SE Ranking and more affordable SEO tools.",
+    description_zh: "对比Semrush替代方案：Ahrefs、Moz等。",
+    category: "AI SEO", count: 10, lastUpdated: "2026-02-02"
+  },
+  "surfer-seo-alternatives": {
+    tool: "Surfer SEO",
+    title_en: "10 Best Surfer SEO Alternatives for Content Optimization in 2026",
+    title_zh: "2026年10个最佳Surfer SEO替代方案",
+    description_en: "Find the best Surfer SEO alternatives for AI content optimization including Frase, Clearscope, and MarketMuse.",
+    description_zh: "发现最佳Surfer SEO替代方案。",
+    category: "AI SEO", count: 10, lastUpdated: "2026-02-02"
+  },
+  "heygen-alternatives": {
+    tool: "HeyGen",
+    title_en: "10 Best HeyGen Alternatives for AI Video Avatars in 2026",
+    title_zh: "2026年10个最佳HeyGen替代方案",
+    description_en: "Compare top HeyGen alternatives for AI avatar video creation including Synthesia, D-ID, and Colossyan.",
+    description_zh: "对比HeyGen替代方案：Synthesia、D-ID等。",
+    category: "AI Video", count: 10, lastUpdated: "2026-02-02"
+  },
+  "fireflies-alternatives": {
+    tool: "Fireflies.ai",
+    title_en: "10 Best Fireflies.ai Alternatives for Meeting Transcription in 2026",
+    title_zh: "2026年10个最佳Fireflies替代方案",
+    description_en: "Find the best Fireflies.ai alternatives for AI meeting transcription and notes.",
+    description_zh: "发现最佳Fireflies替代方案。",
+    category: "AI Productivity", count: 10, lastUpdated: "2026-02-02"
+  },
+  "clickup-alternatives": {
+    tool: "ClickUp",
+    title_en: "10 Best ClickUp Alternatives for Project Management in 2026",
+    title_zh: "2026年10个最佳ClickUp替代方案",
+    description_en: "Compare top ClickUp alternatives including Notion, Monday.com, Asana, and Linear.",
+    description_zh: "对比ClickUp替代方案。",
+    category: "AI Productivity", count: 10, lastUpdated: "2026-02-02"
+  },
+  "leonardo-ai-alternatives": {
+    tool: "Leonardo AI",
+    title_en: "10 Best Leonardo AI Alternatives for Image Generation in 2026",
+    title_zh: "2026年10个最佳Leonardo AI替代方案",
+    description_en: "Find the best Leonardo AI alternatives including Midjourney, DALL-E 3, Stable Diffusion, and Ideogram.",
+    description_zh: "发现最佳Leonardo AI替代方案。",
+    category: "AI Design", count: 10, lastUpdated: "2026-02-02"
+  },
+  "pictory-alternatives": {
+    tool: "Pictory",
+    title_en: "10 Best Pictory Alternatives for AI Video Creation in 2026",
+    title_zh: "2026年10个最佳Pictory替代方案",
+    description_en: "Compare top Pictory alternatives for text-to-video creation including Lumen5, InVideo, and Synthesia.",
+    description_zh: "对比Pictory替代方案。",
+    category: "AI Video", count: 10, lastUpdated: "2026-02-02"
+  },
+  "frase-alternatives": {
+    tool: "Frase",
+    title_en: "10 Best Frase Alternatives for SEO Content in 2026",
+    title_zh: "2026年10个最佳Frase替代方案",
+    description_en: "Find the best Frase alternatives for AI SEO content optimization including Surfer SEO and Clearscope.",
+    description_zh: "发现最佳Frase替代方案。",
+    category: "AI SEO", count: 10, lastUpdated: "2026-02-02"
+  },
+  "murf-alternatives": {
+    tool: "Murf AI",
+    title_en: "10 Best Murf AI Alternatives for AI Voice Generation in 2026",
+    title_zh: "2026年10个最佳Murf AI替代方案",
+    description_en: "Compare top Murf AI alternatives for text-to-speech including ElevenLabs, Play.ht, and WellSaid.",
+    description_zh: "对比Murf AI替代方案。",
+    category: "AI Voice", count: 10, lastUpdated: "2026-02-02"
+  },
+  "capcut-alternatives": {
+    tool: "CapCut",
+    title_en: "10 Best CapCut Alternatives for Video Editing in 2026",
+    title_zh: "2026年10个最佳CapCut替代方案",
+    description_en: "Find the best CapCut alternatives for video editing including Descript, DaVinci Resolve, and Filmora.",
+    description_zh: "发现最佳CapCut替代方案。",
+    category: "AI Video", count: 10, lastUpdated: "2026-02-02"
+  },
 };
 
 function getContent(slug: string): string | null {

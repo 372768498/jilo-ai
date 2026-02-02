@@ -141,7 +141,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // 最佳工具页（高优先级 — 程序化SEO核心）
-  const bestSlugs = ['best-ai-writing-tools', 'best-ai-coding-tools', 'best-ai-design-tools', 'best-ai-video-tools', 'best-ai-tools-for-business', 'best-ai-data-analysis-tools', 'best-ai-voice-tools', 'best-ai-translation-tools', 'best-ai-tools-for-education', 'best-free-ai-tools', 'best-ai-chatbots', 'best-ai-image-generators', 'best-ai-marketing-tools', 'best-ai-productivity-tools', 'best-ai-search-engines', 'best-ai-presentation-tools', 'best-ai-music-generators', 'best-ai-meeting-assistants', 'best-ai-tools-for-startups', 'best-ai-tools-for-developers', 'best-ai-tools-for-content-creators', 'best-ai-tools-for-ecommerce', 'best-ai-tools-for-students', 'best-ai-tools-for-healthcare', 'best-ai-tools-for-real-estate', 'best-ai-tools-for-finance', 'best-ai-tools-for-hr', 'best-ai-tools-for-customer-service', 'best-ai-tools-for-social-media', 'best-ai-tools-for-research']
+  const bestSlugs = ['best-ai-writing-tools', 'best-ai-coding-tools', 'best-ai-design-tools', 'best-ai-video-tools', 'best-ai-tools-for-business', 'best-ai-data-analysis-tools', 'best-ai-voice-tools', 'best-ai-translation-tools', 'best-ai-tools-for-education', 'best-free-ai-tools', 'best-ai-chatbots', 'best-ai-image-generators', 'best-ai-marketing-tools', 'best-ai-productivity-tools', 'best-ai-search-engines', 'best-ai-presentation-tools', 'best-ai-music-generators', 'best-ai-meeting-assistants', 'best-ai-tools-for-startups', 'best-ai-tools-for-developers', 'best-ai-tools-for-content-creators', 'best-ai-tools-for-ecommerce', 'best-ai-tools-for-students', 'best-ai-tools-for-healthcare', 'best-ai-tools-for-real-estate', 'best-ai-tools-for-finance', 'best-ai-tools-for-hr', 'best-ai-tools-for-customer-service', 'best-ai-tools-for-social-media', 'best-ai-tools-for-research', 'best-ai-seo-tools', 'best-ai-email-tools', 'best-ai-video-editors', 'best-ai-avatar-generators', 'best-ai-transcription-tools', 'best-ai-logo-generators', 'best-ai-scheduling-tools', 'best-ai-resume-builders']
   const bestRoutes: MetadataRoute.Sitemap = []
   for (const locale of locales) {
     bestRoutes.push({
@@ -163,7 +163,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // FAQ/指南页
-  const faqSlugs = ['what-is-chatgpt', 'how-to-use-midjourney', 'is-ai-safe', 'what-is-prompt-engineering', 'how-to-choose-ai-tool', 'ai-tools-free-vs-paid', 'what-is-rag', 'how-ai-agents-work', 'best-ai-for-beginners', 'ai-tools-privacy-guide', 'top-questions']
+  const faqSlugs = ['what-is-chatgpt', 'how-to-use-midjourney', 'is-ai-safe', 'what-is-prompt-engineering', 'how-to-choose-ai-tool', 'ai-tools-free-vs-paid', 'what-is-rag', 'how-ai-agents-work', 'best-ai-for-beginners', 'ai-tools-privacy-guide', 'top-questions', 'what-is-claude', 'chatgpt-vs-claude-which-is-better', 'how-to-use-ai-for-coding', 'how-to-make-ai-images', 'what-is-ai-agent', 'is-chatgpt-plus-worth-it', 'how-to-write-better-prompts', 'best-free-ai-alternatives', 'ai-for-small-business', 'how-to-make-money-with-ai']
   const faqRoutes: MetadataRoute.Sitemap = []
   for (const slug of faqSlugs) {
     for (const locale of locales) {
