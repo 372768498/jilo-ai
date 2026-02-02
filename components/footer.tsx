@@ -23,18 +23,19 @@ export default function Footer({ locale }: FooterProps) {
       title: "资源",
       links: [
         { name: "AI 新闻", href: `/${locale}/news` },
-        { name: "提交工具", href: "/submit" },
-        { name: "周刊", href: "/weekly" },
+        { name: "AI 工具优惠", href: `/${locale}/deals` },
         { name: "比较工具", href: "/compare" },
+        { name: "提交工具", href: "/submit" },
       ]
     },
     about: {
-      title: "更多",
+      title: "热门对比",
       links: [
-        { name: "深度评测", href: `/${locale}/reviews` },
-        { name: "工具对比", href: "/compare" },
-        { name: "推广合作", href: `/${locale}/promote` },
-        { name: "提交工具", href: "/submit" },
+        { name: "ChatGPT vs Claude", href: `/${locale}/compare/chatgpt-vs-claude` },
+        { name: "Cursor vs Copilot", href: `/${locale}/compare/cursor-vs-github-copilot` },
+        { name: "Jasper vs Copy.ai", href: `/${locale}/compare/jasper-vs-copy-ai` },
+        { name: "Semrush vs Surfer SEO", href: `/${locale}/compare/semrush-vs-surfer-seo` },
+        { name: "Midjourney vs DALL-E", href: `/${locale}/compare/midjourney-vs-dall-e` },
       ]
     }
   } : {
