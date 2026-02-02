@@ -326,6 +326,16 @@ export const alternatives: Record<string, AlternativeEntity> = {
   "synthesia-alternatives": { slug: "synthesia-alternatives", baseTool: "synthesia", alternatives: ["heygen", "runway", "descript"], category: "ai-video" },
   "deepl-alternatives": { slug: "deepl-alternatives", baseTool: "deepl", alternatives: ["google-translate", "smartcat"], category: "ai-translation" },
   "figma-alternatives": { slug: "figma-alternatives", baseTool: "figma-ai", alternatives: ["canva", "adobe-express"], category: "ai-design" },
+  "semrush-alternatives": { slug: "semrush-alternatives", baseTool: "semrush", alternatives: ["ahrefs", "moz", "ubersuggest"], category: "ai-seo" },
+  "surfer-seo-alternatives": { slug: "surfer-seo-alternatives", baseTool: "surfer-seo", alternatives: ["frase", "clearscope", "marketmuse"], category: "ai-seo" },
+  "heygen-alternatives": { slug: "heygen-alternatives", baseTool: "heygen", alternatives: ["synthesia", "d-id", "colossyan"], category: "ai-video" },
+  "fireflies-alternatives": { slug: "fireflies-alternatives", baseTool: "fireflies", alternatives: ["otter-ai", "fathom", "grain"], category: "ai-productivity" },
+  "clickup-alternatives": { slug: "clickup-alternatives", baseTool: "clickup-ai", alternatives: ["notion-ai", "monday", "asana"], category: "ai-productivity" },
+  "leonardo-ai-alternatives": { slug: "leonardo-ai-alternatives", baseTool: "leonardo-ai", alternatives: ["midjourney", "dall-e", "stable-diffusion"], category: "ai-design" },
+  "pictory-alternatives": { slug: "pictory-alternatives", baseTool: "pictory", alternatives: ["lumen5", "invideo", "synthesia"], category: "ai-video" },
+  "frase-alternatives": { slug: "frase-alternatives", baseTool: "frase", alternatives: ["surfer-seo", "clearscope", "marketmuse"], category: "ai-seo" },
+  "murf-alternatives": { slug: "murf-alternatives", baseTool: "murf", alternatives: ["elevenlabs", "play-ht", "speechify"], category: "ai-voice" },
+  "capcut-alternatives": { slug: "capcut-alternatives", baseTool: "capcut", alternatives: ["descript", "davinci-resolve", "filmora"], category: "ai-video" },
 };
 
 export const bestLists: Record<string, BestListEntity> = {
