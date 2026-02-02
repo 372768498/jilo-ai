@@ -254,6 +254,96 @@ const comparisonMeta: Record<string, {
     logoA: "/logos/notion.png", logoB: "/logos/obsidian.png",
     popularity: "stable", views: "48K"
   },
+  "jasper-vs-copy-ai": {
+    toolA: "Jasper", toolB: "Copy.ai",
+    title_en: "Jasper vs Copy.ai: Best AI Marketing Copywriter (2026)",
+    title_zh: "Jasper vs Copy.ai: AI营销文案工具对比",
+    description_en: "In-depth comparison of Jasper and Copy.ai for marketing copy, content creation, and team workflows.",
+    description_zh: "深入对比Jasper和Copy.ai的营销文案、内容创作和团队协作功能。",
+    category: "AI Writing", lastUpdated: "2026-02-02",
+    popularity: "hot", views: "67K"
+  },
+  "semrush-vs-surfer-seo": {
+    toolA: "Semrush", toolB: "Surfer SEO",
+    title_en: "Semrush vs Surfer SEO: Complete SEO Tool Comparison (2026)",
+    title_zh: "Semrush vs Surfer SEO: SEO工具全面对比",
+    description_en: "Detailed comparison of Semrush and Surfer SEO for keyword research, content optimization, and SEO strategy.",
+    description_zh: "详细对比Semrush和Surfer SEO在关键词研究、内容优化和SEO策略方面的表现。",
+    category: "AI SEO", lastUpdated: "2026-02-02",
+    popularity: "rising", views: "52K"
+  },
+  "synthesia-vs-heygen": {
+    toolA: "Synthesia", toolB: "HeyGen",
+    title_en: "Synthesia vs HeyGen: Best AI Video Avatar Tool (2026)",
+    title_zh: "Synthesia vs HeyGen: AI视频数字人对比",
+    description_en: "Compare Synthesia and HeyGen for AI avatar video creation, enterprise features, and pricing.",
+    description_zh: "对比Synthesia和HeyGen的AI数字人视频创作功能。",
+    category: "AI Video", lastUpdated: "2026-02-02",
+    popularity: "rising", views: "41K"
+  },
+  "grammarly-vs-writesonic": {
+    toolA: "Grammarly", toolB: "Writesonic",
+    title_en: "Grammarly vs Writesonic: Grammar Tool vs AI Writer (2026)",
+    title_zh: "Grammarly vs Writesonic: 语法工具 vs AI写作",
+    description_en: "Compare Grammarly's grammar checking with Writesonic's AI content generation. Which writing tool is right for you?",
+    description_zh: "对比Grammarly的语法检查和Writesonic的AI内容生成功能。",
+    category: "AI Writing", lastUpdated: "2026-02-02",
+    popularity: "stable", views: "38K"
+  },
+  "fireflies-vs-otter": {
+    toolA: "Fireflies.ai", toolB: "Otter.ai",
+    title_en: "Fireflies vs Otter: Best AI Meeting Transcription (2026)",
+    title_zh: "Fireflies vs Otter: AI会议转录工具对比",
+    description_en: "Compare Fireflies.ai and Otter.ai for meeting transcription, AI summaries, and team collaboration.",
+    description_zh: "对比Fireflies.ai和Otter.ai的会议转录和AI摘要功能。",
+    category: "AI Productivity", lastUpdated: "2026-02-02",
+    popularity: "rising", views: "35K"
+  },
+  "notion-vs-clickup": {
+    toolA: "Notion", toolB: "ClickUp",
+    title_en: "Notion vs ClickUp: Best AI Productivity Tool (2026)",
+    title_zh: "Notion vs ClickUp: AI生产力工具对比",
+    description_en: "Compare Notion and ClickUp for project management, docs, and AI features. Find the right productivity tool.",
+    description_zh: "对比Notion和ClickUp的项目管理、文档和AI功能。",
+    category: "AI Productivity", lastUpdated: "2026-02-02",
+    popularity: "hot", views: "89K"
+  },
+  "canva-vs-leonardo-ai": {
+    toolA: "Canva", toolB: "Leonardo AI",
+    title_en: "Canva vs Leonardo AI: Design Tool vs AI Image Generator (2026)",
+    title_zh: "Canva vs Leonardo AI: 设计工具 vs AI图片生成",
+    description_en: "Compare Canva's all-in-one design platform with Leonardo AI's image generation capabilities.",
+    description_zh: "对比Canva的全能设计平台和Leonardo AI的图片生成能力。",
+    category: "AI Design", lastUpdated: "2026-02-02",
+    popularity: "stable", views: "44K"
+  },
+  "pictory-vs-synthesia": {
+    toolA: "Pictory", toolB: "Synthesia",
+    title_en: "Pictory vs Synthesia: AI Video Creation Tools Compared (2026)",
+    title_zh: "Pictory vs Synthesia: AI视频创作工具对比",
+    description_en: "Compare Pictory's text-to-video with Synthesia's avatar videos. Which AI video tool is right for you?",
+    description_zh: "对比Pictory的文本转视频和Synthesia的数字人视频功能。",
+    category: "AI Video", lastUpdated: "2026-02-02",
+    popularity: "stable", views: "29K"
+  },
+  "surfer-seo-vs-frase": {
+    toolA: "Surfer SEO", toolB: "Frase",
+    title_en: "Surfer SEO vs Frase: Best AI Content Optimization Tool (2026)",
+    title_zh: "Surfer SEO vs Frase: AI内容优化工具对比",
+    description_en: "Compare Surfer SEO and Frase for content optimization, SEO writing, and keyword research.",
+    description_zh: "对比Surfer SEO和Frase的内容优化和SEO写作功能。",
+    category: "AI SEO", lastUpdated: "2026-02-02",
+    popularity: "stable", views: "31K"
+  },
+  "copy-ai-vs-writesonic": {
+    toolA: "Copy.ai", toolB: "Writesonic",
+    title_en: "Copy.ai vs Writesonic: Best AI Writing Tool (2026)",
+    title_zh: "Copy.ai vs Writesonic: AI写作工具对比",
+    description_en: "Compare Copy.ai and Writesonic for marketing copy, blog posts, and content generation.",
+    description_zh: "对比Copy.ai和Writesonic的营销文案和内容生成功能。",
+    category: "AI Writing", lastUpdated: "2026-02-02",
+    popularity: "stable", views: "33K"
+  },
 };
 
 // 从内容文件获取对比内容
