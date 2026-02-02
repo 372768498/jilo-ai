@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ContextualDiscovery, { ContextualBreadcrumbs } from "@/components/contextual-discovery";
+import ComparisonAffiliateCTA from "@/components/ComparisonAffiliateCTA";
 import { generateComparisonSchema } from "@/lib/schema-generator";
+import { getAffiliateConfig } from "@/lib/affiliate";
 import fs from "fs";
 import path from "path";
 
@@ -702,6 +704,22 @@ export default function ComparisonPage({ params }: PageProps) {
               ))}
           </div>
         </section>
+
+        {/* Affiliate CTA */}
+        <ComparisonAffiliateCTA
+          toolA={{
+            name: meta.toolA,
+            slug: slug.split('-vs-')[0] || '',
+            affiliateUrl: getAffiliateConfig(slug.split('-vs-')[0] || '')?.url,
+            dealText: getAffiliateConfig(slug.split('-vs-')[0] || '')?.dealText,
+          }}
+          toolB={{
+            name: meta.toolB,
+            slug: slug.split('-vs-').slice(1).join('-vs-') || '',
+            affiliateUrl: getAffiliateConfig(slug.split('-vs-').slice(1).join('-vs-') || '')?.url,
+            dealText: getAffiliateConfig(slug.split('-vs-').slice(1).join('-vs-') || '')?.dealText,
+          }}
+        />
 
         {/* CTA */}
         <Card className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 border-0">

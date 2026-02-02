@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import SearchBar from "@/components/search-bar";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import NewsletterSignup from "@/components/NewsletterSignup";
 import CategoryScrollBar from "@/components/category-scroll-bar";
 import TrendingTools from "@/components/trending-tools";
 import QuickDiscovery from "@/components/quick-discovery";
@@ -848,6 +849,11 @@ export default async function HomePage({ params }: PageProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Newsletter Signup */}
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <NewsletterSignup />
       </div>
 
       <Footer locale={locale} />

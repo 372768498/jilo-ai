@@ -297,6 +297,16 @@ export const comparisons: Record<string, ComparisonEntity> = {
   "deepl-vs-google-translate": { slug: "deepl-vs-google-translate", tools: ["deepl", "google-translate"], category: "ai-translation" },
   "midjourney-vs-leonardo": { slug: "midjourney-vs-leonardo", tools: ["midjourney", "leonardo-ai"], category: "ai-design" },
   "notion-ai-vs-obsidian": { slug: "notion-ai-vs-obsidian", tools: ["notion-ai", "obsidian"], category: "ai-productivity" },
+  "jasper-vs-copy-ai": { slug: "jasper-vs-copy-ai", tools: ["jasper", "copy-ai"], category: "ai-writing" },
+  "semrush-vs-surfer-seo": { slug: "semrush-vs-surfer-seo", tools: ["semrush", "surfer-seo"], category: "ai-seo" },
+  "synthesia-vs-heygen": { slug: "synthesia-vs-heygen", tools: ["synthesia", "heygen"], category: "ai-video" },
+  "grammarly-vs-writesonic": { slug: "grammarly-vs-writesonic", tools: ["grammarly", "writesonic"], category: "ai-writing" },
+  "fireflies-vs-otter": { slug: "fireflies-vs-otter", tools: ["fireflies", "otter-ai"], category: "ai-productivity" },
+  "notion-vs-clickup": { slug: "notion-vs-clickup", tools: ["notion-ai", "clickup-ai"], category: "ai-productivity" },
+  "canva-vs-leonardo-ai": { slug: "canva-vs-leonardo-ai", tools: ["canva", "leonardo-ai"], category: "ai-design" },
+  "pictory-vs-synthesia": { slug: "pictory-vs-synthesia", tools: ["pictory", "synthesia"], category: "ai-video" },
+  "surfer-seo-vs-frase": { slug: "surfer-seo-vs-frase", tools: ["surfer-seo", "frase"], category: "ai-seo" },
+  "copy-ai-vs-writesonic": { slug: "copy-ai-vs-writesonic", tools: ["copy-ai", "writesonic"], category: "ai-writing" },
 };
 
 export const alternatives: Record<string, AlternativeEntity> = {

@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, TrendingUp, Zap, Users, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import NewsletterSignup from "@/components/NewsletterSignup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/navbar";
@@ -483,6 +484,10 @@ export default function ComparePage({ params }: PageProps) {
             </div>
           </div>
         </section>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <NewsletterSignup />
       </div>
 
       <Footer locale={locale} />
