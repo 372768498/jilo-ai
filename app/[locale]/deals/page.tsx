@@ -1,5 +1,6 @@
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import NewsletterSignup from "@/components/NewsletterSignup";
 import { getAffiliateTools, type AffiliateConfig } from "@/lib/affiliate";
 import type { Metadata } from "next";
 
@@ -161,6 +162,11 @@ export default function DealsPage({ params }: PageProps) {
             </div>
           </section>
         ))}
+
+        {/* Newsletter Signup */}
+        <div className="mt-16">
+          <NewsletterSignup />
+        </div>
 
         {/* FTC Disclosure */}
         <div className="mt-16 p-6 bg-secondary/50 rounded-xl">
