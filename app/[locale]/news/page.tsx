@@ -7,6 +7,9 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import type { Metadata } from "next";
 
+// ISR: 每小时重新验证一次，确保新闻更新
+export const revalidate = 3600;
+
 type PageProps = {
   params: { locale: string };
 };
