@@ -257,7 +257,7 @@ export default async function HomePage({ params }: PageProps) {
                 </span>
                 <br />
                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-slate-900 via-blue-600 to-purple-600 font-mono">
-                  {isZh ? "完美 AI 工具" : "Perfect AI Tool"}
+                  {isZh ? "最适合的 AI 工具" : "Right AI Tool"}
                 </span>
               </h1>
               
