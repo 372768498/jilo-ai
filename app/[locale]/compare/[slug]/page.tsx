@@ -184,6 +184,16 @@ const comparisonMeta: Record<string, {
     logoA: "/logos/cursor.png", logoB: "/logos/github-copilot.png",
     popularity: "hot", views: "95K"
   },
+  "crewai-vs-openclaw": {
+    toolA: "CrewAI", toolB: "OpenClaw",
+    title_en: "CrewAI vs OpenClaw: Best AI Agent Framework 2025 [Comparison]",
+    title_zh: "CrewAI vs OpenClaw: 最佳AI Agent框架对比",
+    description_en: "Compare CrewAI and OpenClaw: multi-agent orchestration vs personal AI assistant. Architecture, use cases, and which is right for you.",
+    description_zh: "对比CrewAI和OpenClaw：多Agent编排vs个人AI助手，架构、用例及选择建议。",
+    category: "AI Agents", lastUpdated: "2026-02-20",
+    logoA: "/logos/crewai.png", logoB: "/logos/openclaw.png",
+    popularity: "hot", views: "15K"
+  },
   "deepseek-vs-chatgpt": {
     toolA: "DeepSeek", toolB: "ChatGPT",
     title_en: "DeepSeek vs ChatGPT: Free Open-Source vs Premium AI (2026)",
@@ -343,6 +353,16 @@ const comparisonMeta: Record<string, {
     description_zh: "对比Copy.ai和Writesonic的营销文案和内容生成功能。",
     category: "AI Writing", lastUpdated: "2026-02-02",
     popularity: "stable", views: "33K"
+  },
+  "cursor-vs-copilot-vs-windsurf": {
+    toolA: "Cursor", toolB: "Copilot/Windsurf",
+    title_en: "Cursor vs GitHub Copilot vs Windsurf: Ultimate AI Code Editor Comparison (2025)",
+    title_zh: "Cursor vs GitHub Copilot vs Windsurf：2025年AI代码编辑器终极对比",
+    description_en: "Comprehensive comparison of the three leading AI coding assistants: Cursor, GitHub Copilot, and Windsurf. Features, pricing, pros and cons.",
+    description_zh: "全面对比三大AI代码助手：Cursor、GitHub Copilot和Windsurf的功能、价格、优缺点。",
+    category: "AI Coding", lastUpdated: "2025-02-12",
+    logoA: "/logos/cursor.png", logoB: "/logos/github-copilot.png",
+    popularity: "hot", views: "0"
   },
 };
 
