@@ -1,8 +1,8 @@
 ---
 tool: "Runway"
 slug: "runway-alternatives"
-title: "10 Best Runway Alternatives for AI Video in 2026"
-description: "Discover the top Runway alternatives for AI video generation, editing, and creative video tools. Compare features, pricing, and capabilities."
+title: "10 Best Runway Alternatives 2026: Cheaper AI Video Generators"
+description: "Runway too expensive? Compare 10 AI video alternatives including Kling, Pika, Luma. We tested them all — see pricing, quality, and features."
 lastUpdated: "2026-02-01"
 ---
 
