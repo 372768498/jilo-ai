@@ -1,6 +1,6 @@
 ---
-title: "Best AI Video Generators in 2025: Runway, Sora, Kling & More Compared"
-description: "An in-depth comparison of the top AI video generation tools in 2025, including Runway Gen-3, Sora, Kling, Pika, Luma Dream Machine, and HailuoAI. We test video quality, motion control, pricing, and more."
+title: "6 Best AI Video Generators 2025: Runway vs Sora vs Kling [Tested]"
+description: "We tested 6 AI video generators head-to-head: Runway Gen-3, Sora, Kling, Pika, Luma & HailuoAI. See real comparisons for quality, speed, pricing & motion control."
 date: 2025-01-31
 author: "Jilo.ai Editorial Team"
 tags: ["ai video generator", "runway", "sora", "kling", "pika", "luma dream machine", "hailuoai", "ai tools", "video ai", "text to video"]
