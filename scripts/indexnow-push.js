@@ -11,8 +11,8 @@ const https = require('https');
 
 const CONFIG = {
   host: 'jilo.ai',
-  key: 'jilo-indexnow-2026', // IndexNow key
-  keyLocation: 'https://jilo.ai/jilo-indexnow-2026.txt',
+  key: 'ddee3f9754f242b3b7b4c93349a99bbb', // IndexNow key (UUID format)
+  keyLocation: 'https://jilo.ai/ddee3f9754f242b3b7b4c93349a99bbb.txt',
   endpoint: 'https://api.indexnow.org/indexnow'
 };
 
