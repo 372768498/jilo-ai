@@ -154,26 +154,32 @@ async function translateAndSummarize(title, description) {
 // 检查新闻是否已存在
 async function checkExisting(slug) {
   const resp = await fetch(
-    `${SUPABASE_URL}/rest/v1/news_simple?slug=eq.${encodeURIComponent(slug)}&select=id`,
+    `${SUPABASE_URL}/rest/v1/news?slug=eq.${encodeURIComponent(slug)}&select=id`,
     { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
   );
   const data = await resp.json();
   return data.length > 0;
 }
 
-// 插入新闻（upsert，slug冲突时跳过）
+// 插入新闻到 news 表
 async function insertNews(news) {
-  const resp = await fetch(`${SUPABASE_URL}/rest/v1/news_simple`, {
+  const resp = await fetch(`${SUPABASE_URL}/rest/v1/news`, {
     method: 'POST',
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json',
-      Prefer: 'return=minimal,resolution=ignore-duplicates',
+      Prefer: 'return=representation,resolution=merge-duplicates',
     },
     body: JSON.stringify(news),
   });
-  return resp.ok || resp.status === 409;
+  if (resp.ok) {
+    const data = await resp.json();
+    return { ok: true, isNew: resp.status === 201, data };
+  }
+  const err = await resp.text();
+  console.warn(`    DB error (${resp.status}): ${err.slice(0, 200)}`);
+  return { ok: false };
 }
 
 // 过滤 AI 相关新闻
@@ -236,20 +242,20 @@ async function main() {
           } catch { }
         }
         
-        // 插入
+        // 插入（字段映射到 news 表）
         const news = {
           slug,
-          title: item.title,
+          title_en: item.title,
           title_zh: title_zh || null,
-          summary: item.description || null,
+          summary_en: item.description || null,
           summary_zh: summary_zh || null,
           source: feed.name,
           source_url: item.link,
           published_at,
         };
         
-        const ok = await insertNews(news);
-        if (ok) {
+        const result = await insertNews(news);
+        if (result.ok) {
           totalNew++;
           console.log(`  ✅ ${item.title.slice(0, 60)}...`);
         } else {

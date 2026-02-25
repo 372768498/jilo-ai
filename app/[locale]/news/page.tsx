@@ -44,10 +44,22 @@ export default async function NewsListPage({ params }: PageProps) {
   const isZh = locale === "zh";
 
   // 获取所有新闻（包含中英文字段）
-  const { data: newsList } = await supabase
-    .from("news_simple")
-    .select("id, slug, title, title_zh, summary, summary_zh, source, published_at")
+  const { data: rawNews } = await supabase
+    .from("news")
+    .select("id, slug, title_en, title_zh, summary_en, summary_zh, source, published_at")
     .order("published_at", { ascending: false, nullsFirst: false });
+
+  // 映射字段名兼容原模板
+  const newsList = rawNews?.map(n => ({
+    id: n.id,
+    slug: n.slug,
+    title: n.title_en,
+    title_zh: n.title_zh,
+    summary: n.summary_en,
+    summary_zh: n.summary_zh,
+    source: n.source,
+    published_at: n.published_at,
+  }));
 
   // 去重
   const uniqueNews = newsList?.filter((news, index, self) =>
