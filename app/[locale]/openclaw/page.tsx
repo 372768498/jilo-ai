@@ -1,4 +1,3 @@
-import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +5,7 @@ import { ArrowRight, Star, Download, Terminal } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import type { Metadata } from "next";
+import skillsData from "@/content/openclaw-skills.json";
 
 export const revalidate = 600;
 
@@ -53,11 +53,10 @@ export default async function OpenClawSkillsPage({ params }: PageProps) {
   const locale = params?.locale || "en";
   const isZh = locale === "zh";
 
-  const { data: skills } = await supabase
-    .from("openclaw_skills")
-    .select("*")
-    .order("featured", { ascending: false })
-    .order("downloads", { ascending: false });
+  const skills = [...skillsData].sort((a, b) => {
+    if (a.featured !== b.featured) return a.featured ? -1 : 1;
+    return (b.downloads || 0) - (a.downloads || 0);
+  });
 
   const categories = Array.from(new Set(skills?.map((s: any) => s.category) || []));
 

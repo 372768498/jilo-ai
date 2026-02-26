@@ -1,4 +1,3 @@
-import { supabase } from "@/lib/supabase";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +5,7 @@ import { Star, Download, Terminal, ExternalLink, Github } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import type { Metadata } from "next";
+import skillsData from "@/content/openclaw-skills.json";
 
 export const revalidate = 600;
 
@@ -27,11 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const isZh = locale === "zh";
   const altLocale = isZh ? "en" : "zh";
 
-  const { data: skill } = await supabase
-    .from("openclaw_skills")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+  const skill = skillsData.find((s: any) => s.slug === slug);
 
   if (!skill) return { title: "Not Found" };
 
@@ -58,11 +54,7 @@ export default async function SkillDetailPage({ params }: PageProps) {
   const { slug, locale } = params;
   const isZh = locale === "zh";
 
-  const { data: skill } = await supabase
-    .from("openclaw_skills")
-    .select("*")
-    .eq("slug", slug)
-    .single();
+  const skill = skillsData.find((s: any) => s.slug === slug);
 
   if (!skill) notFound();
 
