@@ -106,6 +106,14 @@ export default async function OpenClawSkillsPage({ params }: PageProps) {
             <Badge variant="outline" className="text-base px-4 py-1 border-orange-300 text-orange-700">
               {t.total}
             </Badge>
+            <div className="mt-4">
+              <a
+                href={`/${locale}/openclaw/cases`}
+                className="inline-flex items-center gap-2 bg-green-600 text-white px-6 py-2 rounded-full text-sm font-semibold hover:bg-green-700 transition"
+              >
+                💰 {isZh ? "查看赚钱案例" : "Money-Making Cases"} <ArrowRight className="w-3 h-3" />
+              </a>
+            </div>
           </div>
 
           {/* Category pills */}
