@@ -21,6 +21,7 @@ export default function Navbar({ locale }: NavbarProps) {
     { name: "最佳推荐", href: `/${locale}/best` },
     { name: "评测", href: `/${locale}/reviews` },
     { name: "新闻", href: `/${locale}/news` },
+    { name: "🦞 OpenClaw", href: `/${locale}/openclaw` },
   ] : [
     { name: "Home", href: `/${locale}` },
     { name: "AI Tools", href: `/${locale}/tools` },
@@ -29,6 +30,7 @@ export default function Navbar({ locale }: NavbarProps) {
     { name: "Best Tools", href: `/${locale}/best` },
     { name: "Reviews", href: `/${locale}/reviews` },
     { name: "News", href: `/${locale}/news` },
+    { name: "🦞 OpenClaw", href: `/${locale}/openclaw` },
   ];
 
   return (

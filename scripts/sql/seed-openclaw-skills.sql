@@ -1,0 +1,17 @@
+-- OpenClaw Skills 种子数据
+INSERT INTO openclaw_skills (name, slug, description, description_zh, category, author, github_url, install_command, rating, downloads, tags, featured) VALUES
+('Agent Deep Research', 'agent-deep-research', 'Autonomous research agent that searches the web, summarizes findings, and generates comprehensive reports on any topic.', '自主研究Agent，自动搜索网络、总结发现、生成任意主题的综合研究报告。', 'research', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/agent-deep-research', 'clawhub install agent-deep-research', 4.8, 12500, ARRAY['research','automation','report','web-search'], true),
+
+('SEO Audit & Optimizer', 'seo', 'Comprehensive SEO audit tool that analyzes your website structure, meta tags, content quality, and provides actionable optimization suggestions.', '全面的SEO审计工具，分析网站结构、Meta标签、内容质量，提供可操作的优化建议。', 'marketing', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/seo', 'clawhub install seo', 4.6, 8900, ARRAY['seo','marketing','audit','optimization'], true),
+
+('Douyin Hot Trend', 'douyin-hot-trend', 'Real-time Douyin (TikTok China) trending topics scraper. Get top trending hashtags, videos, and content ideas.', '实时抖音热榜抓取工具，获取热门话题、视频和内容灵感。', 'trends', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/douyin-hot-trend', 'clawhub install douyin-hot-trend', 4.5, 6200, ARRAY['douyin','trends','china','content'], true),
+
+('Trend Watcher', 'trend-watcher', 'Multi-platform trend monitoring across Google Trends, Twitter/X, Reddit, and Hacker News. Stay ahead of the curve.', '多平台趋势监控，覆盖Google Trends、Twitter/X、Reddit和Hacker News，把握先机。', 'trends', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/trend-watcher', 'clawhub install trend-watcher', 4.4, 5800, ARRAY['trends','monitoring','google','reddit'], false),
+
+('Affiliate Master', 'affiliate-master', 'Strategic affiliate marketing advisor. Analyzes products, suggests optimal affiliate programs, and generates conversion-optimized content.', 'Affiliate营销策略顾问，分析产品、推荐最优联盟计划、生成高转化内容。', 'marketing', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/affiliate-master', 'clawhub install affiliate-master', 4.3, 4500, ARRAY['affiliate','marketing','monetization','content'], true),
+
+('Mia Content Creator', 'mia-content-creator', 'AI-powered content generation pipeline. Creates blog posts, social media content, newsletters, and marketing copy at scale.', 'AI内容生成流水线，批量创建博客文章、社媒内容、Newsletter和营销文案。', 'content', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/mia-content-creator', 'clawhub install mia-content-creator', 4.5, 7300, ARRAY['content','writing','social-media','marketing'], true),
+
+('AI Video Generator', 'ai-video-gen', 'Generate short-form videos from text prompts. Supports multiple styles, aspect ratios, and automatic subtitle generation.', 'AI短视频生成工具，支持多种风格、画面比例和自动字幕生成。', 'content', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/ai-video-gen', 'clawhub install ai-video-gen', 4.2, 3800, ARRAY['video','content','automation','subtitles'], false),
+
+('Autonomous Brain', 'autonomous-brain', 'Self-directed task planning and execution engine. Breaks down complex goals into actionable steps and executes them autonomously.', '自主任务规划与执行引擎，将复杂目标拆解为可执行步骤并自主完成。', 'automation', 'openclaw-community', 'https://github.com/openclaw/skills/tree/main/autonomous-brain', 'clawhub install autonomous-brain', 4.7, 9800, ARRAY['automation','planning','autonomous','productivity'], true);
