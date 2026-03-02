@@ -1,7 +1,7 @@
----
-title: "Best Chinese AI Models in 2025: DeepSeek vs Doubao vs Qwen vs ERNIE vs Kimi — A Comprehensive Review"
-date: 2025-07-30
-description: "An in-depth comparison of China's top 5 AI large language models in 2025. We test Chinese language understanding, coding, creative writing, multimodal capabilities, pricing, and accessibility."
+﻿---
+title: "Best Chinese AI Models in 2026: DeepSeek vs Doubao vs Qwen vs ERNIE vs Kimi — A Comprehensive Review"
+date: 2026-03-02
+description: "An in-depth comparison of China's top 5 AI large language models in 2026. We test Chinese language understanding, coding, creative writing, multimodal capabilities, pricing, and accessibility."
 author: "Miaosuan Tech Content Team"
 tags: ["Chinese AI", "DeepSeek", "Doubao", "Qwen", "ERNIE", "Kimi", "LLM comparison", "AI review"]
 categories: ["Reviews"]
