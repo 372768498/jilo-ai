@@ -34,13 +34,13 @@ const reviewsMeta: Record<string, {
     tools: ["Midjourney", "DALL-E 3"],
   },
   "best-ai-coding-tools": {
-    title_en: "10 Best AI Coding Assistants in 2026 (Compared)",
-    title_zh: "2026 年 10 款最佳 AI 编程助手（深度对比）",
-    description_en: "Compare GitHub Copilot, Cursor, Claude Code, and 7 more AI coding tools with pricing and features.",
-    description_zh: "对比 GitHub Copilot、Cursor、Claude Code 等 10 款 AI 编程工具。",
+    title_en: "10 Best AI Coding Tools in 2026: Cursor, Copilot, Claude Code & More",
+    title_zh: "2026 年 10 款最佳 AI 编程工具深度对比：Cursor、GitHub Copilot、Claude Code 等",
+    description_en: "The definitive comparison of the 10 best AI coding tools in 2026 — Cursor, GitHub Copilot, Claude Code, Windsurf, Qoder, Codeium, Tabnine, Amazon Q, Replit AI, and Devin. Best overall: Cursor.",
+    description_zh: "2026 年 10 款顶级 AI 编程工具深度对比，含定价、功能和按用户类型的选型建议。综合最佳：Cursor。",
     category: "AI Coding",
     date: "2026-03-02",
-    tools: ["GitHub Copilot", "Cursor", "Claude Code", "Tabnine", "Codeium"],
+    tools: ["GitHub Copilot", "Cursor", "Claude Code", "Windsurf", "Qoder", "Codeium", "Tabnine", "Amazon Q Developer", "Replit AI", "Devin"],
   },
   "best-chinese-ai-models": {
     title_en: "Best Chinese AI Models 2026: DeepSeek vs Doubao vs Qwen vs Kimi",
