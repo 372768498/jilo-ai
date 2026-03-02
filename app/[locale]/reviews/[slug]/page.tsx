@@ -89,12 +89,12 @@ const reviewsMeta: Record<string, {
   },
   "best-free-ai-tools": {
     title_en: "25 Best Free AI Tools in 2026 (No Credit Card Required)",
-    title_zh: "2026 完全免费的 AI 工具推荐",
-    description_en: "The ultimate list of free AI tools across chatbots, image generation, coding, writing, and more.",
-    description_zh: "覆盖各品类的免费 AI 工具大全。",
+    title_zh: "2026 最佳免费 AI 工具大全（无需信用卡）",
+    description_en: "The definitive list of the best free AI tools in 2026 — covering chat, writing, image generation, coding, search, audio, productivity, and video. Real free tiers, real limits, no upsell.",
+    description_zh: "2026 年最全免费 AI 工具大全，覆盖聊天/写作/图像/编程/搜索/音频/生产力/视频 8 大类，标注每款工具具体免费额度。",
     category: "Free Tools",
     date: "2026-03-02",
-    tools: ["ChatGPT", "Claude", "Gemini", "DeepSeek", "Kimi", "Stable Diffusion"],
+    tools: ["ChatGPT", "Claude", "Gemini", "DeepSeek", "Kimi", "Stable Diffusion", "Perplexity", "Kling", "Otter.ai", "Gamma", "NotebookLM"],
   },
   "ai-for-business": {
     title_en: "Best AI Tools for Business in 2026: Top Picks for Every Team",
