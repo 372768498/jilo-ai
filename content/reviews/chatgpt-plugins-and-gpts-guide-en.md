@@ -1,6 +1,6 @@
 ---
-title: "ChatGPT Plugins & GPTs: The Complete Guide to Customizing ChatGPT (2025)"
-date: 2025-01-31
+title: "ChatGPT Plugins & GPTs: The Complete Guide to Customizing ChatGPT (2026)"
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
 description: "Complete guide to ChatGPT GPTs and plugins - discover the best GPTs, learn to create your own, explore monetization strategies, and master the Actions API for custom AI assistants."
 tags: ["chatgpt", "gpts", "plugins", "openai", "ai-assistant", "custom-gpt"]

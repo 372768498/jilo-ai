@@ -1,8 +1,8 @@
 ---
-title: "Perplexity vs Google vs ChatGPT Search: Ultimate AI Search Engine Comparison (2025)"
-date: 2025-01-31
+title: "Perplexity vs Google vs ChatGPT Search: Ultimate AI Search Engine Comparison (2026)"
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
-description: "Complete comparison of Perplexity, Google, and ChatGPT Search - the three leading AI search engines in 2025. Discover which one delivers better results, citations, and real-time information."
+description: "Complete comparison of Perplexity, Google, and ChatGPT Search - the three leading AI search engines in 2026. Discover which one delivers better results, citations, and real-time information."
 tags: ["perplexity", "google", "chatgpt search", "ai search engine", "search comparison"]
 ---
 

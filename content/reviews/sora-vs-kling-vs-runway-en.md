@@ -1,8 +1,8 @@
 ---
-title: "Sora vs Kling vs Runway 2025: AI Video Generator Showdown"
-date: 2025-01-31
+title: "Sora vs Kling vs Runway 2026: AI Video Generator Showdown"
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
-description: "The ultimate comparison of Sora, Kling, and Runway — the three biggest AI video generators in 2025. Compare video quality, duration, motion control, pricing, and real-world performance."
+description: "The ultimate comparison of Sora, Kling, and Runway — the three biggest AI video generators in 2026. Compare video quality, duration, motion control, pricing, and real-world performance."
 tags: ["sora", "kling", "runway", "ai video", "ai video generator", "text to video", "video ai comparison"]
 ---
 

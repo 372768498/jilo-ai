@@ -1,8 +1,8 @@
 ---
-title: "Will AI Replace Your Job? The Complete 2025 Analysis"
-date: 2025-01-31
+title: "Will AI Replace Your Job? The Complete 2026 Analysis"
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
-description: "Comprehensive analysis of AI's impact on 15+ industries in 2025. Discover replacement probabilities, AI tools, and transformation strategies for your career."
+description: "Comprehensive analysis of AI's impact on 15+ industries in 2026. Discover replacement probabilities, AI tools, and transformation strategies for your career."
 tags: ["AI automation", "job market", "career transformation", "future of work", "AI tools"]
 ---
 

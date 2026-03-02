@@ -1,7 +1,7 @@
 ---
-title: "10 Best AI Video Editing Tools 2025: Edit Videos Like a Pro"
-description: "Complete guide to the top 10 AI video editing tools in 2025, including Descript, CapCut AI, Opus Clip, Runway, Pictory, InVideo AI, Filmora AI, and Chinese tools like Jianying AI and Bicut for professional video editing."
-date: 2025-01-31
+title: "10 Best AI Video Editing Tools 2026: Edit Videos Like a Pro"
+description: "Complete guide to the top 10 AI video editing tools in 2026, including Descript, CapCut AI, Opus Clip, Runway, Pictory, InVideo AI, Filmora AI, and Chinese tools like Jianying AI and Bicut for professional video editing."
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
 tags: ["AI video editing", "video production", "content creation", "editing tools", "2025"]
 category: "reviews"

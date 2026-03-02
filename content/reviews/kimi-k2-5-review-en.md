@@ -1,6 +1,6 @@
 ---
 title: "Kimi K2.5 Review: Moonshot AI's Latest Model Explained"
-date: 2025-01-31
+date: 2026-03-02
 description: "A comprehensive review of Kimi K2.5, Moonshot AI's most powerful open-source multimodal model with 1T parameters, Agent Swarm, and 256K context — benchmarked against GPT-5.2, Claude 4.5 Opus, and Gemini 3 Pro."
 tags: ["kimi k2.5", "moonshot ai", "ai model review", "multimodal ai", "open source llm"]
 category: "AI Model Reviews"

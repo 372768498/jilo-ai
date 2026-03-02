@@ -1,7 +1,7 @@
 ---
 title: "Prompt Engineering Guide: The Complete Guide to Making AI Do What You Want"
 description: "A systematic guide to prompt engineering covering role assignment, step-by-step reasoning, few-shot learning, chain of thought, and 10 universal prompt frameworks applicable to ChatGPT, Claude, Midjourney, and other AI tools."
-date: 2025-01-31
+date: 2026-03-02
 author: "Jilo AI"
 tags: ["Prompt Engineering", "AI", "ChatGPT", "Claude", "Midjourney", "LLM", "AI Tutorial", "Productivity"]
 ---

@@ -1,7 +1,7 @@
 ---
-title: "Midjourney V7 Review: Everything New in 2025's Biggest AI Art Update"
+title: "Midjourney V7 Review: Everything New in 2026's Biggest AI Art Update"
 description: "Complete review of Midjourney V7's groundbreaking features, including enhanced image quality, character consistency, text rendering, and style control. Compare with DALL-E 3, Stable Diffusion 3, and Kling AI."
-date: 2025-01-31
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
 tags: ["Midjourney V7", "AI art", "image generation", "creative tools", "2025"]
 category: "reviews"

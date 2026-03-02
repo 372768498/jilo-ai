@@ -1,7 +1,7 @@
 ---
-title: "Best AI Tools for Students in 2025: Free & Essential Tools for Learning, Writing, and Studying"
+title: "Best AI Tools for Students in 2026: Free & Essential Tools for Learning, Writing, and Studying"
 description: "Discover the best AI tools for students covering study aids, essay writing, math problem solving, coding, language learning, and note-taking. Focus on free and affordable options for every student."
-date: 2025-01-30
+date: 2026-03-02
 author: "Jilo AI"
 tags: ["ai tools for students", "ai study tools", "ai essay writing", "ai math solver", "ai coding", "ai language learning", "student tools", "free ai tools", "education ai"]
 ---

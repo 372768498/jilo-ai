@@ -1,8 +1,8 @@
 ---
-title: "Top 10 AI Presentation Tools 2025: Create Professional Slides in Minutes"
-date: 2025-01-31
+title: "Top 10 AI Presentation Tools 2026: Create Professional Slides in Minutes"
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
-description: "Discover the best AI-powered presentation tools of 2025. Compare Gamma, Beautiful.ai, Tome, and more to create stunning PPT slides automatically from text prompts."
+description: "Discover the best AI-powered presentation tools of 2026. Compare Gamma, Beautiful.ai, Tome, and more to create stunning PPT slides automatically from text prompts."
 tags: ["ai presentation", "ai ppt maker", "presentation tools", "gamma", "beautiful.ai", "tome", "slidesai"]
 ---
 

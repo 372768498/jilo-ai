@@ -1,7 +1,7 @@
 ---
 title: "How to Use Midjourney: The Complete Guide from Registration to Stunning AI Art"
 description: "Master Midjourney with this comprehensive guide covering setup, prompting techniques, parameter deep-dives, 10 scene-specific prompt templates, and style comparisons for photorealistic, anime, watercolor, and oil painting aesthetics."
-date: 2025-01-31
+date: 2026-03-02
 author: "Jilo AI"
 tags: ["Midjourney", "AI Art", "Image Generation", "AI Guide", "Prompt Engineering", "Digital Art", "Creative AI"]
 ---

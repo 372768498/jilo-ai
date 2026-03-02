@@ -1,8 +1,8 @@
 ---
-title: "10 Best AI Design Tools in 2025: Figma AI vs Canva AI & More"
-date: 2025-01-31
+title: "10 Best AI Design Tools in 2026: Figma AI vs Canva AI & More"
+date: 2026-03-02
 author: "Jilo.ai Editorial Team"
-description: "Comprehensive comparison of the top AI design tools in 2025, including Figma AI, Canva AI, Adobe Firefly, and more. Find the perfect AI-powered design solution for your needs."
+description: "Comprehensive comparison of the top AI design tools in 2026, including Figma AI, Canva AI, Adobe Firefly, and more. Find the perfect AI-powered design solution for your needs."
 tags: ["AI design tools", "Figma AI", "Canva AI", "graphic design", "UI/UX design"]
 ---
 
