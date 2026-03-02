@@ -135,8 +135,8 @@ const reviewsMeta: Record<string, {
   "openclaw-review-and-setup-guide": {
     title_en: "OpenClaw Review & Setup Guide: The AI Assistant with 120K GitHub Stars",
     title_zh: "OpenClaw 深度评测：GitHub 12万Star的AI助手",
-    description_en: "In-depth review and setup guide for OpenClaw, the hottest open-source AI assistant of 2025.",
-    description_zh: "深度评测 2025 最火开源 AI 助手 OpenClaw。",
+    description_en: "In-depth review and setup guide for OpenClaw, the hottest open-source AI assistant of 2026.",
+    description_zh: "深度评测 2026 最火开源 AI 助手 OpenClaw。",
     category: "AI Agent",
     date: "2026-03-02",
     tools: ["OpenClaw", "Claude", "ChatGPT"],
@@ -144,7 +144,7 @@ const reviewsMeta: Record<string, {
   "best-ai-agents": {
     title_en: "10 Best AI Agents in 2026: OpenClaw, AutoGPT, CrewAI & More",
     title_zh: "2026 十大 AI Agent 工具横评",
-    description_en: "Compare the top AI agent tools of 2025 across features, pricing, and use cases.",
+    description_en: "Compare the top AI agent tools of 2026 across features, pricing, and use cases.",
     description_zh: "对比十大 AI 智能体工具。",
     category: "AI Agent",
     date: "2026-03-02",
