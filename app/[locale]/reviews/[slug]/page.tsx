@@ -61,13 +61,13 @@ const reviewsMeta: Record<string, {
     tools: ["Jasper", "Copy.ai", "Writesonic", "Notion AI", "Claude", "ChatGPT"],
   },
   "best-ai-image-generators": {
-    title_en: "Best AI Image Generators 2026: Midjourney, DALL-E, SD & More",
-    title_zh: "2026 最佳 AI 图片生成器全面对比",
-    description_en: "Compare Midjourney, DALL-E 3, Stable Diffusion, Leonardo AI, Ideogram, and Flux across quality, pricing, and licensing.",
-    description_zh: "6 大 AI 绘图工具的图片质量、价格和商用授权对比。",
+    title_en: "Best AI Image Generators in 2026: Midjourney, Flux, Stable Diffusion & More",
+    title_zh: "2026 最佳 AI 图像生成器深度对比：Midjourney v7、Flux、SD4 等 8 款工具",
+    description_en: "The definitive comparison of the 8 best AI image generators in 2026 — Midjourney v7, GPT Image 1.5, Flux 1.1 Pro, Stable Diffusion 4, Ideogram v3, Adobe Firefly 4, Nano Banana Pro, and Leonardo AI.",
+    description_zh: "2026 年 8 款顶级 AI 图像生成器深度对比，含 8 维度评分表、具体定价和按场景选型建议。",
     category: "AI Art",
     date: "2026-03-02",
-    tools: ["Midjourney", "DALL-E 3", "Stable Diffusion", "Leonardo AI", "Ideogram", "Flux"],
+    tools: ["Midjourney v7", "GPT Image 1.5", "Flux 1.1 Pro", "Stable Diffusion 4", "Ideogram v3", "Adobe Firefly 4", "Nano Banana Pro", "Leonardo AI"],
   },
   "ai-tools-for-students": {
     title_en: "15 Best Free AI Tools for Students in 2026",
