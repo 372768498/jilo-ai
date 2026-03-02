@@ -16,13 +16,13 @@ const reviewsMeta: Record<string, {
   tools: string[];
 }> = {
   "chatgpt-vs-claude": {
-    title_en: "ChatGPT vs Claude 2026: Complete Comparison Guide",
-    title_zh: "ChatGPT vs Claude 2026：全面深度对比指南",
-    description_en: "An in-depth comparison of ChatGPT and Claude across writing, coding, reasoning, creativity, and pricing.",
-    description_zh: "从写作、编程、推理、创意和价格五大维度深度对比 ChatGPT 和 Claude。",
+    title_en: "ChatGPT vs Claude in 2026: Which AI Is Better? (GPT-5.2 vs Opus 4.6)",
+    title_zh: "ChatGPT vs Claude 2026 深度对比：GPT-5.2 还是 Claude Opus 4.6 更强？",
+    description_en: "The definitive ChatGPT vs Claude comparison in 2026. GPT-5.2 vs Claude Opus 4.6 across writing, coding, reasoning, pricing, and API. 6-dimension scorecard with clear winners.",
+    description_zh: "2026 年最全 ChatGPT vs Claude 对比：GPT-5.2 vs Claude Opus 4.6，含六维度评分、精确定价表和 API 对比（$1.75 vs $5/M tokens）。",
     category: "AI Chatbots",
     date: "2026-03-02",
-    tools: ["ChatGPT", "Claude"],
+    tools: ["ChatGPT", "Claude", "GPT-5.2", "Claude Opus 4.6"],
   },
   "midjourney-vs-dalle": {
     title_en: "Midjourney vs DALL-E 3: Ultimate AI Art Comparison",
