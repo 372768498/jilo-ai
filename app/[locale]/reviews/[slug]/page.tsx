@@ -16,13 +16,31 @@ const reviewsMeta: Record<string, {
   tools: string[];
 }> = {
   "chatgpt-vs-claude": {
-    title_en: "ChatGPT vs Claude in 2026: Which AI Is Better? (GPT-5.2 vs Opus 4.6)",
-    title_zh: "ChatGPT vs Claude 2026 深度对比：GPT-5.2 还是 Claude Opus 4.6 更强？",
-    description_en: "The definitive ChatGPT vs Claude comparison in 2026. GPT-5.2 vs Claude Opus 4.6 across writing, coding, reasoning, pricing, and API. 6-dimension scorecard with clear winners.",
-    description_zh: "2026 年最全 ChatGPT vs Claude 对比：GPT-5.2 vs Claude Opus 4.6，含六维度评分、精确定价表和 API 对比（$1.75 vs $5/M tokens）。",
+    title_en: "Claude vs ChatGPT 2026: Which AI Chatbot is Better?",
+    title_zh: "Claude vs ChatGPT 2026：哪个 AI 聊天机器人更好？",
+    description_en: "Detailed comparison of Claude Opus 4.6 and ChatGPT GPT-5.2 in 2026 — pricing, performance, features, and use case recommendations to help you choose the right AI assistant.",
+    description_zh: "2026 年 Claude Opus 4.6 与 ChatGPT GPT-5.2 详细对比 — 定价、性能、功能和使用场景推荐，帮助你选择合适的 AI 助手。",
     category: "AI Chatbots",
-    date: "2026-03-02",
+    date: "2026-03-03",
     tools: ["ChatGPT", "Claude", "GPT-5.2", "Claude Opus 4.6"],
+  },
+  "midjourney-vs-flux": {
+    title_en: "Midjourney vs Flux 2026: Which AI Image Generator is Better?",
+    title_zh: "Midjourney vs Flux 2026：哪个 AI 图像生成器更好？",
+    description_en: "Detailed comparison of Midjourney v7 and Flux 1.1 Pro in 2026 — image quality, speed, pricing, and use case recommendations for designers and creators.",
+    description_zh: "2026 年 Midjourney v7 与 Flux 1.1 Pro 详细对比 — 图像质量、速度、定价和使用场景推荐。",
+    category: "AI Art",
+    date: "2026-03-03",
+    tools: ["Midjourney", "Flux", "Midjourney v7", "Flux 1.1 Pro"],
+  },
+  "cursor-vs-github-copilot": {
+    title_en: "Cursor vs GitHub Copilot 2026: Which AI Coding Assistant is Better?",
+    title_zh: "Cursor vs GitHub Copilot 2026：哪个 AI 编程助手更好？",
+    description_en: "Detailed comparison of Cursor and GitHub Copilot in 2026 — pricing, features, IDE support, and use case recommendations for developers and teams.",
+    description_zh: "2026 年 Cursor 与 GitHub Copilot 详细对比 — 定价、功能、IDE 支持和使用场景推荐。",
+    category: "AI Coding",
+    date: "2026-03-03",
+    tools: ["Cursor", "GitHub Copilot"],
   },
   "midjourney-vs-dalle": {
     title_en: "Midjourney vs DALL-E 3: Ultimate AI Art Comparison",
