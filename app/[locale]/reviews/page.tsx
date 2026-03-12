@@ -450,6 +450,22 @@ export default function ReviewsPage({ params }: PageProps) {
           </div>
         </div>
 
+        <div className="mb-8 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold mb-2">
+                {isZh ? '不只看评测，也可以直接看工作流' : 'Not just reviews — you can also jump straight to workflows'}
+              </h2>
+              <p className="text-sm text-slate-600">
+                {isZh ? '如果你已经知道要解决什么问题，而不是只想比较工具，可以直接进入工作流库。' : 'If you already know the job to be done, start with workflows instead of only comparing tools.'}
+              </p>
+            </div>
+            <Link href={`/${locale}/workflows`} className="inline-flex items-center px-5 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition">
+              {isZh ? '浏览工作流' : 'Browse Workflows'} →
+            </Link>
+          </div>
+        </div>
+
         {/* 筛选后的评测文章 */}
         <div className="grid gap-6">
           {filteredReviews.map((review) => (

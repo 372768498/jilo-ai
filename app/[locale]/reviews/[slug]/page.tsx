@@ -114,6 +114,15 @@ const reviewsMeta: Record<string, {
     date: "2026-03-02",
     tools: ["ChatGPT", "Claude", "Gemini", "DeepSeek", "Kimi", "Stable Diffusion", "Perplexity", "Kling", "Otter.ai", "Gamma", "NotebookLM"],
   },
+  "chatgpt-uninstalls-surge-295-2026": {
+    title_en: "ChatGPT Uninstalls Surge 295%: Where Are Users Going in 2026?",
+    title_zh: "ChatGPT 卸载量暴增 295%：用户都去哪了？（2026）",
+    description_en: "ChatGPT uninstalls jumped 295% after OpenAI's Pentagon deal controversy in February 2026. This guide covers what happened, why users are leaving, and the 5 best ChatGPT alternatives — Claude, Gemini, Perplexity, and more.",
+    description_zh: "2026年2月，OpenAI五角大楼合同争议引发ChatGPT卸载量暴增295%。本文详解事件经过、用户出走原因，以及5大最佳ChatGPT替代品：Claude、Gemini、Perplexity等。",
+    category: "AI Chatbots",
+    date: "2026-03-04",
+    tools: ["ChatGPT", "Claude", "Gemini", "Perplexity", "Microsoft Copilot", "Grok"],
+  },
   "ai-for-business": {
     title_en: "Best AI Tools for Business in 2026: Top Picks for Every Team",
     title_zh: "2026 最佳企业 AI 工具全指南：各职能团队精选推荐",
@@ -706,21 +715,40 @@ export default function ReviewPage({ params }: PageProps) {
         </div>
 
         {/* CTA */}
-        <div className="mt-8 p-6 bg-secondary/50 rounded-xl text-center">
-          <h3 className="text-xl font-bold mb-2">
-            {isZh ? "发现更多 AI 工具" : "Discover More AI Tools"}
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {isZh
-              ? "浏览我们的 AI 工具目录，找到最适合你的工具。"
-              : "Browse our AI tools directory to find the perfect tool for your needs."}
-          </p>
-          <Link
-            href={`/${locale}/tools`}
-            className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
-          >
-            {isZh ? "浏览工具目录" : "Browse Tools"} →
-          </Link>
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          <div className="p-6 bg-secondary/50 rounded-xl text-center">
+            <h3 className="text-xl font-bold mb-2">
+              {isZh ? "发现更多 AI 工具" : "Discover More AI Tools"}
+            </h3>
+            <p className="text-muted-foreground mb-4">
+              {isZh
+                ? "浏览我们的 AI 工具目录，找到最适合你的工具。"
+                : "Browse our AI tools directory to find the perfect tool for your needs."}
+            </p>
+            <Link
+              href={`/${locale}/tools`}
+              className="inline-flex items-center px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
+            >
+              {isZh ? "浏览工具目录" : "Browse Tools"} →
+            </Link>
+          </div>
+
+          <div className="p-6 bg-blue-50 rounded-xl text-center border border-blue-200">
+            <h3 className="text-xl font-bold mb-2">
+              {isZh ? "想直接解决问题？" : "Need a step-by-step solution?"}
+            </h3>
+            <p className="text-slate-600 mb-4">
+              {isZh
+                ? "如果你不只是想比较工具，而是想直接知道怎么做，去看我们的 workflow library。"
+                : "If you care more about execution than comparison, explore our workflow library."}
+            </p>
+            <Link
+              href={`/${locale}/workflows`}
+              className="inline-flex items-center px-6 py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition"
+            >
+              {isZh ? "浏览工作流" : "Browse Workflows"} →
+            </Link>
+          </div>
         </div>
       </article>
       <Footer locale={locale} />

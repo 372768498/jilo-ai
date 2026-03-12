@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Workflow } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import type { Metadata } from "next";
@@ -93,13 +93,19 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
     all_categories: "全部分类",
     ai_chat: "AI聊天",
     no_tools: "暂无工具",
-    try_filters: "请尝试其他筛选条件"
+    try_filters: "请尝试其他筛选条件",
+    workflows_title: "直接看工作流",
+    workflows_desc: "如果你不是想找工具，而是想直接知道事情怎么做，先看工作流。",
+    workflows_cta: "浏览工作流"
   } : {
     page_title: "AI Tools",
     all_categories: "All Categories",
     ai_chat: "AI Chat",
     no_tools: "No tools found",
-    try_filters: "Try different filters"
+    try_filters: "Try different filters",
+    workflows_title: "Jump to Workflows",
+    workflows_desc: "If you care more about getting the job done than comparing tools, start with workflows.",
+    workflows_cta: "Browse Workflows"
   };
 
   // 获取工具的本地化描述
@@ -168,6 +174,21 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
                       </Link>
                     ))}
                   </nav>
+                </div>
+
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200 p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center text-white shadow-sm">
+                      <Workflow className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-sm text-slate-900">{t.workflows_title}</h4>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed mb-3">{t.workflows_desc}</p>
+                  <Link href={`/${locale}/workflows`} className="text-xs font-semibold text-blue-700 hover:text-blue-800">
+                    {t.workflows_cta} →
+                  </Link>
                 </div>
 
                 {/* Skool 广告位 */}
