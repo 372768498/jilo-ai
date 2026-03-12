@@ -6,6 +6,7 @@ import Footer from '@/components/footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getWorkflowBySlug } from '@/lib/workflows';
+import CopyPromptButton from '@/components/copy-prompt-button';
 
 export async function generateMetadata({ params }: { params: { locale: string; slug: string } }): Promise<Metadata> {
   const locale = params?.locale || 'en';
@@ -68,7 +69,12 @@ export default function WorkflowDetailPage({ params }: { params: { locale: strin
             <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-4">{title}</h1>
             <p className="text-lg text-slate-600 leading-relaxed mb-6">{summary}</p>
             <div className="flex flex-wrap gap-3">
-              <Button className="rounded-xl">{isZh ? '复制 Prompt 包' : 'Copy Prompt Pack'}</Button>
+              <CopyPromptButton
+                text={prompts.map((item) => `${item.title}\n${item.text}`).join('\n\n')}
+                copyLabel={isZh ? '复制 Prompt 包' : 'Copy Prompt Pack'}
+                copiedLabel={isZh ? '已复制' : 'Copied'}
+                className="rounded-xl"
+              />
               <Button asChild variant="outline" className="rounded-xl">
                 <Link href={`/${locale}/tools`}>{isZh ? '查看推荐工具' : 'View Recommended Tools'}</Link>
               </Button>
@@ -147,8 +153,15 @@ export default function WorkflowDetailPage({ params }: { params: { locale: strin
                 <div className="space-y-4">
                   {prompts.map((prompt) => (
                     <div key={prompt.title} className="border border-slate-200 rounded-xl p-4">
-                      <div className="font-semibold mb-2">{prompt.title}</div>
-                      <div className="text-sm text-slate-600">{prompt.text}</div>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="font-semibold">{prompt.title}</div>
+                        <CopyPromptButton
+                          text={prompt.text}
+                          copyLabel={isZh ? '复制' : 'Copy'}
+                          copiedLabel={isZh ? '已复制' : 'Copied'}
+                        />
+                      </div>
+                      <div className="text-sm text-slate-600 whitespace-pre-line">{prompt.text}</div>
                     </div>
                   ))}
                 </div>
