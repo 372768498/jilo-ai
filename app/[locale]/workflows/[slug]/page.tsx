@@ -14,6 +14,20 @@ export async function generateMetadata({ params }: { params: { locale: string; s
   const workflow = getWorkflowBySlug(params.slug);
   if (!workflow) return {};
   const altLocale = isZh ? 'en' : 'zh';
+  const faqs = isZh ? workflow.faqs_zh : workflow.faqs_en;
+
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.a,
+      },
+    })),
+  };
 
   return {
     title: isZh ? `${workflow.title_zh} | Jilo.ai` : `${workflow.title_en} | Jilo.ai`,
@@ -24,6 +38,9 @@ export async function generateMetadata({ params }: { params: { locale: string; s
         [locale]: `https://jilo.ai/${locale}/workflows/${workflow.slug}`,
         [altLocale]: `https://jilo.ai/${altLocale}/workflows/${workflow.slug}`,
       },
+    },
+    other: {
+      'script:ld+json': JSON.stringify(faqSchema),
     },
   };
 }

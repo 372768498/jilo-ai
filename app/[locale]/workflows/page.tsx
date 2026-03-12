@@ -1,34 +1,27 @@
+'use client';
+
 import Link from 'next/link';
-import type { Metadata } from 'next';
+import { useState } from 'react';
 import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { workflows } from '@/lib/workflows';
 
-export async function generateMetadata({ params }: { params: { locale: string } }): Promise<Metadata> {
-  const locale = params?.locale || 'en';
-  const isZh = locale === 'zh';
-  const altLocale = isZh ? 'en' : 'zh';
-
-  return {
-    title: isZh ? 'AI 工作流库 - 可直接执行的 AI 方案 | Jilo.ai' : 'AI Workflows Library - Step-by-Step AI Workflows | Jilo.ai',
-    description: isZh
-      ? '浏览可直接执行的 AI 工作流，覆盖写作、营销、调研、编程等场景，附推荐工具、步骤和 Prompt。'
-      : 'Explore step-by-step AI workflows for writing, coding, marketing, research, and more. Includes tools, prompts, and practical steps.',
-    alternates: {
-      canonical: `https://jilo.ai/${locale}/workflows`,
-      languages: {
-        [locale]: `https://jilo.ai/${locale}/workflows`,
-        [altLocale]: `https://jilo.ai/${altLocale}/workflows`,
-      },
-    },
-  };
-}
-
 export default function WorkflowsPage({ params }: { params: { locale: string } }) {
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const locale = params?.locale || 'en';
   const isZh = locale === 'zh';
+
+  const categories = ['All', 'Writing', 'Marketing', 'Research', 'Coding'];
+  const difficulties = ['All', 'Beginner', 'Intermediate', 'Advanced'];
+
+  const filteredWorkflows = workflows.filter((w) => {
+    if (selectedCategory !== 'All' && w.category !== selectedCategory) return false;
+    if (selectedDifficulty !== 'All' && w.difficulty !== selectedDifficulty) return false;
+    return true;
+  });
 
   const categoryLabel = (category: string) => {
     if (!isZh) return category;
@@ -70,9 +63,44 @@ export default function WorkflowsPage({ params }: { params: { locale: string } }
           </div>
         </section>
 
-        <section className="max-w-7xl mx-auto px-4 py-12">
+        <section className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex flex-wrap gap-3 mb-8">
+            <div className="flex gap-2">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    selectedCategory === cat
+                      ? 'bg-slate-900 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {cat === 'All' ? (isZh ? '全部' : 'All') : categoryLabel(cat)}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              {difficulties.map((diff) => (
+                <button
+                  key={diff}
+                  onClick={() => setSelectedDifficulty(diff)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    selectedDifficulty === diff
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {diff === 'All' ? (isZh ? '全部难度' : 'All') : diff}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="max-w-7xl mx-auto px-4 pb-12">
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {workflows.map((workflow) => (
+            {filteredWorkflows.map((workflow) => (
               <div key={workflow.slug} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-lg transition-shadow">
                 <div className="flex items-center gap-2 mb-4 flex-wrap">
                   <Badge variant="secondary">{categoryLabel(workflow.category)}</Badge>
