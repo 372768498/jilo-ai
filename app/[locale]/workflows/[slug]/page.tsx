@@ -5,7 +5,7 @@ import Navbar from '@/components/navbar';
 import Footer from '@/components/footer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getWorkflowBySlug } from '@/lib/workflows';
+import { getWorkflowBySlug, workflows } from '@/lib/workflows';
 import CopyPromptButton from '@/components/copy-prompt-button';
 
 export async function generateMetadata({ params }: { params: { locale: string; slug: string } }): Promise<Metadata> {
@@ -62,6 +62,14 @@ export default function WorkflowDetailPage({ params }: { params: { locale: strin
   const variations = isZh ? workflow.variations_zh : workflow.variations_en;
   const faqs = isZh ? workflow.faqs_zh : workflow.faqs_en;
   const category = isZh ? ({ Writing: '写作', Marketing: '营销', Research: '调研', Coding: '编程' } as Record<string, string>)[workflow.category] || workflow.category : workflow.category;
+
+  // Smart related workflows: use manual list + auto-fill from same category
+  const relatedSlugs = workflow.related.length > 0 
+    ? workflow.related 
+    : workflows
+        .filter((w) => w.category === workflow.category && w.slug !== workflow.slug)
+        .slice(0, 3)
+        .map((w) => w.slug);
 
   return (
     <>
@@ -225,7 +233,7 @@ export default function WorkflowDetailPage({ params }: { params: { locale: strin
               <section className="bg-white border border-slate-200 rounded-2xl p-6">
                 <h2 className="text-xl font-bold mb-4">{isZh ? '相关工作流' : 'Related Workflows'}</h2>
                 <div className="space-y-3">
-                  {workflow.related.map((slug) => {
+                  {relatedSlugs.map((slug) => {
                     const related = getWorkflowBySlug(slug);
                     if (!related) return null;
                     return (
