@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight, TrendingUp, Workflow } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -323,8 +323,8 @@ export default async function HomePage({ params }: PageProps) {
                   </Link>
                 </Button>
                 <Button asChild variant="ghost" size="lg" className="rounded-xl h-12 px-8 font-medium text-slate-600 hover:text-slate-900">
-                  <Link href={`/${locale}/reviews`}>
-                    {isZh ? "阅读专业评测" : "Read Expert Reviews"}
+                  <Link href={`/${locale}/workflows`}>
+                    {isZh ? "查看工作流" : "Explore Workflows"}
                   </Link>
                 </Button>
               </div>
@@ -473,6 +473,73 @@ export default async function HomePage({ params }: PageProps) {
                 </Button>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* Popular Workflows */}
+        <section className="max-w-7xl mx-auto px-4 py-12">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-bold mb-1 flex items-center gap-2">
+                <Workflow className="w-7 h-7" />
+                {isZh ? "热门 AI 工作流" : "Popular AI Workflows"}
+              </h2>
+              <p className="text-sm text-slate-600">
+                {isZh ? "不是只看工具，而是直接看这件事怎么做。" : "Not just which tools to use, but how to get the job done."}
+              </p>
+            </div>
+            <Button asChild variant="ghost" className="group hidden md:flex">
+              <Link href={`/${locale}/workflows`}>
+                {isZh ? "查看全部工作流" : "View All Workflows"}
+                <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </Button>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {[
+              {
+                slug: 'write-seo-blog-posts-with-ai',
+                title: isZh ? '用 AI 写 SEO 博客文章' : 'Write SEO Blog Posts with AI',
+                desc: isZh ? '从关键词到提纲、初稿、优化和发布的一套标准流程。' : 'A practical flow from keyword research to outline, draft, optimization, and publish.',
+                meta: isZh ? '入门 · 30-60 分钟 · 3 工具' : 'Beginner · 30–60 min · 3 tools'
+              },
+              {
+                slug: 'turn-one-article-into-social-content',
+                title: isZh ? '把一篇文章拆成社媒内容' : 'Turn One Article into Social Content',
+                desc: isZh ? '把一篇长文快速拆成多平台可发的短内容。' : 'Repurpose one long-form article into multi-channel social content.',
+                meta: isZh ? '入门 · 20-30 分钟 · 2 工具' : 'Beginner · 20–30 min · 2 tools'
+              },
+              {
+                slug: 'research-competitors-in-30-minutes',
+                title: isZh ? '30 分钟完成竞品研究' : 'Research Competitors in 30 Minutes',
+                desc: isZh ? '快速梳理竞品定位、卖点和差异化机会。' : 'Quickly compare positioning, messaging, and differentiation opportunities.',
+                meta: isZh ? '入门 · 30 分钟 · 2 工具' : 'Beginner · 30 min · 2 tools'
+              },
+              {
+                slug: 'ai-coding-workflow-for-solo-developers',
+                title: isZh ? '独立开发者的 AI 编码工作流' : 'AI Coding Workflow for Solo Developers',
+                desc: isZh ? '需求澄清、实现、调试、发布，一套更稳的 AI 编码方式。' : 'A safer AI-assisted coding flow from feature planning to debugging and shipping.',
+                meta: isZh ? '中级 · 1-3 小时 · 3 工具' : 'Intermediate · 1–3 hrs · 3 tools'
+              }
+            ].map((item) => (
+              <Card key={item.slug} className="group hover:shadow-lg transition-all hover:-translate-y-0.5 border hover:border-blue-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg group-hover:text-blue-600 transition line-clamp-2">
+                    <Link href={`/${locale}/workflows/${item.slug}`}>{item.title}</Link>
+                  </CardTitle>
+                  <CardDescription className="text-sm line-clamp-3">{item.desc}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xs text-slate-500 mb-4">{item.meta}</div>
+                  <Button asChild variant="outline" className="w-full rounded-xl">
+                    <Link href={`/${locale}/workflows/${item.slug}`}>
+                      {isZh ? '查看工作流' : 'View Workflow'}
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </section>
 

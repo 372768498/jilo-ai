@@ -44,10 +44,10 @@ export default function NewsletterSignup() {
     <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-8 text-white">
       <div className="max-w-xl mx-auto text-center">
         <h3 className="text-2xl font-bold mb-2">
-          🔍 Weekly AI Tools Newsletter
+          🔍 Weekly AI Tools & Workflows Newsletter
         </h3>
         <p className="text-white/80 mb-6">
-          Get the best new AI tools, comparisons, and deals delivered to your inbox every week. Free, no spam.
+          Get the best new AI tools, comparisons, workflows, and deals delivered to your inbox every week. Free, no spam.
         </p>
         
         {status === 'success' ? (

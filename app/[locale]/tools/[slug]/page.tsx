@@ -395,6 +395,30 @@ export default async function ToolDetailPage({ params }: PageProps) {
         </div>
       </section>
 
+      {/* Related Workflows */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-bold mb-4">{isZh ? "相关工作流" : "Related Workflows"}</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          {[
+            {
+              slug: 'write-seo-blog-posts-with-ai',
+              title: isZh ? '用 AI 写 SEO 博客文章' : 'Write SEO Blog Posts with AI',
+              desc: isZh ? '适合内容生产、SEO 和营销团队。' : 'Best for content, SEO, and marketing workflows.'
+            },
+            {
+              slug: 'ai-coding-workflow-for-solo-developers',
+              title: isZh ? '独立开发者的 AI 编码工作流' : 'AI Coding Workflow for Solo Developers',
+              desc: isZh ? '适合独立开发、MVP 和功能迭代。' : 'Useful for solo development, MVPs, and faster feature shipping.'
+            }
+          ].map((item) => (
+            <Link key={item.slug} href={`/${locale}/workflows/${item.slug}`} className="block p-5 border rounded-xl hover:shadow-md hover:border-primary/30 transition">
+              <h3 className="font-semibold mb-2">{item.title}</h3>
+              <p className="text-sm text-muted-foreground">{item.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* Tags */}
       {((isZh && data.tags_zh) || (!isZh && data.tags_en)) && (
         <section>

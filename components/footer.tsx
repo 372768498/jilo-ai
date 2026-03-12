@@ -23,9 +23,9 @@ export default function Footer({ locale }: FooterProps) {
       title: "资源",
       links: [
         { name: "AI 新闻", href: `/${locale}/news` },
+        { name: "AI 工作流", href: `/${locale}/workflows` },
         { name: "AI 工具优惠", href: `/${locale}/deals` },
         { name: "比较工具", href: "/compare" },
-        { name: "提交工具", href: "/submit" },
       ]
     },
     about: {
@@ -54,9 +54,9 @@ export default function Footer({ locale }: FooterProps) {
       title: "Resources",
       links: [
         { name: "AI News", href: `/${locale}/news` },
+        { name: "AI Workflows", href: `/${locale}/workflows` },
         { name: "AI Tool Deals", href: `/${locale}/deals` },
         { name: "Compare Tools", href: "/compare" },
-        { name: "Submit Tool", href: "/submit" },
       ]
     },
     about: {
