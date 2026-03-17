@@ -132,23 +132,28 @@ export default async function ToolDetailPage({ params }: PageProps) {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: name,
-    applicationCategory: "AI Tool",
+    applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    offers: {
-      "@type": "Offer",
-      price: data.pricing_type === "free" ? "0" : undefined,
-      priceCurrency: "USD",
-    },
     url: `https://www.jilo.ai/${locale}/tools/${data.slug}`,
     description: metaDescription || description,
-    image: data.logo_url || undefined,
-    aggregateRating: data.rating
-      ? {
-          "@type": "AggregateRating",
-          ratingValue: data.rating,
-          reviewCount: data.review_count || 0,
-        }
-      : undefined,
+    image: data.logo_url,
+    brand: {
+      "@type": "Organization",
+      name: name
+    },
+    offers: data.pricing_type || data.price_range ? {
+      "@type": "Offer",
+      price: data.pricing_type === "free" 
+        ? "0" 
+        : data.price_range?.split("-")[0]?.replace(/[^0-9.]/g, "") || null,
+      priceCurrency: "USD",
+      availability: "https://schema.org/InStock"
+    } : undefined,
+    aggregateRating: data.rating ? {
+      "@type": "AggregateRating",
+      ratingValue: data.rating,
+      reviewCount: data.review_count || 1
+    } : undefined
   };
 
   return (

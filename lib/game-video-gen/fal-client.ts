@@ -48,9 +48,9 @@ export async function generateVideo(
     const estimatedCost = duration === 4 ? 0.13 : duration === 8 ? 0.22 : 0.31;
 
     return {
-      videoUrl: result.video?.url || '',
+      videoUrl: (result as any).video?.url || '',
       duration,
-      seed: result.seed,
+      seed: (result as any).seed,
       cost: estimatedCost,
     };
   } catch (error: any) {
