@@ -9,8 +9,13 @@ from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 from config import FEISHU_WEBHOOK_URL
 
-client = OpenAI(api_key=OPENAI_API_KEY)
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; JiloBot/1.0)"}
+
+
+def _get_openai_client():
+    if not OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY not configured")
+    return OpenAI(api_key=OPENAI_API_KEY)
 
 
 def crawl_product_hunt():
@@ -83,7 +88,7 @@ DESCRIPTION_ZH: [Chinese translation of description]
 CATEGORY: [exactly one of: Writing, Coding, Design, Video, Business, Image, Audio, Chatbot, Developer, Productivity]
 PRICING: [one of: free, freemium, paid, open_source]"""
 
-        response = client.chat.completions.create(
+        response = _get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an AI tool reviewer. Be factual and concise."},
