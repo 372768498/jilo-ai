@@ -10,6 +10,7 @@ on:
     - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
     - cron: '0 4 * * *'   # UTC 04:00 - Analytics collection
     - cron: '30 4 * * *'  # UTC 04:30 - L2 strategy engine
+    - cron: '0 5 * * 1'   # UTC 05:00 Monday - Weekly report
   workflow_dispatch:
     inputs:
       job:
@@ -26,6 +27,7 @@ on:
           - compare
           - analytics
           - strategy
+          - weekly
 
 env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -132,3 +134,16 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python strategy_engine.py
+
+  weekly-report:
+    if: github.event.schedule == '0 5 * * 1' || github.event.inputs.job == 'all' || github.event.inputs.job == 'weekly'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python weekly_report.py
