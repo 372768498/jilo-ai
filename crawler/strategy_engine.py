@@ -19,7 +19,7 @@ def check_keyword_opportunities():
 
     # Fetch raw rows for current week
     current_rows = supabase.table('search_console_daily').select(
-        'query, position, impressions'
+        'query, position'
     ).gte('date', week_ago).execute()
 
     # Fetch raw rows for previous week
@@ -65,12 +65,15 @@ def check_vs_queries_without_articles():
         'impressions', desc=True
     ).limit(10).execute()
 
-    actions = []
+    # Aggregate impressions by query (deduplicate multi-day rows)
+    query_impressions = defaultdict(int)
     for q in (vs_queries.data or []):
-        query = q['query'].lower()
-        if ' vs ' not in query:
-            continue
+        q_lower = q['query'].lower()
+        if ' vs ' in q_lower:
+            query_impressions[q_lower] += q['impressions']
 
+    actions = []
+    for query, total_impressions in sorted(query_impressions.items(), key=lambda x: -x[1])[:10]:
         parts = query.split(' vs ')
         if len(parts) != 2:
             continue
@@ -81,7 +84,7 @@ def check_vs_queries_without_articles():
         if not existing.data:
             actions.append({
                 'type': 'generate_comparison',
-                'reason': f'Search query "{query}" has {q["impressions"]} impressions but no compare article',
+                'reason': f'Search query "{query}" has {total_impressions} impressions but no compare article',
                 'tool_a': parts[0].strip(),
                 'tool_b': parts[1].strip(),
                 'priority': 'medium',
