@@ -1,4 +1,5 @@
 # crawler/strategy_engine.py
+from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
@@ -16,24 +17,30 @@ def check_keyword_opportunities():
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
     two_weeks_ago = (datetime.utcnow() - timedelta(days=14)).strftime('%Y-%m-%d')
 
-    # Current week avg positions
-    current = supabase.table('search_console_daily').select(
-        'query, position.avg(), impressions.sum()'
+    # Fetch raw rows for current week
+    current_rows = supabase.table('search_console_daily').select(
+        'query, position, impressions'
     ).gte('date', week_ago).execute()
 
-    # Previous week avg positions
-    previous = supabase.table('search_console_daily').select(
-        'query, position.avg()'
+    # Fetch raw rows for previous week
+    previous_rows = supabase.table('search_console_daily').select(
+        'query, position'
     ).gte('date', two_weeks_ago).lt('date', week_ago).execute()
 
-    # Build lookup
-    prev_positions = {r['query']: r['avg'] for r in (previous.data or [])}
-    actions = []
+    # Aggregate in Python
+    curr_positions = defaultdict(list)
+    for r in (current_rows.data or []):
+        curr_positions[r['query']].append(r['position'])
+    curr_avg = {q: sum(v)/len(v) for q, v in curr_positions.items()}
 
-    for row in (current.data or []):
-        query = row['query']
-        curr_pos = row.get('avg', 100)
-        prev_pos = prev_positions.get(query, 100)
+    prev_positions = defaultdict(list)
+    for r in (previous_rows.data or []):
+        prev_positions[r['query']].append(r['position'])
+    prev_avg = {q: sum(v)/len(v) for q, v in prev_positions.items()}
+
+    actions = []
+    for query, curr_pos in curr_avg.items():
+        prev_pos = prev_avg.get(query, 100)
 
         # Keyword improved from 10+ to 5-10 → create more content
         if prev_pos > 10 and 5 <= curr_pos <= 10:
@@ -88,17 +95,28 @@ def check_high_bounce_pages():
     supabase = get_supabase()
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
 
-    high_bounce = supabase.table('analytics_daily').select(
-        'page_path, bounce_rate.avg(), pageviews.sum()'
-    ).gte('date', week_ago).gte('pageviews', 10).execute()
+    # Fetch raw rows
+    raw = supabase.table('analytics_daily').select(
+        'page_path, bounce_rate, pageviews'
+    ).gte('date', week_ago).execute()
+
+    # Aggregate in Python
+    page_bounce = defaultdict(list)
+    page_views = defaultdict(int)
+    for r in (raw.data or []):
+        page_bounce[r['page_path']].append(r['bounce_rate'])
+        page_views[r['page_path']] += r['pageviews']
 
     actions = []
-    for row in (high_bounce.data or []):
-        if row.get('avg', 0) > 0.8:
+    for page_path, bounce_rates in page_bounce.items():
+        if page_views[page_path] < 10:
+            continue
+        avg_bounce = sum(bounce_rates) / len(bounce_rates)
+        if avg_bounce > 0.8:
             actions.append({
                 'type': 'flag_for_review',
-                'reason': f'Page {row["page_path"]} has {row["avg"]:.0%} bounce rate',
-                'page': row['page_path'],
+                'reason': f'Page {page_path} has {avg_bounce:.0%} bounce rate',
+                'page': page_path,
                 'priority': 'low',
             })
 
@@ -109,14 +127,14 @@ def execute_actions(actions):
     """Execute or queue the strategy actions."""
     supabase = get_supabase()
 
-    # Save actions to strategy_reports for tracking
+    # Save actions to strategy_reports for tracking (upsert to avoid duplicates)
     today = datetime.utcnow().strftime('%Y-%m-%d')
-    supabase.table('strategy_reports').insert({
+    supabase.table('strategy_reports').upsert({
         'report_date': today,
         'report_type': 'daily',
         'actions_taken': actions,
         'content': {'action_count': len(actions)},
-    }).execute()
+    }, on_conflict='report_date,report_type').execute()
 
     # For now, just log the actions. Actual execution (calling seo/compare generators)
     # would be done by separate scheduled jobs that read from strategy_reports.
