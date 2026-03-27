@@ -8,6 +8,8 @@ on:
     - cron: '30 0 * * *'  # UTC 00:30 - Tool discovery
     - cron: '0 2 * * *'   # UTC 02:00 - SEO articles
     - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
+    - cron: '0 4 * * *'   # UTC 04:00 - Analytics collection
+    - cron: '30 4 * * *'  # UTC 04:30 - L2 strategy engine
   workflow_dispatch:
     inputs:
       job:
@@ -22,6 +24,8 @@ on:
           - tools
           - seo
           - compare
+          - analytics
+          - strategy
 
 env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -97,3 +101,34 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python compare_article_generator.py
+
+  analytics:
+    if: github.event.schedule == '0 4 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'analytics'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
+      GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python analytics_collector.py
+
+  strategy-engine:
+    if: github.event.schedule == '30 4 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'strategy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: analytics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python strategy_engine.py
