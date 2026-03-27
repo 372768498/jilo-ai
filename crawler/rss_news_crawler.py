@@ -1,194 +1,191 @@
+# crawler/rss_news_crawler.py
 import feedparser
 import time
+import hashlib
+import re
 from datetime import datetime
 from supabase import create_client
-from config import SUPABASE_URL, SUPABASE_KEY
-from processors.translator import translate_text
 from openai import OpenAI
-import os
-import hashlib
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, RSS_SOURCES
+from ops_logger import log_operation
+from feishu_bot import send_feishu_alert
+from config import FEISHU_WEBHOOK_URL
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+def _get_openai_client():
+    return OpenAI(api_key=OPENAI_API_KEY)
 
-RSS_SOURCES = {
-    'TechCrunch AI': 'https://techcrunch.com/tag/artificial-intelligence/feed/',
-    'VentureBeat AI': 'https://venturebeat.com/category/ai/feed/',
-    'The Verge AI': 'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml',
-    'MIT Tech Review AI': 'https://www.technologyreview.com/topic/artificial-intelligence/feed/',
-    'OpenAI Blog': 'https://openai.com/blog/rss/',
+CATEGORY_KEYWORDS = {
+    'product_launch': ['launch', 'release', 'announce', 'introduce', 'unveil', 'ship', 'available', 'new feature'],
+    'funding': ['raise', 'funding', 'series', 'invest', 'valuation', 'capital', 'million', 'billion', '$'],
+    'tech_breakthrough': ['breakthrough', 'achieve', 'beat', 'record', 'state-of-the-art', 'benchmark', 'outperform'],
+    'policy': ['regulation', 'policy', 'ban', 'law', 'govern', 'congress', 'senate', 'eu', 'compliance'],
+    'research': ['paper', 'research', 'study', 'arxiv', 'findings', 'experiment', 'transformer', 'attention'],
 }
 
+
 def generate_slug(title):
-    """生成 URL 友好的 slug"""
     slug = title.lower()[:80]
-    slug = ''.join(c if c.isalnum() or c == ' ' else '' for c in slug)
+    slug = ''.join(c if c.isalnum() or c in (' ', '-') else '' for c in slug)
     slug = slug.replace(' ', '-').strip('-')
+    slug = re.sub(r'-+', '-', slug)
     return slug[:100]
 
+
 def generate_content_hash(title, source_url):
-    """生成内容哈希，用于去重"""
     content = f"{title}{source_url}"
     return hashlib.md5(content.encode()).hexdigest()
 
+
+def classify_news(title, summary):
+    """Classify news into category tags based on keywords."""
+    text = f"{title} {summary}".lower()
+    tags = []
+    for category, keywords in CATEGORY_KEYWORDS.items():
+        if any(kw in text for kw in keywords):
+            tags.append(category)
+    return tags if tags else ['industry_news']
+
+
 def parse_published_date(entry):
-    """解析RSS条目的发布时间"""
     for field in ['published_parsed', 'updated_parsed', 'created_parsed']:
-        if hasattr(entry, field):
-            time_struct = getattr(entry, field)
-            if time_struct:
-                return datetime(*time_struct[:6]).isoformat()
+        time_struct = getattr(entry, field, None)
+        if time_struct:
+            return datetime(*time_struct[:6]).isoformat()
     return datetime.now().isoformat()
 
-def rewrite_with_ai(title, summary, source_url):
-    """用 AI 改写新闻，生成原创内容"""
+
+def rewrite_and_translate(title, summary, source):
+    """Rewrite news + translate to Chinese in a single API call."""
     try:
-        prompt = f"""
-        Rewrite this AI news in your own words. Make it engaging and SEO-friendly.
-        Keep it under 200 words. Focus on the key information.
-        
-        Original title: {title}
-        Original summary: {summary[:500]}
-        
-        Provide:
-        1. A new catchy title (max 100 chars)
-        2. A rewritten summary (150-200 words)
-        
-        Format as:
-        TITLE: [new title]
-        SUMMARY: [new summary]
-        """
-        
+        client = _get_openai_client()
+        prompt = f"""Rewrite this AI news in your own words. Make it engaging and SEO-friendly.
+
+Original title: {title}
+Original summary: {summary[:500]}
+Source: {source}
+
+Respond in this exact format (no extra text):
+TITLE_EN: [rewritten English title, max 100 chars]
+SUMMARY_EN: [rewritten English summary, 100-200 words]
+TITLE_ZH: [Chinese translation of the new title]
+SUMMARY_ZH: [Chinese translation of the new summary]"""
+
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an AI news editor. Rewrite news to be original while keeping facts accurate."},
+                {"role": "system", "content": "You are an AI news editor. Rewrite news to be original while keeping facts accurate. Translate naturally to Chinese, keeping brand names in English."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=400
+            max_tokens=800
         )
-        
+
         content = response.choices[0].message.content
-        
-        # 解析结果
-        lines = content.split('\n')
-        new_title = ""
-        new_summary = ""
-        
-        for line in lines:
-            if line.startswith('TITLE:'):
-                new_title = line.replace('TITLE:', '').strip()
-            elif line.startswith('SUMMARY:'):
-                new_summary = line.replace('SUMMARY:', '').strip()
-        
-        return new_title or title, new_summary or summary[:200]
-        
+        result = {}
+        for line in content.split('\n'):
+            for key in ['TITLE_EN', 'SUMMARY_EN', 'TITLE_ZH', 'SUMMARY_ZH']:
+                if line.startswith(f'{key}:'):
+                    result[key.lower()] = line.split(':', 1)[1].strip()
+
+        return (
+            result.get('title_en', title),
+            result.get('summary_en', summary[:200]),
+            result.get('title_zh', ''),
+            result.get('summary_zh', ''),
+        )
     except Exception as e:
-        print(f"  ⚠️  AI rewrite error: {e}")
-        return title, summary[:200]
+        print(f"  AI rewrite error: {e}")
+        return title, summary[:200], '', ''
+
 
 def crawl_rss_news():
-    """从 RSS 抓取并改写新闻"""
-    print("📰 Crawling RSS news sources...")
+    """Crawl and rewrite news from all RSS sources."""
+    print("Crawling RSS news sources...")
     news_list = []
-    
+
     for source, url in RSS_SOURCES.items():
         try:
-            print(f"\n📡 Fetching from {source}...")
+            print(f"\nFetching from {source}...")
             feed = feedparser.parse(url)
-            
-            # 每个源取3条最新的
+
             for entry in feed.entries[:3]:
                 try:
                     published_at = parse_published_date(entry)
-                    
-                    # AI 改写
-                    print(f"  ✍️  Rewriting: {entry.title[:50]}...")
-                    new_title, new_summary = rewrite_with_ai(
-                        entry.title,
-                        entry.get('summary', entry.get('description', '')),
-                        entry.link
+                    raw_summary = entry.get('summary', entry.get('description', ''))
+
+                    print(f"  Rewriting: {entry.title[:50]}...")
+                    title_en, summary_en, title_zh, summary_zh = rewrite_and_translate(
+                        entry.title, raw_summary, source
                     )
-                    
-                    # 生成唯一标识
-                    content_hash = generate_content_hash(new_title, entry.link)
-                    
-                    news_item = {
-                        'title_en': new_title,
-                        'summary_en': new_summary,
+
+                    category_tags = classify_news(entry.title, raw_summary)
+                    content_hash = generate_content_hash(title_en, entry.link)
+
+                    news_list.append({
+                        'title_en': title_en,
+                        'summary_en': summary_en,
+                        'title_zh': title_zh,
+                        'summary_zh': summary_zh,
                         'source': source,
                         'source_url': entry.link,
                         'news_type': 'industry_news',
+                        'category_tags': category_tags,
                         'published_at': published_at,
                         'status': 'published',
-                        'content_hash': content_hash  # 用于去重
-                    }
-                    
-                    news_list.append(news_item)
-                    print(f"  ✅ Rewritten: {new_title[:50]}")
+                        'content_hash': content_hash,
+                    })
+                    print(f"  Done: {title_en[:50]}")
                     time.sleep(1)
-                    
                 except Exception as e:
-                    print(f"  ❌ Error processing entry: {e}")
+                    print(f"  Error processing entry: {e}")
                     continue
-            
         except Exception as e:
-            print(f"❌ Error fetching {source}: {e}")
+            print(f"Error fetching {source}: {e}")
             continue
-    
+
     return news_list
 
+
 def save_news_to_db(news_list):
-    """保存新闻到数据库，避免重复"""
+    """Save news to database, skip duplicates."""
     if not news_list:
         print("No news to save")
-        return
-    
+        return 0, 0
+
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     saved = 0
     skipped = 0
-    
+
     for news in news_list:
         try:
-            # 使用 content_hash 去重
             existing = supabase.table('news').select('id').eq('content_hash', news['content_hash']).execute()
             if existing.data:
-                print(f"  ⏭️  Skip (duplicate): {news['title_en'][:50]}")
                 skipped += 1
                 continue
-            
-            # 生成 slug
-            slug = generate_slug(news['title_en'])
-            
-            # 翻译成中文
-            print(f"  🌐 Translating: {news['title_en'][:50]}...")
-            news['title_zh'] = translate_text(news['title_en'])
-            news['summary_zh'] = translate_text(news['summary_en'])
-            
-            # 添加 slug
-            news['slug'] = slug
-            
-            # 插入数据库
+
+            news['slug'] = generate_slug(news['title_en'])
             result = supabase.table('news').insert(news).execute()
             if result.data:
                 saved += 1
-                print(f"  ✅ Saved: {news['title_en'][:50]}")
-            
             time.sleep(0.5)
-            
         except Exception as e:
-            print(f"  ❌ Error saving: {e}")
+            print(f"  Error saving: {e}")
             continue
-    
-    print(f"\n📊 Summary:")
-    print(f"  ✅ Saved: {saved}")
-    print(f"  ⏭️  Skipped (duplicates): {skipped}")
-    print(f"  📝 Total processed: {len(news_list)}")
+
+    print(f"\nSaved: {saved}, Skipped: {skipped}, Total: {len(news_list)}")
+    return saved, skipped
+
 
 if __name__ == "__main__":
-    print("🚀 Starting RSS news crawler with AI rewriting...")
-    print("=" * 60)
-    news = crawl_rss_news()
-    save_news_to_db(news)
-    print("=" * 60)
-    print("🎉 Done!")
+    print("Starting RSS news crawler...")
+    try:
+        news = crawl_rss_news()
+        saved, skipped = save_news_to_db(news)
+        log_operation("news_crawler", "success", f"Saved {saved}, skipped {skipped}", {
+            "saved": saved, "skipped": skipped, "total": len(news)
+        })
+    except Exception as e:
+        log_operation("news_crawler", "error", str(e))
+        if FEISHU_WEBHOOK_URL:
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "News Crawler Error", str(e), "error")
+        raise
