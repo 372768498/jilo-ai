@@ -22,13 +22,20 @@ def find_comparison_pairs():
 
     # Strategy 1: GSC queries containing "vs" or "alternative"
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
-    vs_queries = supabase.table('search_console_daily').select(
+    vs_result = supabase.table('search_console_daily').select(
         'query, impressions'
-    ).gte('date', week_ago).or_('query.ilike.%vs%,query.ilike.%alternative%').order(
+    ).gte('date', week_ago).ilike('query', '%vs%').order(
         'impressions', desc=True
     ).limit(5).execute()
+    alt_result = supabase.table('search_console_daily').select(
+        'query, impressions'
+    ).gte('date', week_ago).ilike('query', '%alternative%').order(
+        'impressions', desc=True
+    ).limit(5).execute()
+    combined = (vs_result.data or []) + (alt_result.data or [])
+    vs_queries_data = sorted(combined, key=lambda x: x.get('impressions', 0), reverse=True)[:5]
 
-    for q in (vs_queries.data or []):
+    for q in vs_queries_data:
         query = q['query'].lower()
         if ' vs ' in query:
             parts = query.split(' vs ')
