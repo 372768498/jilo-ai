@@ -11,7 +11,7 @@ def translate_text(text, target_lang='zh'):
     
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are a translator. Translate to Chinese naturally, keep brand names in English."},
                 {"role": "user", "content": f"Translate: {text}"}
