@@ -5,6 +5,9 @@ on:
   schedule:
     - cron: '0 0 * * *'   # UTC 00:00 - News crawler
     - cron: '0 5 * * *'   # UTC 05:00 - Daily report
+    - cron: '30 0 * * *'  # UTC 00:30 - Tool discovery
+    - cron: '0 2 * * *'   # UTC 02:00 - SEO articles
+    - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
   workflow_dispatch:
     inputs:
       job:
@@ -16,6 +19,9 @@ on:
           - all
           - news
           - report
+          - tools
+          - seo
+          - compare
 
 env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -49,3 +55,45 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python daily_report.py
+
+  tool-discovery:
+    if: github.event.schedule == '30 0 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'tools'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: news-crawler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python tool_discovery.py
+
+  seo-articles:
+    if: github.event.schedule == '0 2 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'seo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: news-crawler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python seo_article_generator.py
+
+  compare-articles:
+    if: github.event.schedule == '0 2 * * 1,4' || github.event.inputs.job == 'all' || github.event.inputs.job == 'compare'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: news-crawler
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python compare_article_generator.py
