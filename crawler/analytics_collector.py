@@ -22,6 +22,7 @@ def get_google_credentials():
     if not GOOGLE_SERVICE_ACCOUNT_JSON:
         raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON not configured")
     info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
+    print(f"  JSON keys found: {list(info.keys())}")
     return service_account.Credentials.from_service_account_info(
         info,
         scopes=[
