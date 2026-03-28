@@ -91,7 +91,6 @@ def collect_gsc_data():
     from urllib.parse import quote
     encoded_site = quote(GSC_SITE_URL, safe='')
     url = f"https://www.googleapis.com/webmasters/v3/sites/{encoded_site}/searchAnalytics/query"
-    print(f"  GSC URL: {url}")
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     payload = {
         "startDate": three_days_ago,
