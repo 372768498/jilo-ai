@@ -22,7 +22,6 @@ def get_google_credentials():
     if not GOOGLE_SERVICE_ACCOUNT_JSON:
         raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON not configured")
     info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
-    print(f"  JSON keys found: {list(info.keys())}")
     return service_account.Credentials.from_service_account_info(
         info,
         scopes=[
@@ -89,7 +88,9 @@ def collect_gsc_data():
     three_days_ago = (datetime.utcnow() - timedelta(days=3)).strftime('%Y-%m-%d')
     yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    url = f"https://www.googleapis.com/webmasters/v3/sites/{GSC_SITE_URL}/searchAnalytics/query"
+    from urllib.parse import quote
+    encoded_site = quote(GSC_SITE_URL, safe='')
+    url = f"https://www.googleapis.com/webmasters/v3/sites/{encoded_site}/searchAnalytics/query"
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
     payload = {
         "startDate": three_days_ago,
