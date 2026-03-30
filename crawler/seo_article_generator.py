@@ -9,6 +9,11 @@ from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_UR
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 
+# Minimum GSC data threshold before auto-generating articles.
+# Prevents publishing generic fallback content when the site is new.
+MIN_GSC_IMPRESSIONS = 50
+MIN_GSC_ROWS_TO_PROCEED = 3
+
 
 def _get_openai_client():
     if not OPENAI_API_KEY:
@@ -17,136 +22,173 @@ def _get_openai_client():
 
 
 def get_target_keywords():
-    """Get high-potential keywords from GSC data."""
+    """
+    Get high-potential keywords from GSC data.
+    Returns (keywords, used_fallback) tuple.
+    used_fallback=True means no real GSC data was available.
+    """
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
 
-    # High impressions, low CTR = opportunity
     result = supabase.table('search_console_daily').select(
         'query, impressions, clicks, ctr, position'
-    ).gte('date', week_ago).gte('impressions', 50).lte('ctr', 0.05).order(
-        'impressions', desc=True
-    ).limit(10).execute()
+    ).gte('date', week_ago).gte('impressions', MIN_GSC_IMPRESSIONS).lte(
+        'ctr', 0.05
+    ).order('impressions', desc=True).limit(10).execute()
 
-    if not result.data:
-        # Fallback: use predefined seed keywords
-        return [
-            {"query": "best ai tools 2026", "impressions": 0, "position": 0},
-            {"query": "ai writing assistant comparison", "impressions": 0, "position": 0},
-        ]
+    rows = result.data or []
 
-    return result.data[:2]
+    # Deduplicate queries across multiple dates
+    seen = {}
+    for row in rows:
+        q = row['query']
+        if q not in seen or row['impressions'] > seen[q]['impressions']:
+            seen[q] = row
+    unique_rows = list(seen.values())
+
+    if len(unique_rows) >= MIN_GSC_ROWS_TO_PROCEED:
+        return unique_rows[:2], False
+
+    return [], True
 
 
 def get_related_tools(keyword):
-    """Find tools in our DB related to the keyword."""
+    """Find published tools in DB whose category matches keyword."""
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    words = keyword.split()[:3]
-    search_term = ' '.join(words)
+
+    category_map = {
+        'writing': 'Writing', 'write': 'Writing', 'content': 'Writing',
+        'coding': 'Coding', 'code': 'Coding', 'developer': 'Developer',
+        'image': 'Image', 'design': 'Design', 'video': 'Video',
+        'seo': 'Business', 'marketing': 'Business', 'business': 'Business',
+        'chatbot': 'Chatbot', 'chat': 'Chatbot',
+        'productivity': 'Productivity', 'audio': 'Audio',
+    }
+    kw_lower = keyword.lower()
+    category = next((v for k, v in category_map.items() if k in kw_lower), None)
+
+    if category:
+        result = supabase.table('tools').select(
+            'name_en, slug, category, pricing_type'
+        ).eq('status', 'published').eq('category', category).limit(5).execute()
+        if result.data:
+            return result.data
 
     result = supabase.table('tools').select(
         'name_en, slug, category, pricing_type'
-    ).eq('status', 'published').ilike('name_en', f'%{search_term}%').limit(5).execute()
-
+    ).eq('status', 'published').limit(5).execute()
     return result.data or []
 
 
 def generate_seo_article(keyword_data):
-    """Generate a long-form SEO article using GPT-4o."""
+    """
+    Generate a long-form SEO article.
+    Uses gpt-4o-mini (~$0.006/article) instead of gpt-4o (~$0.06/article).
+    """
     keyword = keyword_data['query']
     related_tools = get_related_tools(keyword)
 
     tools_context = ""
     if related_tools:
-        tools_list = ', '.join(t['name_en'] for t in related_tools)
-        tools_context = f"\nRelated tools from our database to mention and link: {tools_list}"
+        tool_lines = [
+            f"- {t['name_en']} (/{t['slug']}, {t.get('pricing_type','freemium')})"
+            for t in related_tools
+        ]
+        tools_context = "\n\nTools from our directory to mention (use /slug for internal links):\n" + '\n'.join(tool_lines)
 
     prompt = f"""Write a comprehensive, SEO-optimized article about: "{keyword}"
 
 Requirements:
 - 1500-2000 words
-- Use H2 and H3 headings (markdown format)
-- Include a comparison table if relevant
-- Include a FAQ section (3-5 questions) at the end
-- Be factual, practical, and helpful
+- H2 and H3 headings (markdown)
+- One comparison table where relevant
+- FAQ section (3-5 questions) at the end
+- Factual, practical, genuinely helpful — not generic filler
 - Current year is 2026{tools_context}
 
-Respond in this exact format:
-TITLE_EN: [SEO-optimized title including "{keyword}"]
-META_DESC_EN: [155 char meta description]
-CONTENT_EN: [full article in markdown]
+Respond in this EXACT format:
+TITLE_EN: [SEO title including "{keyword}", max 70 chars]
+META_DESC_EN: [Meta description, 140-155 chars]
+CONTENT_EN:
+[full article in markdown]
 ---SEPARATOR---
 TITLE_ZH: [Chinese title]
-META_DESC_ZH: [Chinese meta description]
-CONTENT_ZH: [Chinese translation of full article]"""
+META_DESC_ZH: [Chinese meta description, 80-100 chars]
+CONTENT_ZH:
+[Chinese translation of full article in markdown]"""
 
     try:
         response = _get_openai_client().chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an expert AI technology writer. Write in-depth, well-structured articles that provide genuine value to readers. Use markdown formatting."},
+                {"role": "system", "content": "You are an expert AI technology writer. Write in-depth, well-structured articles with genuine value. Use markdown. Never write generic filler."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.7,
-            max_tokens=4000
+            temperature=0.65,
+            max_tokens=3500
         )
 
-        content = response.choices[0].message.content
-        parts = content.split('---SEPARATOR---')
-        en_part = parts[0] if parts else content
-        zh_part = parts[1] if len(parts) > 1 else ''
+        raw = response.choices[0].message.content
+        parts = raw.split('---SEPARATOR---')
+        en_part = parts[0].strip()
+        zh_part = parts[1].strip() if len(parts) > 1 else ''
 
-        def extract(text, key):
+        def extract_field(text, key):
             for line in text.split('\n'):
                 if line.startswith(f'{key}:'):
                     return line.split(':', 1)[1].strip()
             return ''
 
-        def extract_content(text, key):
-            lines = text.split('\n')
-            collecting = False
-            collected = []
-            for line in lines:
-                if line.startswith(f'{key}:'):
-                    collected.append(line.split(':', 1)[1].strip())
-                    collecting = True
-                elif collecting and not any(line.startswith(f'{k}:') for k in ['TITLE_EN', 'META_DESC_EN', 'TITLE_ZH', 'META_DESC_ZH']):
-                    collected.append(line)
-                elif collecting:
-                    break
-            return '\n'.join(collected).strip()
+        def extract_multiline(text, key):
+            marker = f'{key}:\n'
+            idx = text.find(marker)
+            if idx == -1:
+                return extract_field(text, key)
+            return text[idx + len(marker):].strip()
 
-        return {
-            'title_en': extract(en_part, 'TITLE_EN'),
-            'meta_description_en': extract(en_part, 'META_DESC_EN'),
-            'content_en': extract_content(en_part, 'CONTENT_EN'),
-            'title_zh': extract(zh_part, 'TITLE_ZH'),
-            'meta_description_zh': extract(zh_part, 'META_DESC_ZH'),
-            'content_zh': extract_content(zh_part, 'CONTENT_ZH'),
+        result = {
+            'title_en': extract_field(en_part, 'TITLE_EN'),
+            'meta_description_en': extract_field(en_part, 'META_DESC_EN'),
+            'content_en': extract_multiline(en_part, 'CONTENT_EN'),
+            'title_zh': extract_field(zh_part, 'TITLE_ZH'),
+            'meta_description_zh': extract_field(zh_part, 'META_DESC_ZH'),
+            'content_zh': extract_multiline(zh_part, 'CONTENT_ZH'),
             'target_keyword': keyword,
         }
+
+        # Quality gate: reject suspiciously short content
+        if len(result['content_en']) < 500:
+            print(f"  Quality gate FAIL: content too short ({len(result['content_en'])} chars)")
+            return None
+
+        return result
+
     except Exception as e:
-        print(f"  GPT-4o article generation error: {e}")
+        print(f"  GPT-4o-mini article generation error: {e}")
         return None
 
 
 def save_article(article):
-    """Save SEO article to news table as a long-form article."""
-    if not article or not article.get('title_en'):
+    """Save SEO article to news table. Returns True if saved."""
+    if not article or not article.get('title_en') or not article.get('content_en'):
         return False
 
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    slug = article['title_en'].lower()[:80]
-    slug = ''.join(c if c.isalnum() or c in (' ', '-') else '' for c in slug)
-    slug = slug.replace(' ', '-').strip('-')
-    slug = re.sub(r'-+', '-', slug)
 
-    content_hash = hashlib.md5(f"{article['title_en']}{article['target_keyword']}".encode()).hexdigest()
-
+    content_hash = hashlib.md5(
+        f"{article['title_en']}{article['target_keyword']}".encode()
+    ).hexdigest()
     existing = supabase.table('news').select('id').eq('content_hash', content_hash).execute()
     if existing.data:
-        print(f"  Skip (duplicate): {article['title_en'][:50]}")
+        print(f"  Skip (duplicate): {article['title_en'][:60]}")
         return False
+
+    slug = re.sub(r'[^a-z0-9\s-]', '', article['title_en'].lower())[:80]
+    slug = re.sub(r'[\s-]+', '-', slug).strip('-')
+
+    existing_slug = supabase.table('news').select('id').eq('slug', slug).execute()
+    if existing_slug.data:
+        slug = f"{slug}-{content_hash[:6]}"
 
     row = {
         'slug': slug,
@@ -171,19 +213,26 @@ def save_article(article):
 if __name__ == "__main__":
     print("Starting SEO article generator...")
     try:
-        keywords = get_target_keywords()
-        saved = 0
-        for kw in keywords[:2]:
-            print(f"\nGenerating article for: {kw['query']}...")
-            article = generate_seo_article(kw)
-            if save_article(article):
-                saved += 1
-                print(f"  Saved: {article['title_en'][:60]}")
-            time.sleep(2)
+        keywords, used_fallback = get_target_keywords()
 
-        log_operation("seo_articles", "success", f"Generated {saved} articles", {
-            "saved": saved, "keywords": [k['query'] for k in keywords[:2]]
-        })
+        if used_fallback:
+            print(f"Insufficient GSC data (need >= {MIN_GSC_ROWS_TO_PROCEED} queries with {MIN_GSC_IMPRESSIONS}+ impressions). Skipping to avoid low-quality output.")
+            log_operation("seo_articles", "success",
+                          "Skipped: insufficient GSC data", {"saved": 0, "reason": "no_gsc_data"})
+        else:
+            saved = 0
+            for kw in keywords:
+                print(f"\nGenerating: {kw['query']} (impressions={kw.get('impressions',0)}, ctr={kw.get('ctr',0):.1%})")
+                article = generate_seo_article(kw)
+                if save_article(article):
+                    saved += 1
+                    print(f"  Saved: {article['title_en'][:60]}")
+                time.sleep(2)
+
+            log_operation("seo_articles", "success", f"Generated {saved} articles", {
+                "saved": saved, "keywords": [k['query'] for k in keywords]
+            })
+
     except Exception as e:
         log_operation("seo_articles", "error", str(e))
         if FEISHU_WEBHOOK_URL:

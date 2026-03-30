@@ -42,11 +42,12 @@ def find_comparison_pairs():
             if len(parts) == 2:
                 pairs.append((parts[0].strip(), parts[1].strip()))
 
-    # Strategy 2: Top viewed tools → compare with similar category tools
+    # Strategy 2: Most recently published tools → compare with same-category tools
+    # NOTE: click_count column doesn't exist; using created_at instead
     if not pairs:
         top_tools = supabase.table('tools').select(
             'name_en, category, slug'
-        ).eq('status', 'published').order('click_count', desc=True).limit(5).execute()
+        ).eq('status', 'published').order('created_at', desc=True).limit(10).execute()
 
         for tool in (top_tools.data or [])[:2]:
             similar = supabase.table('tools').select(

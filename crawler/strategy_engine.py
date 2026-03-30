@@ -130,14 +130,27 @@ def execute_actions(actions):
     """Execute or queue the strategy actions."""
     supabase = get_supabase()
 
-    # Save actions to strategy_reports for tracking (upsert to avoid duplicates)
+    # Save actions to strategy_reports.
+    # NOTE: upsert requires a unique constraint on (report_date, report_type).
+    # If that constraint doesn't exist in your DB, this falls back to a safe
+    # select-then-insert pattern to avoid duplicates.
     today = datetime.utcnow().strftime('%Y-%m-%d')
-    supabase.table('strategy_reports').upsert({
-        'report_date': today,
-        'report_type': 'daily',
-        'actions_taken': actions,
-        'content': {'action_count': len(actions)},
-    }, on_conflict='report_date,report_type').execute()
+    existing = supabase.table('strategy_reports').select('id').eq(
+        'report_date', today
+    ).eq('report_type', 'daily').execute()
+
+    if existing.data:
+        supabase.table('strategy_reports').update({
+            'actions_taken': actions,
+            'content': {'action_count': len(actions)},
+        }).eq('id', existing.data[0]['id']).execute()
+    else:
+        supabase.table('strategy_reports').insert({
+            'report_date': today,
+            'report_type': 'daily',
+            'actions_taken': actions,
+            'content': {'action_count': len(actions)},
+        }).execute()
 
     # For now, just log the actions. Actual execution (calling seo/compare generators)
     # would be done by separate scheduled jobs that read from strategy_reports.

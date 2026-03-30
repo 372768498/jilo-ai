@@ -4,12 +4,12 @@ name: Daily Ops Pipeline
 on:
   schedule:
     - cron: '0 0 * * *'   # UTC 00:00 - News crawler
-    - cron: '0 5 * * *'   # UTC 05:00 - Daily report
     - cron: '30 0 * * *'  # UTC 00:30 - Tool discovery
     - cron: '0 2 * * *'   # UTC 02:00 - SEO articles
     - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
     - cron: '0 4 * * *'   # UTC 04:00 - Analytics collection
-    - cron: '30 4 * * *'  # UTC 04:30 - L2 strategy engine
+    - cron: '30 4 * * *'  # UTC 04:30 - Strategy engine
+    - cron: '0 5 * * *'   # UTC 05:00 - Daily report
     - cron: '0 5 * * 1'   # UTC 05:00 Monday - Weekly report
   workflow_dispatch:
     inputs:
@@ -21,12 +21,12 @@ on:
         options:
           - all
           - news
-          - report
           - tools
           - seo
           - compare
           - analytics
           - strategy
+          - report
           - weekly
 
 env:
@@ -36,8 +36,13 @@ env:
   FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
 
 jobs:
+  # ─── Job 1: News Crawler ───────────────────────────────────────
   news-crawler:
-    if: github.event.schedule == '0 0 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'news'
+    name: "📰 News Crawler"
+    if: |
+      github.event.schedule == '0 0 * * *' ||
+      github.event.inputs.job == 'all' ||
+      github.event.inputs.job == 'news'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -49,24 +54,20 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python rss_news_crawler.py
 
-  daily-report:
-    if: github.event.schedule == '0 5 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'report'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - run: pip install -r crawler/requirements.txt
-      - run: cd crawler && python daily_report.py
-
+  # ─── Job 2: Tool Discovery ─────────────────────────────────────
+  # FIX: use always() so this job isn't cascade-skipped when
+  # news-crawler is skipped (e.g. when job=tools in workflow_dispatch)
   tool-discovery:
-    if: github.event.schedule == '30 0 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'tools'
+    name: "🔍 Tool Discovery"
+    if: |
+      always() && (
+        github.event.schedule == '30 0 * * *' ||
+        github.event.inputs.job == 'all' ||
+        github.event.inputs.job == 'tools'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: news-crawler
+    needs: [news-crawler]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -76,11 +77,18 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python tool_discovery.py
 
+  # ─── Job 3: SEO Article Generator ─────────────────────────────
   seo-articles:
-    if: github.event.schedule == '0 2 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'seo'
+    name: "✍️ SEO Articles"
+    if: |
+      always() && (
+        github.event.schedule == '0 2 * * *' ||
+        github.event.inputs.job == 'all' ||
+        github.event.inputs.job == 'seo'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: news-crawler
+    needs: [news-crawler]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -90,11 +98,18 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python seo_article_generator.py
 
+  # ─── Job 4: Compare Article Generator ─────────────────────────
   compare-articles:
-    if: github.event.schedule == '0 2 * * 1,4' || github.event.inputs.job == 'all' || github.event.inputs.job == 'compare'
+    name: "⚖️ Compare Articles"
+    if: |
+      always() && (
+        github.event.schedule == '0 2 * * 1,4' ||
+        github.event.inputs.job == 'all' ||
+        github.event.inputs.job == 'compare'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: news-crawler
+    needs: [news-crawler]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -104,8 +119,13 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python compare_article_generator.py
 
+  # ─── Job 5: Analytics Collector ───────────────────────────────
   analytics:
-    if: github.event.schedule == '0 4 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'analytics'
+    name: "📊 Analytics Collector"
+    if: |
+      github.event.schedule == '0 4 * * *' ||
+      github.event.inputs.job == 'all' ||
+      github.event.inputs.job == 'analytics'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -121,11 +141,19 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python analytics_collector.py
 
+  # ─── Job 6: Strategy Engine ────────────────────────────────────
+  # FIX: same always() pattern so it runs independently via job=strategy
   strategy-engine:
-    if: github.event.schedule == '30 4 * * *' || github.event.inputs.job == 'all' || github.event.inputs.job == 'strategy'
+    name: "🧠 Strategy Engine"
+    if: |
+      always() && (
+        github.event.schedule == '30 4 * * *' ||
+        github.event.inputs.job == 'all' ||
+        github.event.inputs.job == 'strategy'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: analytics
+    needs: [analytics]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -135,10 +163,39 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python strategy_engine.py
 
+  # ─── Job 7: Daily Report ──────────────────────────────────────
+  daily-report:
+    name: "📋 Daily Report → Feishu"
+    if: |
+      always() && (
+        github.event.schedule == '0 5 * * *' ||
+        github.event.inputs.job == 'all' ||
+        github.event.inputs.job == 'report'
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [seo-articles, compare-articles, strategy-engine]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python daily_report.py
+
+  # ─── Job 8: Weekly Report ─────────────────────────────────────
   weekly-report:
-    if: github.event.schedule == '0 5 * * 1' || github.event.inputs.job == 'all' || github.event.inputs.job == 'weekly'
+    name: "📈 Weekly Report → Feishu"
+    if: |
+      always() && (
+        github.event.schedule == '0 5 * * 1' ||
+        github.event.inputs.job == 'all' ||
+        github.event.inputs.job == 'weekly'
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: [daily-report]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
