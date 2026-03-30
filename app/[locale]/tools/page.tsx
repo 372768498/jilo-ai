@@ -141,7 +141,7 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
                           <span className="text-sm">{cat.icon}</span>
                           <span>{cat.name}</span>
                         </span>
-                        <span className="text-xs text-slate-400">{cat.count}</span>
+                        <span className="text-xs text-slate-600">{cat.count}</span>
                       </Link>
                     ))}
                   </nav>
@@ -228,12 +228,12 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
                         {/* 平台标签 */}
                         <div className="flex items-center gap-1 flex-wrap">
                           {Array.isArray(tool.tags_en) && (isZh ? tool.tags_zh : tool.tags_en)?.slice(0, 2).map((tag: string, idx: number) => (
-                            <span key={idx} className="text-xs text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded">
+                            <span key={idx} className="text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
                               {tag}
                             </span>
                           ))}
                           {Array.isArray(tool.tags_en) && (isZh ? tool.tags_zh : tool.tags_en)?.length > 2 && (
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-slate-600">
                               +{(isZh ? tool.tags_zh : tool.tags_en).length - 2}
                             </span>
                           )}
@@ -249,7 +249,7 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
                   <p className="text-slate-600 text-lg mb-2 font-medium">
                     {t.no_tools}
                   </p>
-                  <p className="text-slate-500 text-sm">
+                  <p className="text-slate-700 text-sm">
                     {t.try_filters}
                   </p>
                 </div>

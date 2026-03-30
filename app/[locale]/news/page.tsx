@@ -122,7 +122,7 @@ export default async function NewsListPage({ params }: PageProps) {
                       )}
 
                       {/* 底部信息 */}
-                      <div className="flex items-center justify-between text-xs text-slate-500 border-t pt-3">
+                      <div className="flex items-center justify-between text-xs text-slate-600 border-t pt-3">
                         {news.published_at && (
                           <span className="flex items-center gap-1">
                             <span>📅</span>

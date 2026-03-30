@@ -275,7 +275,7 @@ export default async function HomePage({ params }: PageProps) {
                     {tool.logo_url ? (
                       <img src={tool.logo_url} alt={getToolName(tool)} className="w-10 h-10 rounded-lg object-cover" />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-slate-400 font-semibold text-sm">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center text-slate-600 font-semibold text-sm">
                         {getToolName(tool)?.charAt(0)}
                       </div>
                     )}
@@ -339,7 +339,7 @@ export default async function HomePage({ params }: PageProps) {
                             </div>
                           ) : (
                             <div className="w-12 h-12 rounded-xl bg-slate-100 text-slate-700 flex flex-col items-center justify-center">
-                              <div className="text-xs font-semibold opacity-60">No.</div>
+                              <div className="text-xs font-semibold text-slate-500">No.</div>
                               <div className="text-lg font-bold leading-none">{index + 1}</div>
                             </div>
                           )}
@@ -349,7 +349,7 @@ export default async function HomePage({ params }: PageProps) {
                           <h3 className="font-semibold text-base line-clamp-2 group-hover:text-blue-600 transition mb-2">
                             {getTitle(news)}
                           </h3>
-                          <div className="flex items-center gap-3 text-xs text-slate-500">
+                          <div className="flex items-center gap-3 text-xs text-slate-600">
                             {news.published_at && (
                               <span className="flex items-center gap-1">
                                 <span className="text-slate-400">📅</span>
@@ -367,7 +367,7 @@ export default async function HomePage({ params }: PageProps) {
                           </div>
                         </div>
 
-                        <div className="flex-shrink-0 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all">
+                        <div className="flex-shrink-0 text-slate-500 group-hover:text-blue-600 group-hover:translate-x-1 transition-all">
                           <ArrowRight className="w-5 h-5" />
                         </div>
                       </div>
