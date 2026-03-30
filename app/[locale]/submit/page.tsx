@@ -42,10 +42,10 @@ const TIERS = [
   },
 ];
 
-// ─── Stripe payment links (replace with your real links) ─────────
-const STRIPE_LINKS: Record<string, string> = {
-  featured: process.env.NEXT_PUBLIC_STRIPE_FEATURED_URL || "https://buy.stripe.com/REPLACE_FEATURED",
-  sponsored: process.env.NEXT_PUBLIC_STRIPE_SPONSORED_URL || "https://buy.stripe.com/REPLACE_SPONSORED",
+// ─── PayPal payment links ─────────────────────────────────────────
+const PAYMENT_LINKS: Record<string, string> = {
+  featured: "https://paypal.me/jiloai001/49",
+  sponsored: "https://paypal.me/jiloai001/99",
 };
 
 const PLATFORMS = ["web", "chrome", "ios", "android", "vscode", "api"];
@@ -96,12 +96,9 @@ export default function SubmitToolPage() {
       });
       if (error) throw error;
 
-      // For paid tiers: redirect to Stripe
-      if (tier !== "free" && STRIPE_LINKS[tier]) {
-        const stripeUrl = new URL(STRIPE_LINKS[tier]);
-        stripeUrl.searchParams.set("prefilled_email", form.email || "");
-        stripeUrl.searchParams.set("client_reference_id", form.tool_name.replace(/\s+/g, "-").toLowerCase());
-        window.location.href = stripeUrl.toString();
+      // For paid tiers: redirect to PayPal
+      if (tier !== "free" && PAYMENT_LINKS[tier]) {
+        window.location.href = PAYMENT_LINKS[tier];
         return;
       }
 
@@ -271,7 +268,7 @@ export default function SubmitToolPage() {
           </button>
           {tier !== "free" && (
             <p className="text-center text-xs text-muted-foreground mt-2">
-              Secure payment via Stripe · 30-day refund if not published
+              Secure payment via PayPal · 30-day refund if not published
             </p>
           )}
         </div>
