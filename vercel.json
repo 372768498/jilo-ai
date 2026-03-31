@@ -1,10 +1,10 @@
 {
-    "crons": [
-          { "path": "/api/cron/indexnow", "schedule": "0 */6 * * *" },
-          { "path": "/api/cron/health-check", "schedule": "0 6 * * *" }
-    ],
-    "buildCommand": "npm run build",
-    "outputDirectory": ".next",
-    "installCommand": "npm install",
-    "framework": "nextjs"
+      "crons": [
+              { "path": "/api/cron/indexnow", "schedule": "0 2 * * *" },
+              { "path": "/api/cron/health-check", "schedule": "0 6 * * *" }
+      ],
+      "buildCommand": "npm run build",
+      "outputDirectory": ".next",
+      "installCommand": "npm install",
+      "framework": "nextjs"
 }
