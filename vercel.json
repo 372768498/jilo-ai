@@ -1,11 +1,10 @@
 {
-  "crons": [
-    { "path": "/api/cron/indexnow", "schedule": "0 */6 * * *" },
-    { "path": "/api/cron/health-check", "schedule": "0 6 * * *" }
-  ],
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "framework": "nextjs",
-  "_comment": "RSS news crawler disabled on 2026-03-17 by Operator Agent. Reason: 202 thin-content articles hurting E-E-A-T score. Existing content preserved, no new ingestion."
+    "crons": [
+          { "path": "/api/cron/indexnow", "schedule": "0 */6 * * *" },
+          { "path": "/api/cron/health-check", "schedule": "0 6 * * *" }
+    ],
+    "buildCommand": "npm run build",
+    "outputDirectory": ".next",
+    "installCommand": "npm install",
+    "framework": "nextjs"
 }
