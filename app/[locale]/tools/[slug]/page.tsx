@@ -91,14 +91,12 @@ function getLocalizedText(item: any, field: string, locale: string): string {
   return "";
 }
 
-export default async function ToolDetailPage({ params }: PageProps) {
-  const locale = params?.locale || "en";
-  const slug = params?.slug;
-
+// ————— SEO: 动态 Metadata —————
+async function getToolData(slug: string) {
   const { data, error } = await supabase
     .from("tools")
     .select(`
-      id, slug, 
+      id, slug,
       name_en, name_zh,
       tagline_en, tagline_zh,
       description_en, description_zh,
@@ -115,8 +113,48 @@ export default async function ToolDetailPage({ params }: PageProps) {
     `)
     .eq("slug", slug)
     .single();
+  if (error || !data) return null;
+  return data;
+}
 
-  if (error || !data) return notFound();
+export async function generateMetadata({ params }: PageProps): Promise<import("next").Metadata> {
+  const data = await getToolData(params.slug);
+  if (!data) return { title: "Tool Not Found | Jilo.ai" };
+
+  const isZh = (params.locale || "en") === "zh";
+  const name = isZh ? (data.name_zh || data.name_en) : data.name_en;
+  const tagline = isZh ? (data.tagline_zh || data.tagline_en) : data.tagline_en;
+  const metaTitle = isZh
+    ? (data.meta_title_zh || `${name} - 评测、价格与替代方案 (2026) | Jilo.ai`)
+    : (data.meta_title_en || `${name} Review: Pricing, Features & Alternatives (2026) | Jilo.ai`);
+  const metaDescription = isZh
+    ? (data.meta_description_zh || `${name}${tagline ? '：' + tagline : ''} 深度评测，包含功能、价格、优缺点和最佳替代方案。`)
+    : (data.meta_description_en || `${name}${tagline ? ' - ' + tagline : ''}. In-depth review with features, pricing, pros & cons, and best alternatives.`);
+
+  return {
+    title: metaTitle,
+    description: metaDescription,
+    openGraph: {
+      title: metaTitle,
+      description: metaDescription,
+      type: "website",
+      images: data.logo_url ? [{ url: data.logo_url }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: metaTitle,
+      description: metaDescription,
+    },
+  };
+}
+
+export default async function ToolDetailPage({ params }: PageProps) {
+  const locale = params?.locale || "en";
+  const slug = params?.slug;
+
+  const data = await getToolData(slug);
+
+  if (!data) return notFound();
 
   const isZh = locale === "zh";
   const name = isZh ? data.name_zh : data.name_en;
