@@ -11,6 +11,7 @@ import CategoryScrollBar from "@/components/category-scroll-bar";
 import TrendingTools from "@/components/trending-tools";
 import QuickDiscovery from "@/components/quick-discovery";
 import AdSlot from "@/components/ad-slot";
+import ToolFinder from "@/components/ToolFinder";
 
 type PageProps = {
   params: { locale: string };
@@ -234,8 +235,13 @@ export default async function HomePage({ params }: PageProps) {
         {/* Trending Tools */}
         <TrendingTools locale={locale} tools={trendingTools || []} />
 
+        {/* AI Tool Finder */}
+        <section className="max-w-7xl mx-auto px-4 py-10">
+          <ToolFinder locale={locale} />
+        </section>
+
         {/* Quick Discovery */}
-        <QuickDiscovery 
+        <QuickDiscovery
           locale={locale}
           newest={newestTools || []}
           popular={popularTools || []}

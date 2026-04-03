@@ -1,12 +1,10 @@
 import { redirect } from 'next/navigation'
-import { createServerClient } from '@/lib/supabase/client'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export default function NewToolPage() {
   async function createTool(formData: FormData) {
     "use server"
-    
-    const supabase = await createServerClient()
-    
+
     const toolData = {
       slug: formData.get('name_en')?.toString().toLowerCase().replace(/\s+/g, '-') || '',
       name_en: formData.get('name_en')?.toString() || '',
@@ -17,8 +15,8 @@ export default function NewToolPage() {
       status: 'draft',
       created_at: new Date().toISOString()
     }
-    
-    await supabase.from('tools').insert(toolData)
+
+    await supabaseAdmin.from('tools').insert(toolData)
     redirect('/admin/tools')
   }
 

@@ -95,6 +95,21 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
     return tool.name_en || tool.name_zh || '';
   };
 
+  // 获取定价标签样式
+  const getPricingBadge = (pricingType: string | null) => {
+    switch (pricingType) {
+      case 'free':
+        return { label: isZh ? '免費' : 'Free', className: 'bg-green-50 text-green-700 border-green-200' };
+      case 'freemium':
+        return { label: isZh ? '免費增值' : 'Freemium', className: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'paid':
+      case 'subscription':
+        return { label: isZh ? '付費' : 'Paid', className: 'bg-blue-50 text-blue-700 border-blue-200' };
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       <Navbar locale={locale} />
@@ -213,9 +228,14 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
                           <h3 className="font-semibold text-base text-slate-900 group-hover:text-blue-600 transition line-clamp-1">
                             {getLocalizedName(tool)}
                           </h3>
-                          <Badge variant="outline" className="text-xs flex-shrink-0 bg-blue-50 text-blue-700 border-blue-200 px-2 py-0">
-                            {t.ai_chat}
-                          </Badge>
+                          {(() => {
+                            const badge = getPricingBadge(tool.pricing_type);
+                            return badge ? (
+                              <Badge variant="outline" className={`text-xs flex-shrink-0 px-2 py-0 ${badge.className}`}>
+                                {badge.label}
+                              </Badge>
+                            ) : null;
+                          })()}
                         </div>
 
                         {/* 描述 */}

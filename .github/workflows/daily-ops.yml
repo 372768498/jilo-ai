@@ -7,10 +7,10 @@ on:
     - cron: '30 0 * * *'  # UTC 00:30 - Tool discovery
     - cron: '0 2 * * *'   # UTC 02:00 - SEO articles
     - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
-    - cron: '0 4 * * *'   # UTC 04:00 - Analytics collection
-    - cron: '30 4 * * *'  # UTC 04:30 - Strategy engine
-    - cron: '0 5 * * *'   # UTC 05:00 - Daily report
-    - cron: '0 5 * * 1'   # UTC 05:00 Monday - Weekly report
+    - cron: '0 20 * * *'   # UTC 20:00 - Analytics collection (delayed to allow GA4 to finalize previous day's data)
+    - cron: '30 20 * * *'  # UTC 20:30 - Strategy engine
+    - cron: '0 21 * * *'   # UTC 21:00 - Daily report
+    - cron: '0 21 * * 1'   # UTC 21:00 Monday - Weekly report
   workflow_dispatch:
     inputs:
       job:
@@ -123,7 +123,7 @@ jobs:
   analytics:
     name: "📊 Analytics Collector"
     if: |
-      github.event.schedule == '0 4 * * *' ||
+      github.event.schedule == '0 20 * * *' ||
       github.event.inputs.job == 'all' ||
       github.event.inputs.job == 'analytics'
     runs-on: ubuntu-latest
@@ -147,7 +147,7 @@ jobs:
     name: "🧠 Strategy Engine"
     if: |
       always() && (
-        github.event.schedule == '30 4 * * *' ||
+        github.event.schedule == '30 20 * * *' ||
         github.event.inputs.job == 'all' ||
         github.event.inputs.job == 'strategy'
       )
@@ -168,7 +168,7 @@ jobs:
     name: "📋 Daily Report → Feishu"
     if: |
       always() && (
-        github.event.schedule == '0 5 * * *' ||
+        github.event.schedule == '0 21 * * *' ||
         github.event.inputs.job == 'all' ||
         github.event.inputs.job == 'report'
       )
@@ -189,7 +189,7 @@ jobs:
     name: "📈 Weekly Report → Feishu"
     if: |
       always() && (
-        github.event.schedule == '0 5 * * 1' ||
+        github.event.schedule == '0 21 * * 1' ||
         github.event.inputs.job == 'all' ||
         github.event.inputs.job == 'weekly'
       )

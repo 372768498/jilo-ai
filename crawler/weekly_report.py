@@ -19,12 +19,14 @@ def collect_weekly_data():
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
 
-    # GA summary (aggregate in Python)
-    ga_rows = supabase.table('analytics_daily').select(
-        'pageviews, unique_pageviews'
+    # GA summary: use site-level table for correct PV/UV (no double-count)
+    site_rows = supabase.table('analytics_site_daily').select(
+        'total_pageviews, total_users'
     ).gte('date', week_ago).execute()
-    total_pv = sum(r['pageviews'] for r in (ga_rows.data or []))
-    total_uv = sum(r['unique_pageviews'] for r in (ga_rows.data or []))
+    total_pv = sum(r['total_pageviews'] for r in (site_rows.data or []))
+    # UV is summed across days (same user on different days counts multiple times,
+    # which is standard "weekly UV" reporting behaviour)
+    total_uv = sum(r['total_users'] for r in (site_rows.data or []))
 
     # Top pages (aggregate in Python)
     page_rows = supabase.table('analytics_daily').select(

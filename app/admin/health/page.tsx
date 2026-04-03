@@ -1,5 +1,7 @@
-// app/admin/health/page.tsx
 import Link from "next/link";
+import { cookies } from "next/headers";
+
+import { ADMIN_SESSION_COOKIE } from "@/lib/admin-auth";
 
 type Health = {
   env: Record<string, boolean>;
@@ -7,24 +9,29 @@ type Health = {
   service_access?: { ok: boolean };
 };
 
-export const dynamic = "force-dynamic"; // no cache
+export const dynamic = "force-dynamic";
 
-async function getHealth(baseUrl: string) {
+async function getHealth(baseUrl: string, sessionCookie: string) {
   const url = `${baseUrl}/api/health`;
+
   try {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as Health;
-  } catch (e) {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers: sessionCookie ? { cookie: `${ADMIN_SESSION_COOKIE}=${sessionCookie}` } : undefined,
+    });
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return (await response.json()) as Health;
+  } catch {
     return null;
   }
 }
 
 export default async function AdminHealth() {
-  // 在 Vercel/本地都能工作：优先 NEXT_PUBLIC_SITE_URL，退化到 相对路径
-  const base =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "";
-  const health = await getHealth(base || "");
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(ADMIN_SESSION_COOKIE)?.value || "";
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "";
+  const health = await getHealth(base, sessionCookie);
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
@@ -36,10 +43,14 @@ export default async function AdminHealth() {
         <>
           <h2 className="font-semibold mt-6 mb-2">Environment</h2>
           <ul className="space-y-1">
-            {Object.entries(health.env).map(([k, v]) => (
-              <li key={k}>
-                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${v ? "bg-green-500" : "bg-red-500"}`} />
-                <code>{k}</code>: {v ? "OK" : "FAIL"}
+            {Object.entries(health.env).map(([key, value]) => (
+              <li key={key}>
+                <span
+                  className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                    value ? "bg-green-500" : "bg-red-500"
+                  }`}
+                />
+                <code>{key}</code>: {value ? "OK" : "FAIL"}
               </li>
             ))}
           </ul>
@@ -47,20 +58,40 @@ export default async function AdminHealth() {
           <h2 className="font-semibold mt-6 mb-2">Database access</h2>
           <ul className="space-y-1">
             <li>
-              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${health.anon_select_news?.ok ? "bg-green-500" : "bg-red-500"}`} />
+              <span
+                className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                  health.anon_select_news?.ok ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
               Anon select news (count: {health.anon_select_news?.count ?? 0})
             </li>
             <li>
-              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${health.service_access?.ok ? "bg-green-500" : "bg-red-500"}`} />
+              <span
+                className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                  health.service_access?.ok ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
               Service role access to tools
             </li>
           </ul>
 
           <h2 className="font-semibold mt-6 mb-2">Manual checks</h2>
           <ul className="list-disc ml-6 space-y-1">
-            <li><Link className="underline" href="/en/news">/en/news</Link></li>
-            <li><Link className="underline" href="/en/tools">/en/tools</Link></li>
-            <li><Link className="underline" href="/admin/updates">/admin/updates</Link></li>
+            <li>
+              <Link className="underline" href="/en/news">
+                /en/news
+              </Link>
+            </li>
+            <li>
+              <Link className="underline" href="/en/tools">
+                /en/tools
+              </Link>
+            </li>
+            <li>
+              <Link className="underline" href="/admin/updates">
+                /admin/updates
+              </Link>
+            </li>
           </ul>
         </>
       )}

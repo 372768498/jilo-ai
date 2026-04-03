@@ -1,18 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/client'
+import { isAdminAuthorized } from "@/lib/admin-auth";
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isAdminAuthorized(request, process.env.ADMIN_KEY)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const data = await request.json()
     const { id, ...updateData } = data
-    
-    const supabase = await createServerClient()
+
+    if (!id) {
+      return NextResponse.json({ error: "Missing tool id" }, { status: 400 })
+    }
     
     if (updateData.status === 'published' && !updateData.published_at) {
       updateData.published_at = new Date().toISOString()
     }
     
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await supabaseAdmin
       .from('tools')
       .update(updateData)
       .eq('id', id)

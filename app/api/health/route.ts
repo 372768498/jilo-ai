@@ -2,8 +2,13 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { isAdminAuthorized } from "@/lib/admin-auth";
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAdminAuthorized(request, process.env.ADMIN_KEY)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const report: any = {
     env: {
       NEXT_PUBLIC_SUPABASE_URL: !!process.env.NEXT_PUBLIC_SUPABASE_URL,

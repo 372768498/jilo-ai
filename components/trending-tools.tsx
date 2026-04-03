@@ -54,8 +54,13 @@ export default function TrendingTools({ locale, tools }: TrendingToolsProps) {
                           {getToolName(tool)}
                         </h3>
                         {tool.pricing_type && (
-                          <Badge variant="secondary" className="text-xs">
-                            {tool.pricing_type}
+                          <Badge variant="outline" className={`text-xs px-1.5 py-0 ${
+                            tool.pricing_type === 'free' ? 'bg-green-50 text-green-700 border-green-200' :
+                            tool.pricing_type === 'freemium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            {tool.pricing_type === 'free' ? 'Free' :
+                             tool.pricing_type === 'freemium' ? 'Freemium' : 'Paid'}
                           </Badge>
                         )}
                       </div>
@@ -98,8 +103,13 @@ export default function TrendingTools({ locale, tools }: TrendingToolsProps) {
                           {getToolName(tool)}
                         </h3>
                         {tool.pricing_type && (
-                          <Badge variant="secondary" className="text-xs">
-                            {tool.pricing_type}
+                          <Badge variant="outline" className={`text-xs px-1.5 py-0 ${
+                            tool.pricing_type === 'free' ? 'bg-green-50 text-green-700 border-green-200' :
+                            tool.pricing_type === 'freemium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                            'bg-blue-50 text-blue-700 border-blue-200'
+                          }`}>
+                            {tool.pricing_type === 'free' ? 'Free' :
+                             tool.pricing_type === 'freemium' ? 'Freemium' : 'Paid'}
                           </Badge>
                         )}
                       </div>

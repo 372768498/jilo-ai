@@ -37,8 +37,10 @@ def collect_ga_data():
     ga_client = BetaAnalyticsDataClient(credentials=credentials)
 
     yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-    request = RunReportRequest(
+    # ── Query 1: page-level breakdown (for top-page analysis) ──────────────
+    page_request = RunReportRequest(
         property=f"properties/{GA_PROPERTY_ID}",
         date_ranges=[DateRange(start_date=yesterday, end_date=yesterday)],
         dimensions=[
@@ -53,11 +55,10 @@ def collect_ga_data():
         ],
     )
 
-    response = ga_client.run_report(request)
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    page_response = ga_client.run_report(page_request)
     rows_saved = 0
 
-    for row in response.rows:
+    for row in page_response.rows:
         page_path = row.dimension_values[0].value
         traffic_source = row.dimension_values[1].value
 
@@ -75,6 +76,29 @@ def collect_ga_data():
             data, on_conflict='date,page_path,traffic_source'
         ).execute()
         rows_saved += 1
+
+    # ── Query 2: site-level totals (correct PV and UV without double-count) ─
+    # No page/channel dimensions → GA4 deduplicates users across all pages.
+    site_request = RunReportRequest(
+        property=f"properties/{GA_PROPERTY_ID}",
+        date_ranges=[DateRange(start_date=yesterday, end_date=yesterday)],
+        dimensions=[],
+        metrics=[
+            Metric(name="screenPageViews"),
+            Metric(name="totalUsers"),
+            Metric(name="sessions"),
+        ],
+    )
+
+    site_response = ga_client.run_report(site_request)
+    if site_response.rows:
+        r = site_response.rows[0]
+        supabase.table('analytics_site_daily').upsert({
+            'date': yesterday,
+            'total_pageviews': int(r.metric_values[0].value),
+            'total_users': int(r.metric_values[1].value),
+            'total_sessions': int(r.metric_values[2].value),
+        }, on_conflict='date').execute()
 
     return rows_saved
 

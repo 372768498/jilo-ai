@@ -36,6 +36,7 @@ interface Tool {
   logo_url: string
   affiliate_url: string
   click_count: number
+  pricing_type?: string
 }
 
 export default function HotToolsSection({ locale }: { locale: string }) {
@@ -175,9 +176,21 @@ export default function HotToolsSection({ locale }: { locale: string }) {
 
                   {/* 底部信息 */}
                   <div className="flex items-center justify-between">
-                    <Badge variant="secondary" className="text-xs">
-                      {tool.category}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="secondary" className="text-xs">
+                        {tool.category}
+                      </Badge>
+                      {tool.pricing_type && (
+                        <Badge variant="outline" className={`text-xs px-1.5 py-0 ${
+                          tool.pricing_type === 'free' ? 'bg-green-50 text-green-700 border-green-200' :
+                          tool.pricing_type === 'freemium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}>
+                          {tool.pricing_type === 'free' ? 'Free' :
+                           tool.pricing_type === 'freemium' ? 'Freemium' : 'Paid'}
+                        </Badge>
+                      )}
+                    </div>
                     <span className="text-xs text-muted-foreground flex items-center gap-1">
                       <TrendingUp className="w-3 h-3" />
                       {tool.click_count || 0}
