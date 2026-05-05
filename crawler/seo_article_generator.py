@@ -69,14 +69,14 @@ def get_related_tools(keyword):
 
     if category:
         result = supabase.table('tools').select(
-            'name_en, slug, category, pricing_type'
-        ).eq('status', 'published').eq('category', category).limit(5).execute()
+            'name_en, slug, category, pricing_type, affiliate_url'
+        ).eq('status', 'published').eq('category', category).limit(15).execute()
         if result.data:
             return result.data
 
     result = supabase.table('tools').select(
-        'name_en, slug, category, pricing_type'
-    ).eq('status', 'published').limit(5).execute()
+        'name_en, slug, category, pricing_type, affiliate_url'
+    ).eq('status', 'published').limit(15).execute()
     return result.data or []
 
 
@@ -91,18 +91,21 @@ def generate_seo_article(keyword_data):
     tools_context = ""
     if related_tools:
         tool_lines = [
-            f"- {t['name_en']} (/{t['slug']}, {t.get('pricing_type','freemium')})"
+            f"- {t['name_en']} (/{t['slug']}, {t.get('pricing_type','freemium')}, affiliate: {t.get('affiliate_url', 'N/A')})"
             for t in related_tools
         ]
-        tools_context = "\n\nTools from our directory to mention (use /slug for internal links):\n" + '\n'.join(tool_lines)
+        tools_context = "\n\nTools from our directory to mention (use /slug for internal links, use affiliate_url when available):\n" + '\n'.join(tool_lines)
 
     prompt = f"""Write a comprehensive, SEO-optimized article about: "{keyword}"
 
 Requirements:
-- 1500-2000 words
+- 5000-7000 words (detailed, in-depth content)
 - H2 and H3 headings (markdown)
-- One comparison table where relevant
-- FAQ section (3-5 questions) at the end
+- Multiple comparison tables (features, pricing, use cases)
+- Real-world examples and case studies
+- Step-by-step tutorials where applicable
+- FAQ section (5-8 questions) at the end
+- Internal links to at least 10 tools from our directory
 - Factual, practical, genuinely helpful — not generic filler
 - Current year is 2026{tools_context}
 
@@ -125,7 +128,7 @@ CONTENT_ZH:
                 {"role": "user", "content": prompt}
             ],
             temperature=0.65,
-            max_tokens=3500
+            max_tokens=12000
         )
 
         raw = response.choices[0].message.content
@@ -157,7 +160,7 @@ CONTENT_ZH:
         }
 
         # Quality gate: reject suspiciously short content
-        if len(result['content_en']) < 500:
+        if len(result['content_en']) < 3000:
             print(f"  Quality gate FAIL: content too short ({len(result['content_en'])} chars)")
             return None
 
