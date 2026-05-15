@@ -1,42 +1,20 @@
-import { MetadataRoute } from 'next'
+import { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
-        disallow: [
-          '/admin/*',        // 禁止访问管理后台
-          '/api/*',          // 禁止访问API路径
-          '/*?*sort=*',      // 避免重复的排序参数页面
-          '/*?*filter=*',    // 避免重复的筛选参数页面
-        ],
+        userAgent: "*",
+        allow: "/",
+        disallow: ["/admin/*", "/api/*", "/*?*sort=*", "/*?*filter=*"],
       },
-      {
-        userAgent: 'GPTBot',  // OpenAI爬虫
-        allow: '/',           // 允许AI训练(可选)
-      },
-      {
-        userAgent: 'ChatGPT-User', // ChatGPT浏览
-        allow: '/',
-      },
-      {
-        userAgent: 'Google-Extended', // Google Bard
-        allow: '/',
-      },
-      {
-        userAgent: 'anthropic-ai',  // Claude
-        allow: '/',
-      },
-      {
-        userAgent: 'PerplexityBot',  // Perplexity
-        allow: '/',
-      },
+      { userAgent: "GPTBot", allow: "/" },
+      { userAgent: "ChatGPT-User", allow: "/" },
+      { userAgent: "OAI-SearchBot", allow: "/" },
+      { userAgent: "Google-Extended", allow: "/" },
+      { userAgent: "anthropic-ai", allow: "/" },
+      { userAgent: "PerplexityBot", allow: "/" },
     ],
-    sitemap: [
-      'https://www.jilo.ai/sitemap.xml',
-      'https://www.jilo.ai/zh/sitemap.xml',
-    ],
-  }
+    sitemap: "https://jilo.ai/sitemap.xml",
+  };
 }

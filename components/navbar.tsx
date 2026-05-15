@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 type NavbarProps = {
   locale: string;
@@ -13,88 +12,111 @@ export default function Navbar({ locale }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isZh = locale === "zh";
 
-  const navigation = isZh ? [
-    { name: "首页", href: `/${locale}` },
-    { name: "AI 工具", href: `/${locale}/tools` },
-    { name: "AI 新闻", href: `/${locale}/news` },
-    { name: "提交工具", href: "/submit" },
-  ] : [
-    { name: "Home", href: `/${locale}` },
-    { name: "AI Tools", href: `/${locale}/tools` },
-    { name: "AI News", href: `/${locale}/news` },
-    { name: "Submit", href: "/submit" },
-  ];
+  const navigation = isZh
+    ? [
+        { name: "工具库", href: `/${locale}/tools` },
+        { name: "AI Access", href: `/${locale}/access` },
+        { name: "工作流", href: `/${locale}/workflows` },
+        { name: "Radar", href: `/${locale}/radar` },
+        { name: "Deals", href: `/${locale}/deals` },
+        { name: "评测", href: `/${locale}/reviews` },
+      ]
+    : [
+        { name: "Tools", href: `/${locale}/tools` },
+        { name: "AI Access", href: `/${locale}/access` },
+        { name: "Workflows", href: `/${locale}/workflows` },
+        { name: "Radar", href: `/${locale}/radar` },
+        { name: "Deals", href: `/${locale}/deals` },
+        { name: "Reviews", href: `/${locale}/reviews` },
+      ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href={`/${locale}`} className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-              J
-            </div>
-            <span className="text-xl font-bold">Jilo.ai</span>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className="text-slate-600 hover:text-slate-900 transition-colors font-medium"
-              >
-                {item.name}
-              </Link>
-            ))}
-            
-            {/* Language Switcher */}
-            <div className="flex gap-2">
-              <Link
-                href="/en"
-                className={`px-3 py-1 rounded-md text-sm ${locale === "en" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}
-              >
-                EN
-              </Link>
-              <Link
-                href="/zh"
-                className={`px-3 py-1 rounded-md text-sm ${locale === "zh" ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"}`}
-              >
-                中文
-              </Link>
+    <nav className="sticky top-0 z-50 border-b bg-white/90 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
+        <Link href={`/${locale}`} className="flex items-center gap-2" aria-label="Jilo.ai home">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-950 text-sm font-bold text-white">
+            J
+          </div>
+          <div>
+            <div className="text-lg font-bold leading-none text-slate-950">Jilo.ai</div>
+            <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+              AI Intelligence
             </div>
           </div>
+        </Link>
 
-          {/* Mobile menu button */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2"
-          >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+        <div className="hidden items-center gap-6 lg:flex">
+          {navigation.map((item) => (
+            <Link
+              key={item.name}
+              href={item.href}
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-950"
+            >
+              {item.name}
+            </Link>
+          ))}
         </div>
+
+        <div className="hidden items-center gap-2 lg:flex">
+          <Link
+            href="/en"
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              locale === "en" ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            EN
+          </Link>
+          <Link
+            href="/zh"
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+              locale === "zh" ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            中文
+          </Link>
+          <Link
+            href={`/${locale}/submit`}
+            className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+          >
+            {isZh ? "提交工具" : "Submit"}
+          </Link>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen((open) => !open)}
+          className="rounded-md p-2 text-slate-700 hover:bg-slate-100 lg:hidden"
+          aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+        >
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </button>
       </div>
 
-      {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-t">
-          <div className="px-4 py-4 space-y-3">
+        <div className="border-t bg-white lg:hidden">
+          <div className="mx-auto max-w-7xl space-y-1 px-4 py-4">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className="block py-2 text-slate-600 hover:text-slate-900"
+                className="block rounded-md px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {item.name}
               </Link>
             ))}
-            <div className="flex gap-2 pt-2">
-              <Link href="/en" className={`px-3 py-1 rounded-md text-sm ${locale === "en" ? "bg-slate-900 text-white" : "text-slate-600"}`}>
+            <Link
+              href={`/${locale}/submit`}
+              className="block rounded-md bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              {isZh ? "提交工具" : "Submit Tool"}
+            </Link>
+            <div className="flex gap-2 px-3 pt-3">
+              <Link href="/en" className={`rounded-md px-3 py-1 text-sm ${locale === "en" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700"}`}>
                 EN
               </Link>
-              <Link href="/zh" className={`px-3 py-1 rounded-md text-sm ${locale === "zh" ? "bg-slate-900 text-white" : "text-slate-600"}`}>
+              <Link href="/zh" className={`rounded-md px-3 py-1 text-sm ${locale === "zh" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-700"}`}>
                 中文
               </Link>
             </div>

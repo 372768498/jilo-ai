@@ -6,6 +6,8 @@ type PageProps = {
   params: { locale: string; slug: string };
 };
 
+export const dynamic = "force-dynamic";
+
 type NewsItem = {
   slug: string;
   title_en: string | null;

@@ -1,29 +1,23 @@
-﻿import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import Script from 'next/script'
-
-const inter = Inter({ subsets: ['latin'] })
+import "./globals.css";
+import type { Metadata } from "next";
+import Script from "next/script";
 
 export const metadata: Metadata = {
-  title: 'Jilo.ai - Discover AI Tools',
-  description: 'Explore AI tools directory',
+  title: "Jilo.ai - AI Tool Intelligence, Access Guides, Workflows and Reviews",
+  description:
+    "Jilo.ai helps users discover, evaluate, access, and apply AI tools through practical reviews, workflows, deals, and high-intent AI tool intelligence.",
   verification: {
     other: {
-      'impact-site': '8b17145f-f60a-47b8-8ce5-c00d8dcf8092'  // ✅ 更新为新的验证码
-    }
-  }
-}
+      "impact-site": "8b17145f-f60a-47b8-8ce5-c00d8dcf8092",
+    },
+  },
+  metadataBase: new URL("https://jilo.ai"),
+};
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html>
+    <html lang="en">
       <head>
-        {/* Google Tag Manager */}
         <Script
           id="gtm-script"
           strategy="afterInteractive"
@@ -35,12 +29,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-MZN9CXF4');`,
           }}
         />
-        {/* Google Analytics 4 */}
-        <Script
-          id="ga4-script"
-          strategy="afterInteractive"
-          src="https://www.googletagmanager.com/gtag/js?id=G-GZ8RJ2E0S4"
-        />
+        <Script id="ga4-script" strategy="afterInteractive" src="https://www.googletagmanager.com/gtag/js?id=G-GZ8RJ2E0S4" />
         <Script
           id="ga4-config"
           strategy="afterInteractive"
@@ -52,18 +41,17 @@ gtag('config', 'G-GZ8RJ2E0S4');`,
           }}
         />
       </head>
-      <body className={inter.className}>
-        {/* Google Tag Manager (noscript) */}
+      <body>
         <noscript>
           <iframe
             src="https://www.googletagmanager.com/ns.html?id=GTM-MZN9CXF4"
             height="0"
             width="0"
-            style={{ display: 'none', visibility: 'hidden' }}
+            style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
         {children}
       </body>
     </html>
-  )
+  );
 }

@@ -3,46 +3,30 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-// ─── Submission tiers ────────────────────────────────────────────
 const TIERS = [
   {
     id: "free",
     label: "Free",
     price: "$0",
-    description: "Standard review queue (3–5 business days)",
-    features: ["Listed in directory", "Basic profile page", "Organic ranking"],
-    highlight: false,
+    description: "Standard editorial review",
+    features: ["Directory submission", "Basic profile review", "Organic ranking"],
   },
   {
     id: "featured",
     label: "Featured",
     price: "$49",
-    description: "Priority review + 7-day homepage placement",
-    features: [
-      "⚡ 24h priority review",
-      "🔥 Homepage Featured badge (7 days)",
-      "📌 Category page top placement (7 days)",
-      "Email notification to 500+ subscribers",
-    ],
-    highlight: true,
+    description: "Priority review and featured placement",
+    features: ["Priority review", "Homepage or category placement", "Clear sponsorship label"],
   },
   {
     id: "sponsored",
     label: "Sponsored",
     price: "$99",
-    description: "Maximum visibility for 14 days",
-    features: [
-      "⚡ Same-day review",
-      "🏆 Sponsored label + homepage carousel (14 days)",
-      "📌 All category pages top placement (14 days)",
-      "📧 Dedicated newsletter mention",
-      "🔗 Do-follow backlink in review article",
-    ],
-    highlight: false,
+    description: "Maximum launch visibility",
+    features: ["Same-day review target", "Sponsored placement", "Review or newsletter consideration"],
   },
 ];
 
-// ─── PayPal payment links ─────────────────────────────────────────
 const PAYMENT_LINKS: Record<string, string> = {
   featured: "https://paypal.me/jiloai001/49",
   sponsored: "https://paypal.me/jiloai001/99",
@@ -51,8 +35,13 @@ const PAYMENT_LINKS: Record<string, string> = {
 const PLATFORMS = ["web", "chrome", "ios", "android", "vscode", "api"];
 
 type TierId = "free" | "featured" | "sponsored";
+type PageProps = {
+  params: { locale: string };
+};
 
-export default function SubmitToolPage() {
+export default function SubmitToolPage({ params }: PageProps) {
+  const locale = params?.locale || "en";
+  const isZh = locale === "zh";
   const [tier, setTier] = useState<TierId>("free");
   const [form, setForm] = useState({
     email: "",
@@ -68,21 +57,23 @@ export default function SubmitToolPage() {
   const [err, setErr] = useState<string | null>(null);
 
   const togglePlatform = (p: string) => {
-    setForm((f) => {
-      const has = f.platforms.includes(p);
-      return { ...f, platforms: has ? f.platforms.filter((x) => x !== p) : [...f.platforms, p] };
+    setForm((current) => {
+      const has = current.platforms.includes(p);
+      return {
+        ...current,
+        platforms: has ? current.platforms.filter((item) => item !== p) : [...current.platforms, p],
+      };
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!form.tool_name.trim()) return;
     setBusy(true);
     setErr(null);
     setOk(false);
 
     try {
-      // Save submission to Supabase regardless of tier
       const { error } = await supabase.from("submissions").insert({
         submitter_email: form.email || null,
         tool_name: form.tool_name,
@@ -92,11 +83,10 @@ export default function SubmitToolPage() {
         platforms: form.platforms,
         logo_url: form.logo_url || null,
         status: tier === "free" ? "pending" : "paid_pending",
-        tier: tier,
+        tier,
       });
       if (error) throw error;
 
-      // For paid tiers: redirect to PayPal
       if (tier !== "free" && PAYMENT_LINKS[tier]) {
         window.location.href = PAYMENT_LINKS[tier];
         return;
@@ -104,191 +94,181 @@ export default function SubmitToolPage() {
 
       setOk(true);
       setForm({ email: "", tool_name: "", official_url: "", pitch: "", pricing: "freemium", platforms: [], logo_url: "" });
-    } catch (e: any) {
-      setErr(e?.message || "Submit failed. Please try again.");
+    } catch (error: any) {
+      setErr(error?.message || "Submit failed. Please try again.");
     } finally {
       setBusy(false);
     }
   };
 
+  const copy = isZh
+    ? {
+        title: "提交你的 AI 工具或解决方案",
+        subtitle: "Jilo.ai 优先收录能解决真实任务、适合评测和转化的 AI 工具、Access 方案和工作流产品。",
+        details: "提交信息",
+        email: "联系邮箱",
+        tool: "工具名称",
+        url: "官网或产品链接",
+        pitch: "一句话介绍",
+        pricing: "定价模式",
+        logo: "Logo URL",
+        platforms: "平台",
+        submitFree: "提交免费审核",
+        success: "已收到提交，我们会审核后联系你。",
+        paidNote: "付费方案会跳转到 PayPal。上线前如不适合发布，可退款。",
+      }
+    : {
+        title: "Submit your AI tool or solution",
+        subtitle: "Jilo.ai prioritizes products that solve real jobs, fit reviews, and can convert high-intent users.",
+        details: "Submission details",
+        email: "Contact email",
+        tool: "Tool name",
+        url: "Official URL",
+        pitch: "One-line pitch",
+        pricing: "Pricing model",
+        logo: "Logo URL",
+        platforms: "Platforms",
+        submitFree: "Submit for free review",
+        success: "Thanks. Your submission is in the review queue.",
+        paidNote: "Paid tiers redirect to PayPal. Refund available if the submission is not a fit before publication.",
+      };
+
   return (
-    <div className="max-w-3xl mx-auto px-4 py-12">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold mb-2">Submit Your AI Tool</h1>
-        <p className="text-muted-foreground">
-          Join 70+ curated AI tools trusted by 10K+ users. Choose the plan that fits your goals.
-        </p>
-      </div>
-
-      {/* ─── Tier Selector ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-        {TIERS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTier(t.id as TierId)}
-            className={`relative text-left rounded-xl border-2 p-5 transition-all ${
-              tier === t.id
-                ? "border-black bg-black text-white"
-                : "border-gray-200 bg-white hover:border-gray-400"
-            } ${t.highlight && tier !== t.id ? "border-purple-400" : ""}`}
-          >
-            {t.highlight && (
-              <span className={`absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                tier === t.id ? "bg-white text-black" : "bg-purple-500 text-white"
-              }`}>
-                Most Popular
-              </span>
-            )}
-            <div className="font-bold text-lg">{t.label}</div>
-            <div className={`text-2xl font-extrabold my-1 ${tier === t.id ? "text-white" : "text-black"}`}>
-              {t.price}
-            </div>
-            <div className={`text-xs mb-3 ${tier === t.id ? "text-gray-300" : "text-muted-foreground"}`}>
-              {t.description}
-            </div>
-            <ul className="space-y-1">
-              {t.features.map((f) => (
-                <li key={f} className={`text-xs ${tier === t.id ? "text-gray-200" : "text-gray-600"}`}>
-                  {f}
-                </li>
-              ))}
-            </ul>
-          </button>
-        ))}
-      </div>
-
-      {/* ─── Submission Form ───────────────────────────────────────── */}
-      <form onSubmit={handleSubmit} className="space-y-5 bg-gray-50 rounded-2xl p-6 border">
-        <h2 className="font-semibold text-lg">Tool Details</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Contact Email *</label>
-            <input
-              className="w-full border rounded-lg px-3 py-2 bg-white"
-              type="email"
-              required
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              placeholder="name@company.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Tool Name *</label>
-            <input
-              className="w-full border rounded-lg px-3 py-2 bg-white"
-              required
-              value={form.tool_name}
-              onChange={(e) => setForm({ ...form, tool_name: e.target.value })}
-              placeholder="Awesome AI"
-            />
-          </div>
+    <main className="min-h-screen bg-slate-50 px-4 py-12">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-bold text-slate-950">{copy.title}</h1>
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-slate-600">{copy.subtitle}</p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Official URL</label>
-          <input
-            className="w-full border rounded-lg px-3 py-2 bg-white"
-            type="url"
-            value={form.official_url}
-            onChange={(e) => setForm({ ...form, official_url: e.target.value })}
-            placeholder="https://yourtool.com"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">One-liner pitch *</label>
-          <textarea
-            className="w-full border rounded-lg px-3 py-2 bg-white min-h-[90px]"
-            required
-            value={form.pitch}
-            onChange={(e) => setForm({ ...form, pitch: e.target.value })}
-            placeholder="What is it? Who is it for? What's the main value? (2-3 sentences)"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Pricing Model</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2 bg-white"
-              value={form.pricing}
-              onChange={(e) => setForm({ ...form, pricing: e.target.value })}
+        <div className="mb-8 grid gap-4 md:grid-cols-3">
+          {TIERS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTier(item.id as TierId)}
+              className={`rounded-lg border p-5 text-left transition ${
+                tier === item.id ? "border-slate-950 bg-slate-950 text-white" : "bg-white hover:border-emerald-300"
+              }`}
             >
-              <option value="free">Free</option>
-              <option value="freemium">Freemium</option>
-              <option value="paid">Paid</option>
-              <option value="opensource">Open-source</option>
-            </select>
+              <div className="text-lg font-bold">{item.label}</div>
+              <div className={`mt-1 text-3xl font-bold ${tier === item.id ? "text-white" : "text-slate-950"}`}>{item.price}</div>
+              <p className={`mt-2 text-sm ${tier === item.id ? "text-slate-300" : "text-slate-600"}`}>{item.description}</p>
+              <ul className="mt-4 space-y-2">
+                {item.features.map((feature) => (
+                  <li key={feature} className={`text-xs ${tier === item.id ? "text-slate-200" : "text-slate-600"}`}>
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="rounded-lg border bg-white p-6 shadow-sm">
+          <h2 className="mb-5 text-lg font-semibold text-slate-950">{copy.details}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-medium text-slate-700">
+              {copy.email}
+              <input
+                className="mt-1 w-full rounded-md border px-3 py-2"
+                type="email"
+                required
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                placeholder="name@company.com"
+              />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              {copy.tool}
+              <input
+                className="mt-1 w-full rounded-md border px-3 py-2"
+                required
+                value={form.tool_name}
+                onChange={(event) => setForm({ ...form, tool_name: event.target.value })}
+                placeholder="Awesome AI"
+              />
+            </label>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Logo URL</label>
+
+          <label className="mt-4 block text-sm font-medium text-slate-700">
+            {copy.url}
             <input
-              className="w-full border rounded-lg px-3 py-2 bg-white"
-              value={form.logo_url}
-              onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-              placeholder="https://yourtool.com/logo.png"
+              className="mt-1 w-full rounded-md border px-3 py-2"
+              type="url"
+              value={form.official_url}
+              onChange={(event) => setForm({ ...form, official_url: event.target.value })}
+              placeholder="https://example.com"
             />
-          </div>
-        </div>
+          </label>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Platforms</label>
-          <div className="flex flex-wrap gap-2">
-            {PLATFORMS.map((p) => (
-              <button
-                type="button"
-                key={p}
-                onClick={() => togglePlatform(p)}
-                className={`px-3 py-1 rounded-full border text-sm capitalize transition-colors ${
-                  form.platforms.includes(p)
-                    ? "bg-black text-white border-black"
-                    : "bg-white text-gray-700 border-gray-300 hover:border-gray-500"
-                }`}
+          <label className="mt-4 block text-sm font-medium text-slate-700">
+            {copy.pitch}
+            <textarea
+              className="mt-1 min-h-[100px] w-full rounded-md border px-3 py-2"
+              required
+              value={form.pitch}
+              onChange={(event) => setForm({ ...form, pitch: event.target.value })}
+              placeholder="What is it? Who is it for? What job does it solve?"
+            />
+          </label>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-medium text-slate-700">
+              {copy.pricing}
+              <select
+                className="mt-1 w-full rounded-md border px-3 py-2"
+                value={form.pricing}
+                onChange={(event) => setForm({ ...form, pricing: event.target.value })}
               >
-                {p}
-              </button>
-            ))}
+                <option value="free">Free</option>
+                <option value="freemium">Freemium</option>
+                <option value="paid">Paid</option>
+                <option value="opensource">Open-source</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              {copy.logo}
+              <input
+                className="mt-1 w-full rounded-md border px-3 py-2"
+                value={form.logo_url}
+                onChange={(event) => setForm({ ...form, logo_url: event.target.value })}
+                placeholder="https://example.com/logo.png"
+              />
+            </label>
           </div>
-        </div>
 
-        {/* Submit button */}
-        <div className="pt-2">
+          <div className="mt-4">
+            <div className="mb-2 text-sm font-medium text-slate-700">{copy.platforms}</div>
+            <div className="flex flex-wrap gap-2">
+              {PLATFORMS.map((platform) => (
+                <button
+                  type="button"
+                  key={platform}
+                  onClick={() => togglePlatform(platform)}
+                  className={`rounded-md border px-3 py-1 text-sm capitalize ${
+                    form.platforms.includes(platform) ? "border-slate-950 bg-slate-950 text-white" : "bg-white text-slate-700"
+                  }`}
+                >
+                  {platform}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={busy}
-            className="w-full py-3 rounded-xl bg-black text-white font-semibold disabled:opacity-60 hover:bg-gray-800 transition-colors"
+            className="mt-6 w-full rounded-md bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
           >
-            {busy
-              ? "Processing…"
-              : tier === "free"
-              ? "Submit for Free Review"
-              : `Continue to Payment (${TIERS.find((t) => t.id === tier)?.price})`}
+            {busy ? "Processing..." : tier === "free" ? copy.submitFree : `Continue to payment (${TIERS.find((item) => item.id === tier)?.price})`}
           </button>
-          {tier !== "free" && (
-            <p className="text-center text-xs text-muted-foreground mt-2">
-              Secure payment via PayPal · 30-day refund if not published
-            </p>
-          )}
-        </div>
+          {tier !== "free" ? <p className="mt-2 text-center text-xs text-slate-500">{copy.paidNote}</p> : null}
 
-        {ok && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-emerald-700 text-sm">
-            ✅ Thanks! Your submission is in queue. We'll email you when it's reviewed (3–5 days).
-          </div>
-        )}
-        {err && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600 text-sm">
-            ❌ {err}
-          </div>
-        )}
-      </form>
-
-      {/* Social proof */}
-      <div className="mt-8 text-center text-sm text-muted-foreground">
-        <p>Questions? Email <a href="mailto:submit@jilo.ai" className="underline">submit@jilo.ai</a></p>
+          {ok ? <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">{copy.success}</div> : null}
+          {err ? <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">{err}</div> : null}
+        </form>
       </div>
-    </div>
+    </main>
   );
 }
