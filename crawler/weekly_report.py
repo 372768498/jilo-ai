@@ -19,19 +19,28 @@ def collect_weekly_data():
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
 
-    # GA summary: use site-level table for correct PV/UV (no double-count)
-    site_rows = supabase.table('analytics_site_daily').select(
-        'total_pageviews, total_users'
-    ).gte('date', week_ago).execute()
-    total_pv = sum(r['total_pageviews'] for r in (site_rows.data or []))
-    # UV is summed across days (same user on different days counts multiple times,
-    # which is standard "weekly UV" reporting behaviour)
-    total_uv = sum(r['total_users'] for r in (site_rows.data or []))
+    total_pv = 0
+    total_uv = 0
+
+    # GA summary: prefer site-level table for correct PV/UV (no double-count).
+    try:
+        site_rows = supabase.table('analytics_site_daily').select(
+            'total_pageviews, total_users'
+        ).gte('date', week_ago).execute()
+        total_pv = sum(r['total_pageviews'] for r in (site_rows.data or []))
+        # UV is summed across days (same user on different days counts multiple times,
+        # which is standard "weekly UV" reporting behaviour)
+        total_uv = sum(r['total_users'] for r in (site_rows.data or []))
+    except Exception as e:
+        print(f"analytics_site_daily unavailable, using analytics_daily fallback: {e}")
 
     # Top pages (aggregate in Python)
     page_rows = supabase.table('analytics_daily').select(
-        'page_path, pageviews'
+        'page_path, pageviews, unique_pageviews'
     ).gte('date', week_ago).execute()
+    if not total_pv and not total_uv:
+        total_pv = sum(r.get('pageviews', 0) for r in (page_rows.data or []))
+        total_uv = sum(r.get('unique_pageviews', 0) for r in (page_rows.data or []))
     page_views = defaultdict(int)
     for r in (page_rows.data or []):
         page_views[r['page_path']] += r['pageviews']

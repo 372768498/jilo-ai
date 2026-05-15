@@ -34,6 +34,21 @@ CREATE POLICY "Service role full access" ON analytics_daily FOR ALL USING (auth.
 CREATE INDEX idx_analytics_date ON analytics_daily(date DESC);
 CREATE INDEX idx_analytics_page ON analytics_daily(page_path);
 
+-- GA site-level daily totals.
+-- analytics_collector.py, daily_report.py, and weekly_report.py all read this table.
+CREATE TABLE IF NOT EXISTS analytics_site_daily (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  date date NOT NULL UNIQUE,
+  total_pageviews integer DEFAULT 0,
+  total_users integer DEFAULT 0,
+  total_sessions integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE analytics_site_daily ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Service role full access" ON analytics_site_daily FOR ALL USING (auth.role() = 'service_role');
+CREATE INDEX idx_analytics_site_date ON analytics_site_daily(date DESC);
+
 -- GSC 搜索数据表
 CREATE TABLE IF NOT EXISTS search_console_daily (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,

@@ -93,12 +93,15 @@ def collect_ga_data():
     site_response = ga_client.run_report(site_request)
     if site_response.rows:
         r = site_response.rows[0]
-        supabase.table('analytics_site_daily').upsert({
-            'date': yesterday,
-            'total_pageviews': int(r.metric_values[0].value),
-            'total_users': int(r.metric_values[1].value),
-            'total_sessions': int(r.metric_values[2].value),
-        }, on_conflict='date').execute()
+        try:
+            supabase.table('analytics_site_daily').upsert({
+                'date': yesterday,
+                'total_pageviews': int(r.metric_values[0].value),
+                'total_users': int(r.metric_values[1].value),
+                'total_sessions': int(r.metric_values[2].value),
+            }, on_conflict='date').execute()
+        except Exception as e:
+            print(f"  GA4 site totals skipped: {e}")
 
     return rows_saved
 

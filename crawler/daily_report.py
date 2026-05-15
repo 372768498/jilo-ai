@@ -30,23 +30,34 @@ def get_today_stats():
         elif log['job_name'] == 'compare_articles':
             stats['compare_articles'] += details.get('saved', 0)
 
-    # Analytics: yesterday's totals from site-level table (avoids UV double-count)
-    site_yesterday = supabase.table('analytics_site_daily').select(
-        'total_pageviews, total_users'
-    ).eq('date', yesterday).execute()
+    # Analytics: prefer site-level totals; fall back to page rows if the totals
+    # table has not been created yet.
+    try:
+        site_yesterday = supabase.table('analytics_site_daily').select(
+            'total_pageviews, total_users'
+        ).eq('date', yesterday).execute()
+        site_prev = supabase.table('analytics_site_daily').select(
+            'total_pageviews'
+        ).eq('date', two_days_ago).execute()
 
-    site_prev = supabase.table('analytics_site_daily').select(
-        'total_pageviews'
-    ).eq('date', two_days_ago).execute()
-
-    if site_yesterday.data:
-        stats['pv'] = site_yesterday.data[0]['total_pageviews']
-        stats['uv'] = site_yesterday.data[0]['total_users']
-    else:
-        stats['pv'] = 0
-        stats['uv'] = 0
-
-    stats['pv_prev'] = site_prev.data[0]['total_pageviews'] if site_prev.data else 0
+        if site_yesterday.data:
+            stats['pv'] = site_yesterday.data[0]['total_pageviews']
+            stats['uv'] = site_yesterday.data[0]['total_users']
+        else:
+            stats['pv'] = 0
+            stats['uv'] = 0
+        stats['pv_prev'] = site_prev.data[0]['total_pageviews'] if site_prev.data else 0
+    except Exception as e:
+        print(f"analytics_site_daily unavailable, using analytics_daily fallback: {e}")
+        page_yesterday = supabase.table('analytics_daily').select(
+            'pageviews, unique_pageviews'
+        ).eq('date', yesterday).execute()
+        page_prev = supabase.table('analytics_daily').select(
+            'pageviews'
+        ).eq('date', two_days_ago).execute()
+        stats['pv'] = sum(r.get('pageviews', 0) for r in (page_yesterday.data or []))
+        stats['uv'] = sum(r.get('unique_pageviews', 0) for r in (page_yesterday.data or []))
+        stats['pv_prev'] = sum(r.get('pageviews', 0) for r in (page_prev.data or []))
 
     # Top keywords: GSC has a 2-3 day lag, so find the most recent date with data
     # Look back up to 5 days to find the latest available date
