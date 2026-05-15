@@ -1,4 +1,4 @@
-import { BadgeDollarSign, Clock, ShieldQuestion, ThumbsUp } from "lucide-react";
+import { BadgeDollarSign, Clock, ShieldQuestion, ShoppingCart, ThumbsUp } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -21,6 +21,10 @@ export default function DealsPage({ params }: PageProps) {
         { icon: Clock, title: "Check durability", desc: "Look at updates, team credibility, support, and refund policy." },
         { icon: ShieldQuestion, title: "Say who should skip it", desc: "Every deal review needs a clear not-for section." },
       ];
+
+  const pageTypes = isZh
+    ? ["Best AppSumo AI deals", "AI lifetime deals 值不值得买", "某个 deal 的替代方案", "同类工具价格和功能对比", "买断工具长期风险清单"]
+    : ["Best AppSumo AI deals", "Are AI lifetime deals worth it?", "Alternatives to a specific deal", "Price and feature comparison", "Lifetime deal risk checklist"];
 
   return (
     <>
@@ -55,6 +59,29 @@ export default function DealsPage({ params }: PageProps) {
               </div>
             );
           })}
+        </section>
+
+        <section className="border-y bg-slate-50">
+          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <ShoppingCart className="h-5 w-5 text-emerald-700" />
+                <h2 className="text-2xl font-bold text-slate-950">{isZh ? "优先承接的购买意图" : "High-Intent Deal Pages"}</h2>
+              </div>
+              <p className="text-sm leading-6 text-slate-600">
+                {isZh
+                  ? "AI Deals 不是优惠搬运，而是承接正在准备购买的用户。页面必须能导向 affiliate、赞助评测或替代品推荐。"
+                  : "AI Deals is not a repost feed. It should capture users who are close to buying and route them to affiliate, sponsored reviews, or alternatives."}
+              </p>
+            </div>
+            <div className="grid gap-3">
+              {pageTypes.map((item) => (
+                <div key={item} className="rounded-lg border bg-white p-4 text-sm font-medium text-slate-700">
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
       </main>
       <Footer locale={locale} />

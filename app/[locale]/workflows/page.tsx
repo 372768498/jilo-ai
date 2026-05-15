@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Briefcase, Code2, GraduationCap, Megaphone, Palette, Video } from "lucide-react";
+import { ArrowRight, Briefcase, CheckCircle2, Code2, GraduationCap, Megaphone, Palette, Route, Video } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -29,6 +29,14 @@ export default function WorkflowsPage({ params }: PageProps) {
         { icon: Megaphone, title: "Marketing workflow", desc: "SEO, ad copy, social planning, competitor research, and lead capture.", href: `/${locale}/tools?category=Marketing` },
       ];
 
+  const anatomy = isZh
+    ? ["适合谁", "要完成什么任务", "推荐工具组合", "成本和访问门槛", "第一步怎么做", "风险和替代方案"]
+    : ["Who it is for", "Job to be done", "Recommended tool stack", "Cost and access barrier", "First step", "Risks and alternatives"];
+
+  const firstPages = isZh
+    ? ["普通人 AI 入门路线", "学生 AI 学习工具包", "自媒体 AI 内容工作流", "外贸 AI 开发信工作流", "老板/个体户 AI 降本工作流", "开发者 AI 编程助手选择"]
+    : ["AI starter path for ordinary users", "AI toolkit for students", "AI content workflow for creators", "AI workflow for outbound sales", "AI cost-saving workflow for small teams", "AI coding assistant workflow"];
+
   return (
     <>
       <Navbar locale={locale} />
@@ -41,8 +49,8 @@ export default function WorkflowsPage({ params }: PageProps) {
               </h1>
               <p className="mt-5 text-lg leading-8 text-slate-600">
                 {isZh
-                  ? "每条工作流都应该回答：适合谁、要完成什么任务、用哪些工具、成本多少、风险是什么、第一步怎么做。"
-                  : "Every workflow should explain who it is for, what job it completes, which tools to use, cost, risks, and the first step."}
+                  ? "战略里最重要的一点是：最有价值的单元不是工具页，而是能帮助用户避开噪音并采取行动的决策或工作流。"
+                  : "The valuable unit is not a tool page. It is a decision or workflow that helps users avoid noise and take action."}
               </p>
             </div>
           </div>
@@ -63,6 +71,35 @@ export default function WorkflowsPage({ params }: PageProps) {
               </Link>
             );
           })}
+        </section>
+
+        <section className="border-y bg-slate-50">
+          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-2">
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <Route className="h-5 w-5 text-emerald-700" />
+                <h2 className="text-2xl font-bold text-slate-950">{isZh ? "每条工作流必须回答" : "Every Workflow Must Answer"}</h2>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {anatomy.map((item) => (
+                  <div key={item} className="flex items-center gap-3 rounded-lg border bg-white p-4 text-sm font-medium text-slate-700">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h2 className="mb-4 text-2xl font-bold text-slate-950">{isZh ? "首批页面方向" : "First Workflow Pages"}</h2>
+              <div className="grid gap-3">
+                {firstPages.map((page) => (
+                  <div key={page} className="rounded-lg border bg-white p-4 text-sm font-medium text-slate-700">
+                    {page}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </section>
       </main>
       <Footer locale={locale} />

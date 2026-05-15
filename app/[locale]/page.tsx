@@ -143,6 +143,20 @@ export default async function HomePage({ params }: PageProps) {
 
   const getName = (tool: any) => (isZh ? tool.name_zh || tool.name_en : tool.name_en || tool.name_zh);
   const getDesc = (tool: any) => (isZh ? tool.tagline_zh || tool.tagline_en : tool.tagline_en || tool.tagline_zh);
+  const revenuePlan = isZh
+    ? [
+        { label: "英文线", value: "$3,500/月", desc: "SaaS affiliate、赞助评测、付费提交。" },
+        { label: "中文线", value: "$1,500/月", desc: "AI Access、教程资料、订阅解决方案和赞助位。" },
+        { label: "目标", value: "$5,000/月", desc: "用高意图流量和转化链路，而不是泛目录浏览。" },
+      ]
+    : [
+        { label: "English line", value: "$3,500/mo", desc: "SaaS affiliate, sponsored reviews, and paid submissions." },
+        { label: "Chinese line", value: "$1,500/mo", desc: "AI Access, tutorials, subscription solutions, and sponsorship." },
+        { label: "Target", value: "$5,000/mo", desc: "Driven by high-intent traffic, not generic directory browsing." },
+      ];
+  const trafficPlan = isZh
+    ? ["SEO：best、alternatives、vs、国内可用等搜索", "GEO：让 ChatGPT、Perplexity、AI Overviews 更容易引用", "平台分发：X、Reddit、Product Hunt、AppSumo、小红书、B站、知乎", "合作流量：评测博主、工作流创作者、产品猎人和 deal 创作者"]
+    : ["SEO: best, alternatives, vs, deals, and access searches", "GEO: make Jilo.ai easier for ChatGPT, Perplexity, and AI Overviews to cite", "Platform distribution: X, Reddit, Product Hunt, AppSumo, Xiaohongshu, Bilibili, Zhihu", "Partnership traffic: reviewers, workflow creators, product hunters, and deal creators"];
 
   return (
     <>
@@ -258,6 +272,51 @@ export default async function HomePage({ params }: PageProps) {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[0.9fr_1.1fr]">
+          <div>
+            <div className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+              {isZh ? "收入模型" : "Revenue Model"}
+            </div>
+            <h2 className="text-2xl font-bold text-slate-950">
+              {isZh ? "围绕每月 5,000 美金利润倒推产品结构" : "Product structure mapped to a $5,000/month profit target"}
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              {isZh
+                ? "Jilo.ai 2.0 的商业核心不是靠展示广告，而是把高意图用户导向 affiliate、赞助评测、付费提交和订阅解决方案。"
+                : "Jilo.ai 2.0 is not built around display ads. It routes high-intent users toward affiliate, sponsored reviews, paid submissions, and access solutions."}
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {revenuePlan.map((item) => (
+              <div key={item.label} className="rounded-lg border bg-white p-5">
+                <div className="text-sm font-semibold text-slate-500">{item.label}</div>
+                <div className="mt-2 text-3xl font-bold text-slate-950">{item.value}</div>
+                <p className="mt-3 text-sm leading-6 text-slate-600">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-y bg-slate-50">
+          <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[0.8fr_1.2fr]">
+            <div>
+              <div className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
+                {isZh ? "流量来源" : "Traffic Sources"}
+              </div>
+              <h2 className="text-2xl font-bold text-slate-950">
+                {isZh ? "先找到流量来源，再扩产品" : "Find traffic sources before expanding product surface"}
+              </h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {trafficPlan.map((item) => (
+                <div key={item} className="rounded-lg border bg-white p-4 text-sm font-medium leading-6 text-slate-700">
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
         </section>
