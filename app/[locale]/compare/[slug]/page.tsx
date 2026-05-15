@@ -1,6 +1,7 @@
 // app/[locale]/compare/[slug]/page.tsx
 import { supabase } from "@/lib/supabase";
 import type { Metadata } from "next";
+import { CompareFallbackPage, getFallbackMetadata } from "@/components/seo-fallback-page";
 
 type PageProps = {
   params: { locale: string; slug: string };
@@ -40,7 +41,7 @@ async function getArticle(slug: string, locale: string): Promise<CompareArticle 
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const article = await getArticle(params.slug, params.locale);
-  if (!article) return { title: "Article Not Found" };
+  if (!article) return getFallbackMetadata(params.slug, "compare", params.locale);
   return {
     title: article.meta_title || article.title,
     description: article.meta_description || article.title,
@@ -51,11 +52,7 @@ export default async function CompareArticlePage({ params }: PageProps) {
   const article = await getArticle(params.slug, params.locale);
 
   if (!article) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold">Article Not Found</h1>
-      </div>
-    );
+    return <CompareFallbackPage locale={params.locale} slug={params.slug} />;
   }
 
   return (

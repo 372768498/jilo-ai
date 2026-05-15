@@ -4,6 +4,7 @@
 import { supabase } from "@/lib/supabase";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { BestToolsFallbackPage, getFallbackMetadata } from "@/components/seo-fallback-page";
 
 type PageProps = {
   params: { locale: string; slug: string };
@@ -62,7 +63,7 @@ async function getArticle(slug: string): Promise<NewsItem | null> {
 // ————— SEO: 动态 Metadata —————
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const article = await getArticle(params.slug);
-  if (!article) return { title: "Alternatives Not Found | Jilo.ai" };
+  if (!article) return getFallbackMetadata(params.slug, "alternatives", params.locale);
 
   const title = coalesceByLocale(params.locale, article.title_en, article.title_zh) || "Jilo.ai Alternatives";
   const description = coalesceByLocale(params.locale, article.summary_en, article.summary_zh) || "";
@@ -91,7 +92,9 @@ export default async function AlternativesPage({ params }: PageProps) {
   const { locale, slug } = params;
   const article = await getArticle(slug);
 
-  if (!article) return notFound();
+  if (!article) {
+    return <BestToolsFallbackPage locale={locale} slug={slug} mode="alternatives" />;
+  }
 
   const title = coalesceByLocale(locale, article.title_en, article.title_zh);
   const summary = coalesceByLocale(locale, article.summary_en, article.summary_zh);
