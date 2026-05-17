@@ -164,6 +164,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
   const pricingDetails = isZh ? data.pricing_details_zh : data.pricing_details_en;
   const metaTitle = isZh ? data.meta_title_zh : data.meta_title_en;
   const metaDescription = isZh ? data.meta_description_zh : data.meta_description_en;
+  const outboundUrl = `/api/out?tool=${encodeURIComponent(data.id)}&source=tool_detail&locale=${encodeURIComponent(locale)}`;
 
   // JSON-LD for SEO
   const jsonLd = {
@@ -226,9 +227,9 @@ export default async function ToolDetailPage({ params }: PageProps) {
           <div className="flex gap-3">
             {data.official_url && (
               <a
-                href={data.affiliate_url || data.official_url}
+                href={outboundUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="sponsored nofollow noopener noreferrer"
                 className="inline-flex items-center px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition"
               >
                 {isZh ? "访问网站" : "Visit Website"} →

@@ -29,12 +29,13 @@ const CATEGORY_MAP: Record<CategoryKey, { zh: string; en: string; value?: any }>
 const TAB_KEYS: CategoryKey[] = ['recommend', 'office', 'chat', 'image', 'video', 'code', 'comic', 'write', 'audio', 'other']
 
 interface Tool {
-  id: number
+  id: string
   name: string
   description: string
   category: string
   logo_url: string
   affiliate_url: string
+  official_url?: string
   click_count: number
   pricing_type?: string
 }
@@ -88,14 +89,10 @@ export default function HotToolsSection({ locale }: { locale: string }) {
   }, [activeTab, isZh])
 
   // 处理工具点击
-  async function handleToolClick(toolId: number, affiliateUrl: string) {
-    const supabase = createClient()
-    
-    // 增加点击次数
-    await supabase.rpc('increment_tool_clicks', { tool_id: toolId })
-    
-    // 跳转到affiliate链接
-    window.open(affiliateUrl, '_blank')
+  function handleToolClick(tool: Tool) {
+    if (!tool.affiliate_url && !tool.official_url) return
+
+    window.open(`/api/out?tool=${encodeURIComponent(tool.id)}&source=hot_tools&locale=${encodeURIComponent(locale)}`, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -143,7 +140,7 @@ export default function HotToolsSection({ locale }: { locale: string }) {
               <Card 
                 key={tool.id} 
                 className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-                onClick={() => handleToolClick(tool.id, tool.affiliate_url)}
+                onClick={() => handleToolClick(tool)}
               >
                 <CardContent className="p-6">
                   {/* Logo */}

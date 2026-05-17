@@ -54,6 +54,10 @@ function localizedDesc(tool: Tool, isZh: boolean) {
   return (isZh ? tool.tagline_zh || tool.tagline_en : tool.tagline_en || tool.tagline_zh) || "";
 }
 
+function outboundHref(tool: Tool, locale: string, source: string) {
+  return `/api/out?tool=${encodeURIComponent(tool.id)}&source=${encodeURIComponent(source)}&locale=${encodeURIComponent(locale)}`;
+}
+
 async function getToolsForSlug(slug: string, limit = 12) {
   const rule = inferCategory(slug);
   let query = supabase
@@ -130,19 +134,31 @@ export async function BestToolsFallbackPage({ locale, slug, mode = "best" }: { l
 
         <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tools.map((tool) => (
-            <Link key={tool.id} href={`/${locale}/tools/${tool.slug}`} className="rounded-lg border bg-white p-4 transition hover:border-emerald-300 hover:shadow-md">
+            <div key={tool.id} className="rounded-lg border bg-white p-4 transition hover:border-emerald-300 hover:shadow-md">
               <div className="flex items-start gap-3">
                 {tool.logo_url ? <img src={tool.logo_url} alt="" className="h-10 w-10 rounded-md border object-cover" /> : <div className="h-10 w-10 rounded-md bg-slate-900" />}
                 <div>
-                  <h2 className="font-semibold text-slate-950">{localizedName(tool, isZh)}</h2>
+                  <Link href={`/${locale}/tools/${tool.slug}`} className="font-semibold text-slate-950 hover:text-emerald-700">
+                    {localizedName(tool, isZh)}
+                  </Link>
                   <p className="mt-1 line-clamp-3 text-sm leading-6 text-slate-600">{localizedDesc(tool, isZh)}</p>
                   <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-700">
                     {tool.category ? <span className="rounded border px-2 py-1">{tool.category}</span> : null}
                     {tool.pricing_type ? <span className="rounded border px-2 py-1">{tool.pricing_type}</span> : null}
                   </div>
+                  {(tool.affiliate_url || tool.official_url) ? (
+                    <a
+                      href={outboundHref(tool, locale, "seo_fallback")}
+                      target="_blank"
+                      rel="sponsored nofollow noopener noreferrer"
+                      className="mt-4 inline-flex rounded-md bg-emerald-700 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                    >
+                      {isZh ? "访问官网" : "Visit site"}
+                    </a>
+                  ) : null}
                 </div>
               </div>
-            </Link>
+            </div>
           ))}
         </section>
       </main>
@@ -190,6 +206,16 @@ export async function CompareFallbackPage({ locale, slug }: { locale: string; sl
                     <Link className="font-semibold text-emerald-700" href={`/${locale}/tools/${tool.slug}`}>
                       {isZh ? "查看工具" : "View tool"}
                     </Link>
+                    {(tool.affiliate_url || tool.official_url) ? (
+                      <a
+                        className="ml-4 font-semibold text-slate-700 hover:text-emerald-700"
+                        href={outboundHref(tool, locale, "compare_fallback")}
+                        target="_blank"
+                        rel="sponsored nofollow noopener noreferrer"
+                      >
+                        {isZh ? "访问官网" : "Visit site"}
+                      </a>
+                    ) : null}
                   </td>
                 </tr>
               ))}
