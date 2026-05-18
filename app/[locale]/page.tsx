@@ -60,6 +60,81 @@ const pillars = [
   },
 ];
 
+const taskEntrances = [
+  {
+    icon: Compass,
+    href: "workflows",
+    en: {
+      title: "I am new to AI",
+      desc: "Start with simple workflows and a small set of reliable tools.",
+    },
+    zh: {
+      title: "我是 AI 新手",
+      desc: "从简单工作流开始，只先选少量可靠工具。",
+    },
+  },
+  {
+    icon: Globe2,
+    href: "access",
+    en: {
+      title: "I want to use ChatGPT, Claude, Cursor, or Midjourney",
+      desc: "Check access, subscription, payment, safety, and lower-risk alternatives.",
+    },
+    zh: {
+      title: "我想用 ChatGPT、Claude、Cursor、Midjourney",
+      desc: "先看访问、订阅、支付、安全风险和替代方案。",
+    },
+  },
+  {
+    icon: Search,
+    href: "tools",
+    en: {
+      title: "I need a tool for writing, video, coding, or work",
+      desc: "Browse tools by task, pricing, category, and practical use case.",
+    },
+    zh: {
+      title: "我想找写作、视频、编程或办公工具",
+      desc: "按任务、价格、分类和真实使用场景筛选。",
+    },
+  },
+  {
+    icon: BadgeDollarSign,
+    href: "deals",
+    en: {
+      title: "I want to know what is worth paying for",
+      desc: "See buying guidance, deal checks, and tools closest to purchase intent.",
+    },
+    zh: {
+      title: "我想知道哪个 AI 工具值得付费",
+      desc: "查看购买建议、优惠判断和高意图工具清单。",
+    },
+  },
+  {
+    icon: ShieldCheck,
+    href: "reviews",
+    en: {
+      title: "I want comparisons and safer choices",
+      desc: "Use reviews, alternatives, and risk notes before committing to a tool.",
+    },
+    zh: {
+      title: "我想看对比和避坑",
+      desc: "先看评测、替代品和风险提示，再决定是否使用。",
+    },
+  },
+  {
+    icon: ArrowRight,
+    href: "submit",
+    en: {
+      title: "I want to submit or promote an AI product",
+      desc: "Send us your product for review, listing, or future paid placement.",
+    },
+    zh: {
+      title: "我想提交或推广 AI 产品",
+      desc: "提交产品，进入收录、评测或后续付费展示流程。",
+    },
+  },
+];
+
 const audiences = {
   en: [
     "Students choosing reliable study tools",
@@ -109,12 +184,12 @@ export default async function HomePage({ params }: PageProps) {
 
   const t = isZh
     ? {
-        eyebrow: "AI 工具情报与上手平台",
-        title: "从发现 AI 工具，到真正用 AI 改善工作和生活",
+        eyebrow: "从这里开始",
+        title: "告诉我们你想用 AI 做什么，我们帮你选工具和上手路径",
         subtitle:
-          "Jilo.ai 2.0 不再只是工具目录。我们扫描新项目、筛选可用工具、评测访问与订阅方案，并把它们整理成普通用户能执行的 AI 工作流。",
+          "不用先理解复杂概念。你只需要选择任务、预算和使用条件，Jilo.ai 会把工具、访问方式、替代方案和是否值得付费整理成可执行路径。",
         search: "搜索 AI 工具、访问方案或工作流...",
-        browse: "浏览工具库",
+        browse: "按任务找工具",
         submit: "提交工具",
         signalTitle: "我们关注高意图流量",
         signalDesc: "SEO、GEO、平台分发和合作流量一起推进，优先服务正在选择、购买和使用 AI 工具的人。",
@@ -125,12 +200,12 @@ export default async function HomePage({ params }: PageProps) {
         viewAll: "查看全部",
       }
     : {
-        eyebrow: "AI tool intelligence and onboarding",
-        title: "From discovering AI tools to using the right workflow",
+        eyebrow: "Start here",
+        title: "Tell us what you want to do with AI. We will point you to the right tools.",
         subtitle:
-          "Jilo.ai 2.0 is not just a directory. We scan new projects, filter useful tools, review access and subscription options, and turn them into practical AI workflows.",
+          "Choose a task, budget, and setup. Jilo.ai turns tool discovery, access notes, alternatives, and paid-tool decisions into a practical path.",
         search: "Search AI tools, access guides, or workflows...",
-        browse: "Browse Tools",
+        browse: "Find tools by task",
         submit: "Submit Tool",
         signalTitle: "Built for high-intent traffic",
         signalDesc: "SEO, GEO, platform distribution, and partner traffic are designed around people choosing, buying, and using AI tools.",
@@ -195,14 +270,14 @@ export default async function HomePage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="grid content-start gap-3">
-              {pillars.map((pillar) => {
-                const Icon = pillar.icon;
-                const copy = isZh ? pillar.zh : pillar.en;
+            <div className="grid content-start gap-3 sm:grid-cols-2">
+              {taskEntrances.map((task) => {
+                const Icon = task.icon;
+                const copy = isZh ? task.zh : task.en;
                 return (
                   <Link
-                    key={pillar.href}
-                    href={`/${locale}/${pillar.href}`}
+                    key={task.href}
+                    href={`/${locale}/${task.href}`}
                     className="group rounded-lg border bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
                   >
                     <div className="flex items-start gap-4">
