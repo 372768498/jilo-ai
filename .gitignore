@@ -5,6 +5,10 @@ out
 .vercel
 *.log
 .DS_Store
+__pycache__/
+*.py[cod]
+tsconfig.tsbuildinfo
+_local_archive/
 
 crawler/.env
 
