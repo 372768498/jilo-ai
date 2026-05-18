@@ -191,8 +191,8 @@ export default async function HomePage({ params }: PageProps) {
         search: "搜索 AI 工具、访问方案或工作流...",
         browse: "按任务找工具",
         submit: "提交工具",
-        signalTitle: "我们关注高意图流量",
-        signalDesc: "SEO、GEO、平台分发和合作流量一起推进，优先服务正在选择、购买和使用 AI 工具的人。",
+        signalTitle: "从真实任务开始",
+        signalDesc: "先解决访问、选择、付费和上手问题，再推荐具体工具。",
         toolsTitle: "最新收录工具",
         newsTitle: "AI 情报",
         reviewsTitle: "评测方法",
@@ -207,8 +207,8 @@ export default async function HomePage({ params }: PageProps) {
         search: "Search AI tools, access guides, or workflows...",
         browse: "Find tools by task",
         submit: "Submit Tool",
-        signalTitle: "Built for high-intent traffic",
-        signalDesc: "SEO, GEO, platform distribution, and partner traffic are designed around people choosing, buying, and using AI tools.",
+        signalTitle: "Start from a real task",
+        signalDesc: "We help with access, choice, payment, and practical first workflows before recommending tools.",
         toolsTitle: "Latest Tools",
         newsTitle: "AI Intelligence",
         reviewsTitle: "Review Method",
@@ -218,20 +218,54 @@ export default async function HomePage({ params }: PageProps) {
 
   const getName = (tool: any) => (isZh ? tool.name_zh || tool.name_en : tool.name_en || tool.name_zh);
   const getDesc = (tool: any) => (isZh ? tool.tagline_zh || tool.tagline_en : tool.tagline_en || tool.tagline_zh);
-  const revenuePlan = isZh
+  const answerPages = isZh
     ? [
-        { label: "英文线", value: "$3,500/月", desc: "SaaS affiliate、赞助评测、付费提交。" },
-        { label: "中文线", value: "$1,500/月", desc: "AI Access、教程资料、订阅解决方案和赞助位。" },
-        { label: "目标", value: "$5,000/月", desc: "用高意图流量和转化链路，而不是泛目录浏览。" },
+        {
+          title: "在中国大陆能不能用 Claude？",
+          desc: "先看官方可用性、账号风险、替代方案和新手选择。",
+          href: `/${locale}/answers/can-i-use-claude-in-china`,
+        },
+        {
+          title: "ChatGPT、Claude、Gemini 新手先用哪个？",
+          desc: "用任务、预算和使用环境来选，不要一上来买三个订阅。",
+          href: `/${locale}/answers/chatgpt-vs-claude-vs-gemini-for-beginners`,
+        },
+        {
+          title: "哪些 AI 工具值得付费？",
+          desc: "看真实用途、免费额度、替代品和是否能每周省时间。",
+          href: `/${locale}/deals`,
+        },
       ]
     : [
-        { label: "English line", value: "$3,500/mo", desc: "SaaS affiliate, sponsored reviews, and paid submissions." },
-        { label: "Chinese line", value: "$1,500/mo", desc: "AI Access, tutorials, subscription solutions, and sponsorship." },
-        { label: "Target", value: "$5,000/mo", desc: "Driven by high-intent traffic, not generic directory browsing." },
+        {
+          title: "Can I use Claude in China?",
+          desc: "Check official availability, account risk, alternatives, and practical next steps.",
+          href: `/${locale}/answers/can-i-use-claude-in-china`,
+        },
+        {
+          title: "ChatGPT vs Claude vs Gemini for beginners",
+          desc: "Choose by task, budget, access, and the workflows you repeat every week.",
+          href: `/${locale}/answers/chatgpt-vs-claude-vs-gemini-for-beginners`,
+        },
+        {
+          title: "Which AI tools are worth paying for?",
+          desc: "Use real use cases, free limits, alternatives, and time saved to decide.",
+          href: `/${locale}/deals`,
+        },
       ];
-  const trafficPlan = isZh
-    ? ["SEO：best、alternatives、vs、国内可用等搜索", "GEO：让 ChatGPT、Perplexity、AI Overviews 更容易引用", "平台分发：X、Reddit、Product Hunt、AppSumo、小红书、B站、知乎", "合作流量：评测博主、工作流创作者、产品猎人和 deal 创作者"]
-    : ["SEO: best, alternatives, vs, deals, and access searches", "GEO: make Jilo.ai easier for ChatGPT, Perplexity, and AI Overviews to cite", "Platform distribution: X, Reddit, Product Hunt, AppSumo, Xiaohongshu, Bilibili, Zhihu", "Partnership traffic: reviewers, workflow creators, product hunters, and deal creators"];
+  const beginnerSteps = isZh
+    ? [
+        "先选一个任务：写作、学习、办公、编程、图片、视频或搜索资料。",
+        "确认你能不能稳定访问和付款，避免依赖来路不明的账号。",
+        "先用免费版完成 3 次真实任务，再决定是否付费。",
+        "保留一个备用 AI 助手，用来交叉验证重要答案。",
+      ]
+    : [
+        "Pick one task first: writing, study, office work, coding, images, video, or research.",
+        "Check access and payment before relying on any tool for work.",
+        "Finish three real tasks on the free tier before paying.",
+        "Keep one backup assistant to compare important answers.",
+      ];
 
   return (
     <>
@@ -300,28 +334,28 @@ export default async function HomePage({ params }: PageProps) {
           <div className="rounded-lg border p-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-700">
               <Search className="h-4 w-4" />
-              SEO
+              {isZh ? "找工具" : "Find"}
             </div>
             <p className="text-sm leading-6 text-slate-600">
-              {isZh ? "承接 best、alternatives、vs、国内可用等高意图搜索。" : "Capture best, alternatives, vs, deals, and access-intent searches."}
+              {isZh ? "按任务、预算、可用性和替代方案筛选，不再只看泛泛工具列表。" : "Filter by task, budget, availability, and alternatives instead of browsing generic tool lists."}
             </p>
           </div>
           <div className="rounded-lg border p-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-blue-700">
               <ShieldCheck className="h-4 w-4" />
-              GEO
+              {isZh ? "避坑" : "Avoid mistakes"}
             </div>
             <p className="text-sm leading-6 text-slate-600">
-              {isZh ? "用清晰结论、表格、FAQ 和来源，让 AI 答案系统更容易引用。" : "Use conclusions, tables, FAQs, and sources so answer engines can cite Jilo.ai."}
+              {isZh ? "先看访问、账号、付款、隐私和数据风险，再把工具放进日常工作。" : "Check access, account, payment, privacy, and data risks before using a tool for work."}
             </p>
           </div>
           <div className="rounded-lg border p-5">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-700">
               <BadgeDollarSign className="h-4 w-4" />
-              Revenue
+              {isZh ? "决定是否付费" : "Decide whether to pay"}
             </div>
             <p className="text-sm leading-6 text-slate-600">
-              {isZh ? "英文线做 affiliate 和赞助评测，中文线做 Access、教程和订阅解决方案。" : "English drives affiliate and sponsorship; Chinese drives access, guides, and subscription solutions."}
+              {isZh ? "只有当一个工具每周真的帮你省时间、提升质量或解决限制时，才值得订阅。" : "Pay only when a tool saves time, improves quality, or removes a real workflow limit every week."}
             </p>
           </div>
         </section>
@@ -354,24 +388,23 @@ export default async function HomePage({ params }: PageProps) {
         <section className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <div className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-              {isZh ? "收入模型" : "Revenue Model"}
+              {isZh ? "先解决这些问题" : "Start with these questions"}
             </div>
             <h2 className="text-2xl font-bold text-slate-950">
-              {isZh ? "围绕每月 5,000 美金利润倒推产品结构" : "Product structure mapped to a $5,000/month profit target"}
+              {isZh ? "普通用户进来后，不需要先理解 AI 行业" : "You do not need to understand the whole AI market first"}
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               {isZh
-                ? "Jilo.ai 2.0 的商业核心不是靠展示广告，而是把高意图用户导向 affiliate、赞助评测、付费提交和订阅解决方案。"
-                : "Jilo.ai 2.0 is not built around display ads. It routes high-intent users toward affiliate, sponsored reviews, paid submissions, and access solutions."}
+                ? "你只需要告诉我们想完成什么任务、在哪里使用、预算多少。我们会把可用性、风险、替代方案和下一步整理成直接答案。"
+                : "Tell us the task, where you will use it, and your budget. We turn access, risk, alternatives, and next steps into direct answers."}
             </p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            {revenuePlan.map((item) => (
-              <div key={item.label} className="rounded-lg border bg-white p-5">
-                <div className="text-sm font-semibold text-slate-500">{item.label}</div>
-                <div className="mt-2 text-3xl font-bold text-slate-950">{item.value}</div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{item.desc}</p>
-              </div>
+          <div className="grid gap-4">
+            {answerPages.map((item) => (
+              <Link key={item.href} href={item.href} className="rounded-lg border bg-white p-5 transition hover:border-emerald-300 hover:shadow-md">
+                <div className="text-base font-semibold text-slate-950">{item.title}</div>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{item.desc}</p>
+              </Link>
             ))}
           </div>
         </section>
@@ -380,14 +413,14 @@ export default async function HomePage({ params }: PageProps) {
           <div className="mx-auto grid max-w-7xl gap-8 px-4 py-12 lg:grid-cols-[0.8fr_1.2fr]">
             <div>
               <div className="mb-2 text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">
-                {isZh ? "流量来源" : "Traffic Sources"}
+                {isZh ? "新手路径" : "Beginner path"}
               </div>
               <h2 className="text-2xl font-bold text-slate-950">
-                {isZh ? "先找到流量来源，再扩产品" : "Find traffic sources before expanding product surface"}
+                {isZh ? "先能稳定使用，再谈高级技巧" : "Get stable first, then go deeper"}
               </h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {trafficPlan.map((item) => (
+              {beginnerSteps.map((item) => (
                 <div key={item} className="rounded-lg border bg-white p-4 text-sm font-medium leading-6 text-slate-700">
                   {item}
                 </div>
