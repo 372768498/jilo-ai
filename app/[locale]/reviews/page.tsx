@@ -1,4 +1,5 @@
 import { CheckCircle2, FileQuestion, ListChecks, Scale, SearchCheck, XCircle } from "lucide-react";
+import Link from "next/link";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -29,8 +30,20 @@ export default function ReviewsPage({ params }: PageProps) {
     : ["Clear conclusion near the top", "Tables and comparison blocks", "FAQ section", "Updated date", "Author or editorial standard", "Verifiable sources", "Structured data", "Short direct answers"];
 
   const firstPages = isZh
-    ? ["Can I use Claude in China?", "Best ways to access ChatGPT Plus from China", "Cursor vs Windsurf for beginners", "Best AI tools for Chinese content creators", "银河录像局值得用于 AI 订阅吗？"]
-    : ["Can I use Claude in China?", "Best ways to access ChatGPT Plus from China", "Cursor vs Windsurf for beginners", "Best AI tools for Chinese content creators", "Is Galaxy-style shared subscription worth it?"];
+    ? [
+        { title: "在中国大陆能不能用 Claude？", href: `/${locale}/answers/can-i-use-claude-in-china` },
+        { title: "ChatGPT、Claude、Gemini：AI 新手先用哪个？", href: `/${locale}/answers/chatgpt-vs-claude-vs-gemini-for-beginners` },
+        { title: "Best ways to access ChatGPT Plus from China", href: `/${locale}/reviews` },
+        { title: "Cursor vs Windsurf for beginners", href: `/${locale}/reviews` },
+        { title: "银河录像局这类订阅渠道是否值得用？", href: `/${locale}/reviews` },
+      ]
+    : [
+        { title: "Can I use Claude in China?", href: `/${locale}/answers/can-i-use-claude-in-china` },
+        { title: "ChatGPT vs Claude vs Gemini for beginners", href: `/${locale}/answers/chatgpt-vs-claude-vs-gemini-for-beginners` },
+        { title: "Best ways to access ChatGPT Plus from China", href: `/${locale}/reviews` },
+        { title: "Cursor vs Windsurf for beginners", href: `/${locale}/reviews` },
+        { title: "Is Galaxy-style shared subscription worth it?", href: `/${locale}/reviews` },
+      ];
 
   return (
     <>
@@ -85,9 +98,13 @@ export default function ReviewsPage({ params }: PageProps) {
               </div>
               <div className="grid gap-3">
                 {firstPages.map((page) => (
-                  <div key={page} className="rounded-lg border bg-white p-4 text-sm font-medium text-slate-700">
-                    {page}
-                  </div>
+                  <Link
+                    key={page.title}
+                    href={page.href}
+                    className="rounded-lg border bg-white p-4 text-sm font-medium text-slate-700 transition-colors hover:border-emerald-300 hover:text-slate-950"
+                  >
+                    {page.title}
+                  </Link>
                 ))}
               </div>
             </div>
