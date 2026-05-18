@@ -15,7 +15,16 @@ def get_today_stats():
 
     # Content stats from ops_logs
     logs = supabase.table('ops_logs').select('*').gte('created_at', f'{today}T00:00:00Z').execute()
-    stats = {'news_saved': 0, 'news_skipped': 0, 'tools_saved': 0, 'seo_articles': 0, 'compare_articles': 0, 'errors': []}
+    stats = {
+        'news_saved': 0,
+        'news_skipped': 0,
+        'tools_saved': 0,
+        'seo_articles': 0,
+        'compare_articles': 0,
+        'outbound_clicks': 0,
+        'affiliate_clicks': 0,
+        'errors': [],
+    }
     for log in (logs.data or []):
         details = log.get('details', {})
         if log['status'] == 'error':
@@ -29,6 +38,13 @@ def get_today_stats():
             stats['seo_articles'] += details.get('saved', 0)
         elif log['job_name'] == 'compare_articles':
             stats['compare_articles'] += details.get('saved', 0)
+        elif log['job_name'] == 'outbound_click':
+            stats['outbound_clicks'] += 1
+            if details.get('has_affiliate'):
+                stats['affiliate_clicks'] += 1
+
+    tools = supabase.table('tools').select('id, affiliate_url').eq('status', 'published').execute()
+    stats['affiliate_tools'] = sum(1 for t in (tools.data or []) if t.get('affiliate_url'))
 
     # Analytics: prefer site-level totals; fall back to page rows if the totals
     # table has not been created yet.
@@ -116,6 +132,9 @@ def format_daily_report(stats):
 
 **Content Created Today**
   News: {stats['news_saved']} | Tools: {stats['tools_saved']} | SEO: {stats['seo_articles']} | Compare: {stats['compare_articles']}
+
+**Monetization Today**
+  Outbound clicks: {stats['outbound_clicks']} | Affiliate clicks: {stats['affiliate_clicks']} | Affiliate tools live: {stats.get('affiliate_tools', 0)}
 
 **Top Keywords**{kw_date_label}
 {kw_text}

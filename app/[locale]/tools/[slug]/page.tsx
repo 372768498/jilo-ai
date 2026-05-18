@@ -235,6 +235,11 @@ export default async function ToolDetailPage({ params }: PageProps) {
                 {isZh ? "访问网站" : "Visit Website"} →
               </a>
             )}
+            {data.affiliate_url && (
+              <span className="inline-flex items-center rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                {isZh ? "联盟链接" : "Affiliate link"}
+              </span>
+            )}
             {data.rating && (
               <div className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg">
                 <span className="text-2xl">⭐</span>
@@ -247,6 +252,13 @@ export default async function ToolDetailPage({ params }: PageProps) {
               </div>
             )}
           </div>
+          {data.affiliate_url && (
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">
+              {isZh
+                ? "披露：如果你通过此链接购买，Jilo.ai 可能获得佣金；这不会影响我们的评测结论。"
+                : "Disclosure: Jilo.ai may earn a commission if you buy through this link. This does not affect our review."}
+            </p>
+          )}
         </div>
       </div>
 

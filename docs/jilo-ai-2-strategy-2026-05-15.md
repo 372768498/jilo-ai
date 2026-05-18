@@ -371,3 +371,29 @@ Jilo.ai 的首页应该从“战略栏目展示”改成“普通用户决策工
 - 明确 Tool Finder 2.0、外链追踪、affiliate 链接和 7 天执行顺序。
 
 后续所有页面改版优先服从这份调研报告，而不是继续扩大战略展示页面。
+
+## 2026-05-17 第四次迭代：变现链路上线与联盟候选池
+
+本次迭代从“能展示工具”推进到“能记录购买意图”。
+
+已完成：
+
+- 新增 `/api/out` 统一出站入口。
+- 工具详情页、SEO 兜底页、Deals 页和 Skool 广告位开始通过统一入口记录点击。
+- `ops_logs` 新增 `outbound_click` 行为日志。
+- Daily Report 和 Weekly Report 增加 outbound clicks、affiliate clicks、affiliate tools live 三个变现指标。
+- Deals 页从内部战略说明改为面向用户的高意图购买/评测入口。
+- 新增联盟候选池文档：`docs/jilo-affiliate-candidate-pipeline-2026-05-17.md`。
+
+当前商业判断：
+
+- 技术链路已经能承接流量，但 `affiliate_url = 0` 仍是最直接收入缺口。
+- 不应伪造联盟链接，也不应把普通官网链接写入 `affiliate_url`。
+- 下一步必须把 AppSumo、ElevenLabs、Grammarly、QuillBot、Semrush、Surfer SEO、Writesonic、Descript 等优先计划逐个申请下来，再填入 Supabase。
+
+短期执行顺序：
+
+1. 申请 8 个优先联盟计划。
+2. 每拿到一个 tracking link，就更新对应工具的 `affiliate_url` 和 `affiliate_platform`。
+3. 用 `/en/deals`、工具详情页和 SEO fallback 页承接点击。
+4. 每天看四个指标：GSC 曝光、GA 页面流量、outbound clicks、affiliate clicks。

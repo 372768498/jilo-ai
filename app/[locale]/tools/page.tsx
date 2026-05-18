@@ -164,9 +164,9 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
 
                 {/* Skool 广告位 */}
                 <a
-                  href="https://www.skool.com/signup?ref=37b1672271fd4149b32cb4947874e1ba"
+                  href={`/api/out?target=skool-community&source=tools_sidebar&locale=${encodeURIComponent(locale)}`}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="sponsored nofollow noopener noreferrer"
                   className="block bg-gradient-to-br from-orange-50 to-red-50 rounded-lg border-2 border-orange-200 p-4 hover:shadow-md transition-all duration-300 group"
                 >
                   <div className="flex items-center gap-3 mb-2">

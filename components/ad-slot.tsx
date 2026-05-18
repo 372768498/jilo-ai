@@ -10,6 +10,7 @@ type AdSlotProps = {
 
 export default function AdSlot({ type, height, locale }: AdSlotProps) {
   const isZh = locale === "zh";
+  const communityHref = `/api/out?target=skool-community&source=ad_slot_${type}&locale=${encodeURIComponent(locale || "en")}`;
   
   if (type === "sidebar") {
     return (
@@ -26,9 +27,9 @@ export default function AdSlot({ type, height, locale }: AdSlotProps) {
           </p>
           <Button asChild size="lg" className="rounded-full shadow-lg">
             <Link 
-              href="https://www.skool.com/signup?ref=37b1672271fd4149b32cb4947874e1ba"
+              href={communityHref}
               target="_blank"
-              rel="noopener noreferrer"
+              rel="sponsored nofollow noopener noreferrer"
             >
               {isZh ? "立即加入" : "Join Now"} →
             </Link>
@@ -41,9 +42,9 @@ export default function AdSlot({ type, height, locale }: AdSlotProps) {
   return (
     <Card className="border-2 bg-gradient-to-r from-purple-50 via-blue-50 to-pink-50 hover:shadow-lg transition-all">
       <Link 
-        href="https://www.skool.com/signup?ref=37b1672271fd4149b32cb4947874e1ba"
+        href={communityHref}
         target="_blank"
-        rel="noopener noreferrer"
+        rel="sponsored nofollow noopener noreferrer"
         className="block"
       >
         <div className={`${height || "h-32"} flex items-center justify-center gap-6 px-6`}>

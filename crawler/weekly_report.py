@@ -74,6 +74,18 @@ def collect_weekly_data():
     content_logs = supabase.table('ops_logs').select(
         'job_name, details'
     ).gte('created_at', f'{week_ago}T00:00:00Z').eq('status', 'success').execute()
+    outbound_logs = [
+        log for log in (content_logs.data or [])
+        if log.get('job_name') == 'outbound_click'
+    ]
+    affiliate_clicks = sum(
+        1 for log in outbound_logs
+        if (log.get('details') or {}).get('has_affiliate')
+    )
+    tools = supabase.table('tools').select(
+        'id, affiliate_url'
+    ).eq('status', 'published').execute()
+    affiliate_tools = sum(1 for t in (tools.data or []) if t.get('affiliate_url'))
 
     # Strategy actions this week
     actions = supabase.table('strategy_reports').select(
@@ -86,6 +98,9 @@ def collect_weekly_data():
         'top_pages': top_pages,
         'top_queries': top_queries,
         'content_logs': content_logs.data or [],
+        'outbound_clicks': len(outbound_logs),
+        'affiliate_clicks': affiliate_clicks,
+        'affiliate_tools': affiliate_tools,
         'strategy_actions': actions.data or [],
     }
 
@@ -103,6 +118,7 @@ def generate_ai_strategy(weekly_data):
     prompt = f"""Analyze this week's data for jilo.ai (AI tool discovery platform) and provide strategic recommendations.
 
 Weekly Traffic: PV {weekly_data['total_pv']}, UV {weekly_data['total_uv']}
+Monetization: outbound clicks {weekly_data.get('outbound_clicks', 0)}, affiliate clicks {weekly_data.get('affiliate_clicks', 0)}, live affiliate tools {weekly_data.get('affiliate_tools', 0)}
 
 Top Pages by Pageviews:
 {top_pages_text}
@@ -162,6 +178,9 @@ def send_weekly_report():
 
 **Traffic Summary**
   Weekly PV: {weekly_data['total_pv']}  UV: {weekly_data['total_uv']}
+
+**Monetization**
+  Outbound clicks: {weekly_data.get('outbound_clicks', 0)}  Affiliate clicks: {weekly_data.get('affiliate_clicks', 0)}  Affiliate tools live: {weekly_data.get('affiliate_tools', 0)}
 
 ---
 
