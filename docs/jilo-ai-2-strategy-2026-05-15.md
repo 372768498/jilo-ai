@@ -397,3 +397,27 @@ Jilo.ai 的首页应该从“战略栏目展示”改成“普通用户决策工
 2. 每拿到一个 tracking link，就更新对应工具的 `affiliate_url` 和 `affiliate_platform`。
 3. 用 `/en/deals`、工具详情页和 SEO fallback 页承接点击。
 4. 每天看四个指标：GSC 曝光、GA 页面流量、outbound clicks、affiliate clicks。
+
+## 2026-05-18 第五次迭代：从工具目录转为 AI 信息站和决策站
+
+本次判断：
+
+- Jilo.ai 不应该再把内部规划、GEO、Revenue Model、Traffic Sources 等内容作为前台核心内容。
+- 普通用户需要的是“我该用哪个 AI、怎么用、能不能用、值不值得付费”的直接答案。
+- 2026 年用户正在从单一 ChatGPT 使用，转向 ChatGPT、Gemini、Claude、Perplexity、Cursor、Copilot 等组合使用。
+- AI Overviews、ChatGPT、Perplexity、Gemini 等答案系统正在改变搜索流量分配，普通内容站不能只依赖传统 SEO。
+
+新定位：
+
+> Jilo.ai 是普通用户使用 AI 的信息站和决策站。
+
+已新增执行文档：
+
+- `docs/jilo-geo-operations-plan-2026-05-18.md`
+
+下一阶段所有前台页面必须遵守：
+
+1. 首屏优先回答用户问题，不展示内部战略。
+2. 页面必须有明确结论、对比表格、适合谁、不适合谁、FAQ、更新时间和下一步。
+3. 每天运营报告要回答“今天该做哪 3 件事”，而不是只证明爬虫跑成功。
+4. 优先发布 10 个 GEO 答案页，先承接 AI 访问、工具对比、学生工具、视频工具、付费决策和中国用户可用性。

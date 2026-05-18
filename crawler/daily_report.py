@@ -79,6 +79,7 @@ def get_today_stats():
     # Look back up to 5 days to find the latest available date
     stats['top_keywords'] = []
     stats['keywords_date'] = None
+    stats['pages_to_update'] = []
     for days_back in range(1, 6):
         check_date = (datetime.utcnow() - timedelta(days=days_back)).strftime('%Y-%m-%d')
         gsc_data = supabase.table('search_console_daily').select(
@@ -87,7 +88,25 @@ def get_today_stats():
         if gsc_data.data:
             stats['top_keywords'] = gsc_data.data
             stats['keywords_date'] = check_date
+            try:
+                opportunities = supabase.table('search_console_daily').select(
+                    'query, page_path, position, clicks, impressions'
+                ).eq('date', check_date).lte('position', 30).order('impressions', desc=True).limit(20).execute()
+                stats['pages_to_update'] = [
+                    row for row in (opportunities.data or [])
+                    if row.get('impressions', 0) > 0 and row.get('clicks', 0) == 0
+                ][:5]
+            except Exception as e:
+                print(f"Unable to load page update opportunities: {e}")
             break
+
+    clicked_tools = supabase.table('tools').select(
+        'slug, name_en, click_count, affiliate_url'
+    ).eq('status', 'published').order('click_count', desc=True).limit(10).execute()
+    stats['clicked_tools_without_affiliate'] = [
+        t for t in (clicked_tools.data or [])
+        if (t.get('click_count') or 0) > 0 and not t.get('affiliate_url')
+    ][:5]
 
     # Strategy actions today
     strategy = supabase.table('strategy_reports').select('actions_taken').eq(
@@ -123,6 +142,37 @@ def format_daily_report(stats):
         action_lines.append(f"  - [{a.get('priority', '?').upper()}] {a.get('reason', '')[:60]}")
     action_text = '\n'.join(action_lines) if action_lines else '  No actions today'
 
+    page_lines = []
+    for page in stats.get('pages_to_update', [])[:5]:
+        page_lines.append(
+            f"  - {page.get('page_path', '?')} | \"{page.get('query', '')}\" pos:{page.get('position', 0):.0f} imp:{page.get('impressions', 0)}"
+        )
+    pages_text = '\n'.join(page_lines) if page_lines else '  None'
+
+    tool_lines = []
+    for tool in stats.get('clicked_tools_without_affiliate', [])[:5]:
+        tool_lines.append(f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} clicks")
+    tools_text = '\n'.join(tool_lines) if tool_lines else '  None'
+
+    tasks = []
+    if stats.get('pages_to_update'):
+        first_page = stats['pages_to_update'][0]
+        tasks.append(f"Update GEO page: {first_page.get('page_path', '?')} for \"{first_page.get('query', '')}\"")
+    else:
+        tasks.append("Create or improve one GEO answer page from the priority list")
+
+    if stats.get('clicked_tools_without_affiliate'):
+        first_tool = stats['clicked_tools_without_affiliate'][0]
+        tasks.append(f"Apply/follow up affiliate program for {first_tool.get('name_en') or first_tool.get('slug')}")
+    else:
+        tasks.append("Apply/follow up one priority affiliate program")
+
+    if stats.get('outbound_clicks', 0) == 0:
+        tasks.append("Improve one CTA path to generate outbound clicks")
+    else:
+        tasks.append("Review outbound click sources and improve the highest-intent page")
+    tasks_text = '\n'.join(f"  {idx + 1}. {task}" for idx, task in enumerate(tasks[:3]))
+
     errors_text = '\n'.join(f"  - {e}" for e in stats['errors']) if stats['errors'] else '  None'
 
     return f"""**jilo.ai Daily Report - {today}**
@@ -135,6 +185,15 @@ def format_daily_report(stats):
 
 **Monetization Today**
   Outbound clicks: {stats['outbound_clicks']} | Affiliate clicks: {stats['affiliate_clicks']} | Affiliate tools live: {stats.get('affiliate_tools', 0)}
+
+**Pages To Update**
+{pages_text}
+
+**Clicked Tools Without Affiliate**
+{tools_text}
+
+**Today's 3 Tasks**
+{tasks_text}
 
 **Top Keywords**{kw_date_label}
 {kw_text}
