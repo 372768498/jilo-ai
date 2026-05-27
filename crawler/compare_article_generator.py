@@ -1,69 +1,26 @@
 # crawler/compare_article_generator.py
+#
+# Queue consumer: reads `generate_comparison` actions from action_queue
+# (emitted by strategy_engine), produces compare articles, writes lifecycle back.
+# Does NOT self-select pairs — single source of truth is the policy layer.
 import time
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from supabase import create_client
 from openai import OpenAI
 from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
+import action_queue as aq
+import quality_gates as qg
+
+ACTIONS_PER_RUN = 1
 
 
 def _get_openai_client():
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY not configured")
     return OpenAI(api_key=OPENAI_API_KEY)
-
-
-def find_comparison_pairs():
-    """Find tool pairs that should be compared."""
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    pairs = []
-
-    # Strategy 1: GSC queries containing "vs" or "alternative"
-    week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
-    vs_result = supabase.table('search_console_daily').select(
-        'query, impressions'
-    ).gte('date', week_ago).ilike('query', '%vs%').order(
-        'impressions', desc=True
-    ).limit(5).execute()
-    alt_result = supabase.table('search_console_daily').select(
-        'query, impressions'
-    ).gte('date', week_ago).ilike('query', '%alternative%').order(
-        'impressions', desc=True
-    ).limit(5).execute()
-    combined = (vs_result.data or []) + (alt_result.data or [])
-    vs_queries_data = sorted(combined, key=lambda x: x.get('impressions', 0), reverse=True)[:5]
-
-    for q in vs_queries_data:
-        query = q['query'].lower()
-        if ' vs ' in query:
-            parts = query.split(' vs ')
-            if len(parts) == 2:
-                pairs.append((parts[0].strip(), parts[1].strip()))
-
-    # Strategy 2: Most recently published tools → compare with same-category tools
-    # NOTE: click_count column doesn't exist; using created_at instead
-    if not pairs:
-        top_tools = supabase.table('tools').select(
-            'name_en, category, slug'
-        ).eq('status', 'published').order('created_at', desc=True).limit(10).execute()
-
-        for tool in (top_tools.data or [])[:2]:
-            similar = supabase.table('tools').select(
-                'name_en, slug'
-            ).eq('status', 'published').eq('category', tool['category']).neq(
-                'slug', tool['slug']
-            ).limit(1).execute()
-
-            if similar.data:
-                pairs.append((tool['name_en'], similar.data[0]['name_en']))
-
-    # Fallback: predefined popular comparisons
-    if not pairs:
-        pairs = [("ChatGPT", "Claude"), ("Midjourney", "DALL-E 3")]
-
-    return pairs[:1]  # Generate 1 per run
 
 
 def get_tool_data(tool_name):
@@ -158,19 +115,11 @@ CONTENT_ZH: [Chinese translation of full article]"""
         return None
 
 
-def save_comparison(article):
-    """Save comparison article to compare_articles table."""
-    if not article or not article.get('content_en'):
-        return False
-
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    existing = supabase.table('compare_articles').select('id').eq('slug', article['slug']).execute()
-    if existing.data:
-        print(f"  Skip (exists): {article['slug']}")
-        return False
-
-    # Save English version
+def save_comparison(article, supabase):
+    """
+    Save comparison article (both locales) to compare_articles.
+    Assumes quality_gates already passed including slug-duplicate check.
+    """
     supabase.table('compare_articles').insert({
         'slug': article['slug'],
         'locale': 'en',
@@ -182,38 +131,80 @@ def save_comparison(article):
         'published_at': datetime.utcnow().isoformat(),
     }).execute()
 
-    # Save Chinese version
-    if article.get('content_zh'):
-        supabase.table('compare_articles').insert({
-            'slug': f"{article['slug']}-zh",
-            'locale': 'zh',
-            'title': article['title_zh'],
-            'meta_title': article['title_zh'],
-            'meta_description': article['meta_description_zh'],
-            'content': article['content_zh'],
-            'status': 'published',
-            'published_at': datetime.utcnow().isoformat(),
-        }).execute()
-
-    return True
+    supabase.table('compare_articles').insert({
+        'slug': f"{article['slug']}-zh",
+        'locale': 'zh',
+        'title': article['title_zh'],
+        'meta_title': article['title_zh'],
+        'meta_description': article['meta_description_zh'],
+        'content': article['content_zh'],
+        'status': 'published',
+        'published_at': datetime.utcnow().isoformat(),
+    }).execute()
 
 
 if __name__ == "__main__":
-    print("Starting compare article generator...")
+    print("Starting compare article generator (queue consumer)...")
     try:
-        pairs = find_comparison_pairs()
-        saved = 0
-        for tool_a, tool_b in pairs:
-            print(f"\nGenerating: {tool_a} vs {tool_b}...")
-            article = generate_comparison(tool_a, tool_b)
-            if save_comparison(article):
-                saved += 1
-                print(f"  Saved: {article['slug']}")
-            time.sleep(2)
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        actions = aq.pick_pending(supabase, 'generate_comparison', limit=ACTIONS_PER_RUN)
 
-        log_operation("compare_articles", "success", f"Generated {saved} articles", {
-            "saved": saved, "pairs": [f"{a} vs {b}" for a, b in pairs]
-        })
+        if not actions:
+            print("No pending generate_comparison actions. Strategy layer has nothing for us.")
+            log_operation("compare_articles", "success",
+                          "No pending actions", {"saved": 0, "reason": "queue_empty"})
+        else:
+            saved = 0
+            failed = 0
+            skipped = 0
+            for action in actions:
+                payload = action.get('payload') or {}
+                tool_a = payload.get('tool_a')
+                tool_b = payload.get('tool_b')
+                if not tool_a or not tool_b:
+                    aq.mark_failed(supabase, action, "payload missing tool_a/tool_b")
+                    failed += 1
+                    continue
+
+                print(f"\nGenerating: {tool_a} vs {tool_b}  (priority={action['priority']}, attempt={action['attempts']}/{action.get('max_attempts', 3)})")
+                try:
+                    article = generate_comparison(tool_a, tool_b)
+                    if not article:
+                        aq.mark_failed(supabase, action, "generation returned None")
+                        failed += 1
+                        continue
+
+                    gate = qg.check_compare_article(article, supabase)
+                    if not gate.ok:
+                        if gate.terminal:
+                            aq.mark_skipped(supabase, action, gate.reason)
+                            skipped += 1
+                            print(f"  SKIP: {gate.reason}")
+                        else:
+                            aq.mark_failed(supabase, action, gate.reason)
+                            failed += 1
+                            print(f"  FAIL gate: {gate.reason}")
+                        continue
+
+                    save_comparison(article, supabase)
+                    aq.mark_done(supabase, action, {
+                        'slug': article['slug'],
+                        'tool_a': tool_a,
+                        'tool_b': tool_b,
+                    })
+                    saved += 1
+                    print(f"  DONE: {article['slug']}")
+                except Exception as gen_err:
+                    aq.mark_failed(supabase, action, str(gen_err))
+                    failed += 1
+                    print(f"  FAIL: {gen_err}")
+                time.sleep(2)
+
+            log_operation("compare_articles", "success",
+                          f"saved={saved} failed={failed} skipped={skipped}", {
+                              "saved": saved, "failed": failed, "skipped": skipped,
+                              "actions": [{"id": a['id'], "pair": f"{(a.get('payload') or {}).get('tool_a')} vs {(a.get('payload') or {}).get('tool_b')}"} for a in actions],
+                          })
     except Exception as e:
         log_operation("compare_articles", "error", str(e))
         if FEISHU_WEBHOOK_URL:

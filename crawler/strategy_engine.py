@@ -1,4 +1,5 @@
 # crawler/strategy_engine.py
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
@@ -9,6 +10,24 @@ from feishu_bot import send_feishu_alert
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+def _slugify(text):
+    s = re.sub(r'[^a-z0-9\s-]', '', text.lower())
+    return re.sub(r'[\s-]+', '-', s).strip('-')
+
+
+def build_dedup_key(action):
+    """Stable, normalized key so the same logical action is never enqueued twice."""
+    t = action['type']
+    if t == 'generate_seo_content':
+        return f"seo:{_slugify(action['keyword'])}"
+    if t == 'generate_comparison':
+        a, b = sorted([_slugify(action['tool_a']), _slugify(action['tool_b'])])
+        return f"compare:{a}|{b}"
+    if t == 'flag_for_review':
+        return f"flag:{_slugify(action['page'])}"
+    raise ValueError(f"Unknown action type: {t}")
 
 
 def check_keyword_opportunities():
@@ -126,38 +145,70 @@ def check_high_bounce_pages():
     return actions
 
 
-def execute_actions(actions):
-    """Execute or queue the strategy actions."""
-    supabase = get_supabase()
+def enqueue_action(supabase, action, source_report_id):
+    """
+    Upsert action into action_queue keyed by dedup_key.
+    If an open row (pending|in_progress) already exists for the same logical
+    action, the insert is a no-op so we never queue the same work twice.
+    Returns True if a new row was created, False if already queued.
+    """
+    dedup_key = build_dedup_key(action)
+    existing = supabase.table('action_queue').select('id, status').eq(
+        'dedup_key', dedup_key
+    ).in_('status', ['pending', 'in_progress']).execute()
+    if existing.data:
+        return False
 
-    # Save actions to strategy_reports.
-    # NOTE: upsert requires a unique constraint on (report_date, report_type).
-    # If that constraint doesn't exist in your DB, this falls back to a safe
-    # select-then-insert pattern to avoid duplicates.
+    payload = {k: v for k, v in action.items() if k not in ('type', 'priority', 'reason')}
+    supabase.table('action_queue').insert({
+        'action_type': action['type'],
+        'payload': payload,
+        'reason': action.get('reason'),
+        'priority': action.get('priority', 'medium'),
+        'dedup_key': dedup_key,
+        'source_report_id': source_report_id,
+    }).execute()
+    return True
+
+
+def execute_actions(actions):
+    """Persist strategy decisions: write history to strategy_reports AND emit to action_queue."""
+    supabase = get_supabase()
     today = datetime.utcnow().strftime('%Y-%m-%d')
+
+    # 1. Strategy report (audit trail, human-readable)
     existing = supabase.table('strategy_reports').select('id').eq(
         'report_date', today
     ).eq('report_type', 'daily').execute()
 
     if existing.data:
+        report_id = existing.data[0]['id']
         supabase.table('strategy_reports').update({
             'actions_taken': actions,
             'content': {'action_count': len(actions)},
-        }).eq('id', existing.data[0]['id']).execute()
+        }).eq('id', report_id).execute()
     else:
-        supabase.table('strategy_reports').insert({
+        ins = supabase.table('strategy_reports').insert({
             'report_date': today,
             'report_type': 'daily',
             'actions_taken': actions,
             'content': {'action_count': len(actions)},
         }).execute()
+        report_id = ins.data[0]['id'] if ins.data else None
 
-    # For now, just log the actions. Actual execution (calling seo/compare generators)
-    # would be done by separate scheduled jobs that read from strategy_reports.
+    # 2. Action queue (the bus that executors consume)
+    enqueued = 0
+    skipped = 0
     for action in actions:
-        print(f"  [{action['priority'].upper()}] {action['type']}: {action['reason']}")
+        if enqueue_action(supabase, action, report_id):
+            enqueued += 1
+            print(f"  [ENQUEUE {action['priority'].upper()}] {action['type']}: {action['reason']}")
+        else:
+            skipped += 1
+            print(f"  [DEDUP    {action['priority'].upper()}] {action['type']}: {action['reason']}")
 
-    return len(actions)
+    print(f"\n  Enqueued {enqueued}, deduped {skipped}")
+    return enqueued
 
 
 if __name__ == "__main__":
@@ -169,10 +220,11 @@ if __name__ == "__main__":
         all_actions.extend(check_high_bounce_pages())
 
         print(f"\nFound {len(all_actions)} actions:")
-        action_count = execute_actions(all_actions)
+        enqueued = execute_actions(all_actions)
 
-        log_operation("strategy_engine", "success", f"Found {action_count} actions", {
-            "action_count": action_count,
+        log_operation("strategy_engine", "success", f"Enqueued {enqueued} of {len(all_actions)} actions", {
+            "found": len(all_actions),
+            "enqueued": enqueued,
             "actions": all_actions,
         })
     except Exception as e:

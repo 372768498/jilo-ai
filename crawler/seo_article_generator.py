@@ -1,55 +1,27 @@
 # crawler/seo_article_generator.py
+#
+# Queue consumer: reads `generate_seo_content` actions from action_queue
+# (emitted by strategy_engine), produces articles, writes lifecycle back.
+# Does NOT self-select keywords — single source of truth is the policy layer.
 import time
 import re
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime
 from supabase import create_client
 from openai import OpenAI
 from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
+import action_queue as aq
+import quality_gates as qg
 
-# Minimum GSC data threshold before auto-generating articles.
-# Prevents publishing generic fallback content when the site is new.
-MIN_GSC_IMPRESSIONS = 50
-MIN_GSC_ROWS_TO_PROCEED = 3
+ACTIONS_PER_RUN = 2
 
 
 def _get_openai_client():
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY not configured")
     return OpenAI(api_key=OPENAI_API_KEY)
-
-
-def get_target_keywords():
-    """
-    Get high-potential keywords from GSC data.
-    Returns (keywords, used_fallback) tuple.
-    used_fallback=True means no real GSC data was available.
-    """
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
-
-    result = supabase.table('search_console_daily').select(
-        'query, impressions, clicks, ctr, position'
-    ).gte('date', week_ago).gte('impressions', MIN_GSC_IMPRESSIONS).lte(
-        'ctr', 0.05
-    ).order('impressions', desc=True).limit(10).execute()
-
-    rows = result.data or []
-
-    # Deduplicate queries across multiple dates
-    seen = {}
-    for row in rows:
-        q = row['query']
-        if q not in seen or row['impressions'] > seen[q]['impressions']:
-            seen[q] = row
-    unique_rows = list(seen.values())
-
-    if len(unique_rows) >= MIN_GSC_ROWS_TO_PROCEED:
-        return unique_rows[:2], False
-
-    return [], True
 
 
 def get_related_tools(keyword):
@@ -80,12 +52,11 @@ def get_related_tools(keyword):
     return result.data or []
 
 
-def generate_seo_article(keyword_data):
+def generate_seo_article(keyword):
     """
-    Generate a long-form SEO article.
+    Generate a long-form SEO article for the given keyword.
     Uses gpt-4o-mini (~$0.006/article) instead of gpt-4o (~$0.06/article).
     """
-    keyword = keyword_data['query']
     related_tools = get_related_tools(keyword)
 
     tools_context = ""
@@ -149,7 +120,7 @@ CONTENT_ZH:
                 return extract_field(text, key)
             return text[idx + len(marker):].strip()
 
-        result = {
+        return {
             'title_en': extract_field(en_part, 'TITLE_EN'),
             'meta_description_en': extract_field(en_part, 'META_DESC_EN'),
             'content_en': extract_multiline(en_part, 'CONTENT_EN'),
@@ -159,32 +130,18 @@ CONTENT_ZH:
             'target_keyword': keyword,
         }
 
-        # Quality gate: reject suspiciously short content
-        if len(result['content_en']) < 3000:
-            print(f"  Quality gate FAIL: content too short ({len(result['content_en'])} chars)")
-            return None
-
-        return result
-
     except Exception as e:
         print(f"  GPT-4o-mini article generation error: {e}")
         return None
 
 
-def save_article(article):
-    """Save SEO article to news table. Returns True if saved."""
-    if not article or not article.get('title_en') or not article.get('content_en'):
-        return False
-
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    content_hash = hashlib.md5(
-        f"{article['title_en']}{article['target_keyword']}".encode()
-    ).hexdigest()
-    existing = supabase.table('news').select('id').eq('content_hash', content_hash).execute()
-    if existing.data:
-        print(f"  Skip (duplicate): {article['title_en'][:60]}")
-        return False
+def save_article(article, supabase):
+    """
+    Save SEO article to news table. Assumes quality_gates already passed,
+    including duplicate check (which sets article['_content_hash']).
+    Slug collision is handled by appending a content_hash suffix.
+    """
+    content_hash = article['_content_hash']
 
     slug = re.sub(r'[^a-z0-9\s-]', '', article['title_en'].lower())[:80]
     slug = re.sub(r'[\s-]+', '-', slug).strip('-')
@@ -193,7 +150,7 @@ def save_article(article):
     if existing_slug.data:
         slug = f"{slug}-{content_hash[:6]}"
 
-    row = {
+    supabase.table('news').insert({
         'slug': slug,
         'title_en': article['title_en'],
         'title_zh': article['title_zh'],
@@ -207,34 +164,70 @@ def save_article(article):
         'status': 'published',
         'content_hash': content_hash,
         'published_at': datetime.utcnow().isoformat(),
-    }
-
-    supabase.table('news').insert(row).execute()
-    return True
+    }).execute()
+    return slug
 
 
 if __name__ == "__main__":
-    print("Starting SEO article generator...")
+    print("Starting SEO article generator (queue consumer)...")
     try:
-        keywords, used_fallback = get_target_keywords()
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        actions = aq.pick_pending(supabase, 'generate_seo_content', limit=ACTIONS_PER_RUN)
 
-        if used_fallback:
-            print(f"Insufficient GSC data (need >= {MIN_GSC_ROWS_TO_PROCEED} queries with {MIN_GSC_IMPRESSIONS}+ impressions). Skipping to avoid low-quality output.")
+        if not actions:
+            print("No pending generate_seo_content actions. Strategy layer has nothing for us.")
             log_operation("seo_articles", "success",
-                          "Skipped: insufficient GSC data", {"saved": 0, "reason": "no_gsc_data"})
+                          "No pending actions", {"saved": 0, "reason": "queue_empty"})
         else:
             saved = 0
-            for kw in keywords:
-                print(f"\nGenerating: {kw['query']} (impressions={kw.get('impressions',0)}, ctr={kw.get('ctr',0):.1%})")
-                article = generate_seo_article(kw)
-                if save_article(article):
+            failed = 0
+            skipped = 0
+            for action in actions:
+                keyword = (action.get('payload') or {}).get('keyword')
+                if not keyword:
+                    aq.mark_failed(supabase, action, "payload missing 'keyword'")
+                    failed += 1
+                    continue
+
+                print(f"\nGenerating: {keyword}  (priority={action['priority']}, attempt={action['attempts']}/{action.get('max_attempts', 3)})")
+                try:
+                    article = generate_seo_article(keyword)
+                    if not article:
+                        aq.mark_failed(supabase, action, "generation returned None (API error or parse failure)")
+                        failed += 1
+                        continue
+
+                    gate = qg.check_seo_article(article, supabase)
+                    if not gate.ok:
+                        if gate.terminal:
+                            aq.mark_skipped(supabase, action, gate.reason)
+                            skipped += 1
+                            print(f"  SKIP: {gate.reason}")
+                        else:
+                            aq.mark_failed(supabase, action, gate.reason)
+                            failed += 1
+                            print(f"  FAIL gate: {gate.reason}")
+                        continue
+
+                    slug = save_article(article, supabase)
+                    aq.mark_done(supabase, action, {
+                        'slug': slug,
+                        'title_en': article['title_en'],
+                        'keyword': keyword,
+                    })
                     saved += 1
-                    print(f"  Saved: {article['title_en'][:60]}")
+                    print(f"  DONE: {article['title_en'][:60]}")
+                except Exception as gen_err:
+                    aq.mark_failed(supabase, action, str(gen_err))
+                    failed += 1
+                    print(f"  FAIL: {gen_err}")
                 time.sleep(2)
 
-            log_operation("seo_articles", "success", f"Generated {saved} articles", {
-                "saved": saved, "keywords": [k['query'] for k in keywords]
-            })
+            log_operation("seo_articles", "success",
+                          f"saved={saved} failed={failed} skipped={skipped}", {
+                              "saved": saved, "failed": failed, "skipped": skipped,
+                              "actions": [{"id": a['id'], "keyword": (a.get('payload') or {}).get('keyword')} for a in actions],
+                          })
 
     except Exception as e:
         log_operation("seo_articles", "error", str(e))

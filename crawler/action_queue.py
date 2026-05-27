@@ -1,0 +1,106 @@
+"""
+Action queue client — the bus between strategy_engine (producer)
+and generators (consumers).
+
+Lifecycle a generator follows:
+    actions = pick_pending(supabase, 'generate_seo_content', limit=2)
+    for action in actions:
+        try:
+            result = do_work(action['payload'])
+            mark_done(supabase, action, result)
+        except Exception as e:
+            mark_failed(supabase, action, str(e))
+"""
+from datetime import datetime
+
+PRIORITY_SCORE = {'high': 0, 'medium': 1, 'low': 2}
+
+
+def _now():
+    return datetime.utcnow().isoformat()
+
+
+def pick_pending(supabase, action_type, limit=2, batch_window=50):
+    """
+    Claim up to `limit` pending actions of the given type.
+    Sorted by priority (high→low) then FIFO.
+
+    The claim is race-safe: we only flip the row to in_progress if it is
+    still pending, so two concurrent runs cannot double-pick.
+
+    Increments `attempts` on each claim — so a row claimed three times
+    that never completes ends with attempts=3 and stays failed.
+    """
+    rows = supabase.table('action_queue').select('*').eq(
+        'action_type', action_type
+    ).eq('status', 'pending').order(
+        'created_at', desc=False
+    ).limit(batch_window).execute()
+
+    ordered = sorted(
+        (rows.data or []),
+        key=lambda r: (PRIORITY_SCORE.get(r['priority'], 9), r['created_at']),
+    )
+
+    claimed = []
+    for row in ordered:
+        if len(claimed) >= limit:
+            break
+        new_attempts = (row.get('attempts') or 0) + 1
+        upd = supabase.table('action_queue').update({
+            'status': 'in_progress',
+            'picked_at': _now(),
+            'attempts': new_attempts,
+            'updated_at': _now(),
+        }).eq('id', row['id']).eq('status', 'pending').execute()
+        if upd.data:
+            row['status'] = 'in_progress'
+            row['attempts'] = new_attempts
+            claimed.append(row)
+    return claimed
+
+
+def mark_done(supabase, action, result):
+    """Finalize a claimed action with success result."""
+    supabase.table('action_queue').update({
+        'status': 'done',
+        'result': result,
+        'completed_at': _now(),
+        'updated_at': _now(),
+    }).eq('id', action['id']).execute()
+
+
+def mark_failed(supabase, action, error_reason):
+    """
+    Finalize a claimed action with failure.
+    If attempts < max_attempts, revert to pending so the next run retries.
+    Otherwise mark failed permanently — strategy/monitor agents can flag it.
+    """
+    attempts = action.get('attempts') or 0
+    max_attempts = action.get('max_attempts') or 3
+    if attempts < max_attempts:
+        supabase.table('action_queue').update({
+            'status': 'pending',
+            'error_reason': error_reason,
+            'updated_at': _now(),
+        }).eq('id', action['id']).execute()
+    else:
+        supabase.table('action_queue').update({
+            'status': 'failed',
+            'error_reason': error_reason,
+            'completed_at': _now(),
+            'updated_at': _now(),
+        }).eq('id', action['id']).execute()
+
+
+def mark_skipped(supabase, action, reason):
+    """
+    Terminal skip — for example duplicate content detected at quality gate.
+    Differs from failed: skip is "don't retry, this was a soft no-op".
+    """
+    supabase.table('action_queue').update({
+        'status': 'skipped',
+        'error_reason': reason,
+        'completed_at': _now(),
+        'updated_at': _now(),
+    }).eq('id', action['id']).execute()
