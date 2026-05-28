@@ -93,45 +93,77 @@ def check_underperforming_pages():
     return actions
 
 
+# Keyword-opportunity thresholds. The old rule ("improved from 10+ into 5-10")
+# never fires on a young site whose queries all sit at position 40-90, so the
+# SEO generator starved. Instead: target queries with real demand that we
+# already rank for — but too low — and don't yet have a dedicated page.
+OPP_MIN_IMPRESSIONS = 5    # confirmed demand (top queries here have 6-27)
+OPP_POS_MIN = 11           # not already top-10 (those are winning, leave them)
+OPP_POS_MAX = 80           # ranking exists but poor; beyond this it's noise
+OPP_MAX_PER_RUN = 10       # cap new evergreen targets per run
+
+
+def _opp_priority(impressions):
+    if impressions >= 20:
+        return 'high'
+    if impressions >= 10:
+        return 'medium'
+    return 'low'
+
+
 def check_keyword_opportunities():
-    """Find keywords ranking 5-10 that improved from 10+."""
+    """
+    Find queries with real search demand that rank poorly and have no dedicated
+    page yet — the highest-leverage evergreen targets. Google already surfaces
+    us for them; we just rank too low. Pages we've already made are skipped
+    here (improving those is the lookback-driven rewrite path's job).
+    """
     supabase = get_supabase()
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
-    two_weeks_ago = (datetime.utcnow() - timedelta(days=14)).strftime('%Y-%m-%d')
 
-    # Fetch raw rows for current week
-    current_rows = supabase.table('search_console_daily').select(
-        'query, position'
+    rows = supabase.table('search_console_daily').select(
+        'query, impressions, clicks, position'
     ).gte('date', week_ago).execute()
 
-    # Fetch raw rows for previous week
-    previous_rows = supabase.table('search_console_daily').select(
-        'query, position'
-    ).gte('date', two_weeks_ago).lt('date', week_ago).execute()
+    # Aggregate per query: total impressions/clicks, impression-weighted position.
+    agg = defaultdict(lambda: {'impr': 0, 'clicks': 0, 'wpos': 0.0})
+    for r in (rows.data or []):
+        q = r['query']
+        impr = r.get('impressions') or 0
+        agg[q]['impr'] += impr
+        agg[q]['clicks'] += r.get('clicks') or 0
+        agg[q]['wpos'] += (r.get('position') or 0) * impr
 
-    # Aggregate in Python
-    curr_positions = defaultdict(list)
-    for r in (current_rows.data or []):
-        curr_positions[r['query']].append(r['position'])
-    curr_avg = {q: sum(v)/len(v) for q, v in curr_positions.items()}
+    candidates = []
+    for q, a in agg.items():
+        # 'X vs Y' queries are the comparison generator's job — don't double up.
+        if ' vs ' in q.lower():
+            continue
+        if a['impr'] < OPP_MIN_IMPRESSIONS:
+            continue
+        avg_pos = a['wpos'] / a['impr'] if a['impr'] else 999
+        if not (OPP_POS_MIN <= avg_pos <= OPP_POS_MAX):
+            continue
+        candidates.append((q, a['impr'], avg_pos))
 
-    prev_positions = defaultdict(list)
-    for r in (previous_rows.data or []):
-        prev_positions[r['query']].append(r['position'])
-    prev_avg = {q: sum(v)/len(v) for q, v in prev_positions.items()}
+    # Strongest demand first.
+    candidates.sort(key=lambda x: -x[1])
 
     actions = []
-    for query, curr_pos in curr_avg.items():
-        prev_pos = prev_avg.get(query, 100)
-
-        # Keyword improved from 10+ to 5-10 → create more content
-        if prev_pos > 10 and 5 <= curr_pos <= 10:
-            actions.append({
-                'type': 'generate_seo_content',
-                'reason': f'关键词 "{query}" 排名从第 {prev_pos:.0f} 升到第 {curr_pos:.0f}，值得加内容巩固',
-                'keyword': query,
-                'priority': 'high',
-            })
+    for query, impr, avg_pos in candidates[:OPP_MAX_PER_RUN]:
+        dedup_key = f"seo:{_slugify(query)}"
+        # Skip if we already made (or are making) a page for this keyword.
+        existing = supabase.table('action_queue').select('id').eq(
+            'dedup_key', dedup_key
+        ).in_('status', ['pending', 'in_progress', 'done']).execute()
+        if existing.data:
+            continue
+        actions.append({
+            'type': 'generate_seo_content',
+            'reason': f'"{query}" 有 {impr} 次曝光但排名第 {avg_pos:.0f}，且无专属页 — 做深 evergreen',
+            'keyword': query,
+            'priority': _opp_priority(impr),
+        })
 
     return actions
 
