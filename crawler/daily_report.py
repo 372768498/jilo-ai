@@ -239,9 +239,21 @@ def format_daily_report(stats):
     if not any(o == '你' for o, _ in candidates):
         candidates.insert(0, ('你', "去 /admin/queue 挑一个漏钱工具申请联盟链接"))
 
+    # Backfill with standing Agent activities so there are always 3 assigned items.
+    standing = [
+        ('Agent · strategy', "今晚 20:30 UTC 复审 GSC + lookback，自动决定新增/重写"),
+        ('Agent · lookback', "页面到 1/3/7 天龄自动拍快照，喂回策略层"),
+        ('Agent · monitor', f"持续监控 {stats.get('monetization_open', 0)} 个漏钱工具，你接一个它销一个"),
+    ]
+    for item in standing:
+        if len(candidates) >= 3:
+            break
+        if item not in candidates:
+            candidates.append(item)
+
     owned_tasks = candidates[:3]
     tasks_text = '\n'.join(
-        f"  {i + 1}. [{owner}] {text}" for i, (owner, text) in enumerate(owned_tasks)
+        f"{i + 1}. [{owner}] {text}" for i, (owner, text) in enumerate(owned_tasks)
     )
 
     # ==== Agent self-driving status block ====

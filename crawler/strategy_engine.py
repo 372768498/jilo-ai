@@ -86,7 +86,7 @@ def check_underperforming_pages():
             'slug': slug,
             'content_type': snap['content_type'],
             'keyword': slug.replace('-', ' '),
-            'reason': f"Underperforming at {snap['age_bucket']}d: pos={pos}, ctr={ctr:.1%}, impressions={impr}",
+            'reason': f"{snap['age_bucket']} 天龄表现不佳：排名 {pos}、点击率 {ctr:.1%}、曝光 {impr}，进队重写",
             'priority': 'medium',
         })
 
@@ -128,7 +128,7 @@ def check_keyword_opportunities():
         if prev_pos > 10 and 5 <= curr_pos <= 10:
             actions.append({
                 'type': 'generate_seo_content',
-                'reason': f'Keyword "{query}" improved from position {prev_pos:.0f} to {curr_pos:.0f}',
+                'reason': f'关键词 "{query}" 排名从第 {prev_pos:.0f} 升到第 {curr_pos:.0f}，值得加内容巩固',
                 'keyword': query,
                 'priority': 'high',
             })
@@ -166,7 +166,7 @@ def check_vs_queries_without_articles():
         if not existing.data:
             actions.append({
                 'type': 'generate_comparison',
-                'reason': f'Search query "{query}" has {total_impressions} impressions but no compare article',
+                'reason': f'搜索词 "{query}" 有 {total_impressions} 次曝光但还没有对比文章',
                 'tool_a': parts[0].strip(),
                 'tool_b': parts[1].strip(),
                 'priority': 'medium',
@@ -200,7 +200,7 @@ def check_high_bounce_pages():
         if avg_bounce > 0.8:
             actions.append({
                 'type': 'flag_for_review',
-                'reason': f'Page {page_path} has {avg_bounce:.0%} bounce rate',
+                'reason': f'页面 {page_path} 跳出率高达 {avg_bounce:.0%}，需排查',
                 'page': page_path,
                 'priority': 'low',
             })
