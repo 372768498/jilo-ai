@@ -5,6 +5,7 @@ on:
   schedule:
     - cron: '0 0 * * *'   # UTC 00:00 - News crawler
     - cron: '30 0 * * *'  # UTC 00:30 - Tool discovery
+    - cron: '45 0 * * *'  # UTC 00:45 - Trend agent (after fresh news lands)
     - cron: '0 2 * * *'   # UTC 02:00 - SEO articles
     - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
     - cron: '0 20 * * *'   # UTC 20:00 - Analytics collection (delayed to allow GA4 to finalize previous day's data)
@@ -24,6 +25,7 @@ on:
           - all
           - news
           - tools
+          - trend
           - seo
           - compare
           - analytics
@@ -56,6 +58,28 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python rss_news_crawler.py
+
+  # ─── Job 1b: Trend Agent ───────────────────────────────────────
+  # Forward loop: reads fresh news, detects multi-source surging topics,
+  # enqueues high-priority generate_seo_content while the topic is hot.
+  trend-agent:
+    name: "📈 Trend Agent"
+    if: |
+      always() && (
+        (github.event_name == 'schedule' && github.event.schedule == '45 0 * * *') ||
+        (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'trend'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [news-crawler]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python trend_agent.py
 
   # ─── Job 2: Tool Discovery ─────────────────────────────────────
   # FIX: use always() so this job isn't cascade-skipped when
