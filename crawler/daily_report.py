@@ -116,6 +116,54 @@ def get_today_stats():
     for r in (strategy.data or []):
         stats['strategy_actions'].extend(r.get('actions_taken', []))
 
+    # ==== Agent self-driving activity (queue + lookback) ====
+    today_start = f'{today}T00:00:00Z'
+    try:
+        queue = (supabase.table('action_queue').select(
+            'action_type, status, payload, dedup_key, created_at, completed_at'
+        ).execute().data) or []
+    except Exception as e:
+        print(f"action_queue unavailable: {e}")
+        queue = []
+
+    stats['trend_enqueued_today'] = [
+        r for r in queue
+        if r['action_type'] == 'generate_seo_content'
+        and (r.get('payload') or {}).get('source') == 'trend'
+        and (r.get('created_at') or '') >= today_start
+    ]
+    stats['rewrites_pending'] = sum(
+        1 for r in queue
+        if (r.get('dedup_key') or '').startswith('rewrite:')
+        and r['status'] in ('pending', 'in_progress')
+    )
+    stats['rewrites_done_today'] = sum(
+        1 for r in queue
+        if (r.get('dedup_key') or '').startswith('rewrite:')
+        and r['status'] == 'done'
+        and (r.get('completed_at') or '') >= today_start
+    )
+    monetization_flags = [
+        r for r in queue
+        if r['action_type'] == 'flag_for_review'
+        and (r.get('payload') or {}).get('subtype') == 'monetization_gap'
+    ]
+    stats['monetization_open'] = sum(1 for r in monetization_flags if r['status'] == 'pending')
+    stats['monetization_resolved_today'] = sum(
+        1 for r in monetization_flags
+        if r['status'] == 'done'
+        and (r.get('completed_at') or '') >= today_start
+    )
+
+    try:
+        lb = supabase.table('page_performance_lookback').select('id').gte(
+            'captured_at', today_start
+        ).execute()
+        stats['lookback_today'] = len(lb.data or [])
+    except Exception as e:
+        print(f"page_performance_lookback unavailable: {e}")
+        stats['lookback_today'] = 0
+
     return stats
 
 
@@ -154,24 +202,56 @@ def format_daily_report(stats):
         tool_lines.append(f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} 次点击")
     tools_text = '\n'.join(tool_lines) if tool_lines else '  无'
 
-    tasks = []
-    if stats.get('pages_to_update'):
-        first_page = stats['pages_to_update'][0]
-        tasks.append(f"优化 GEO 页面：{first_page.get('page_path', '?')}（关键词 \"{first_page.get('query', '')}\"）")
-    else:
-        tasks.append("从优先级清单里新建或优化一个 GEO 答案页")
+    # ==== Owned tasks: every item explicitly assigned to 你 or an Agent ====
+    candidates = []  # list of (owner, text), prioritized
 
+    # Joel — highest revenue lever first
     if stats.get('clicked_tools_without_affiliate'):
-        first_tool = stats['clicked_tools_without_affiliate'][0]
-        tasks.append(f"申请/跟进 {first_tool.get('name_en') or first_tool.get('slug')} 的联盟项目")
-    else:
-        tasks.append("申请/跟进一个优先级联盟项目")
+        top = stats['clicked_tools_without_affiliate'][0]
+        name = top.get('name_en') or top.get('slug')
+        candidates.append(('你', f"申请 {name} 联盟链接（{top.get('click_count', 0)} 次出站点击，最大漏钱口）"))
 
-    if stats.get('outbound_clicks', 0) == 0:
-        tasks.append("优化一条 CTA 路径以产生出站点击")
+    # Joel — high-intent page needing manual content fix
+    if stats.get('pages_to_update'):
+        p = stats['pages_to_update'][0]
+        candidates.append((
+            '你',
+            f"改 {p.get('page_path', '?')} 让 \"{p.get('query', '')}\" 真正吃下点击（曝光 {p.get('impressions', 0)} 但 0 点击）",
+        ))
+
+    # Agent — trend
+    if stats.get('trend_enqueued_today'):
+        candidates.append(('Agent · trend', f"今日已捕获 {len(stats['trend_enqueued_today'])} 个高优先级热点，SEO 生成器会自动消费"))
     else:
-        tasks.append("复盘出站点击来源，优化意图最强的页面")
-    tasks_text = '\n'.join(f"  {idx + 1}. {task}" for idx, task in enumerate(tasks[:3]))
+        candidates.append(('Agent · trend', "下次 00:45 / 08:45 / 16:45 UTC 扫 HN+Reddit 找新热点"))
+
+    # Agent — strategy rewrites (only if there's work queued or done today)
+    if stats.get('rewrites_pending', 0) > 0:
+        candidates.append(('Agent · strategy', f"队列里 {stats['rewrites_pending']} 条排名差页待自动重写"))
+    elif stats.get('rewrites_done_today', 0) > 0:
+        candidates.append(('Agent · strategy', f"今日已自动重写 {stats['rewrites_done_today']} 个排名差页"))
+
+    # Agent — monitor (only if it auto-resolved something today, shows the loop closing)
+    if stats.get('monetization_resolved_today', 0) > 0:
+        candidates.append(('Agent · monitor', f"今日自动销了 {stats['monetization_resolved_today']} 个漏钱 flag（你加好的联盟链接）"))
+
+    # If no Joel task surfaced, give a fallback so 你 always has something to do
+    if not any(o == '你' for o, _ in candidates):
+        candidates.insert(0, ('你', "去 /admin/queue 挑一个漏钱工具申请联盟链接"))
+
+    owned_tasks = candidates[:3]
+    tasks_text = '\n'.join(
+        f"  {i + 1}. [{owner}] {text}" for i, (owner, text) in enumerate(owned_tasks)
+    )
+
+    # ==== Agent self-driving status block ====
+    agent_lines = [
+        f"  • 趋势探测: 今日入队 {len(stats.get('trend_enqueued_today', []))} 条热点动作",
+        f"  • 监控/自愈: {stats.get('monetization_open', 0)} 个漏钱 flag 在 pending，今日自动销 {stats.get('monetization_resolved_today', 0)} 个",
+        f"  • 排名重写: 待执行 {stats.get('rewrites_pending', 0)} 条，今日完成 {stats.get('rewrites_done_today', 0)} 条",
+        f"  • 表现回看: 今日捕获 {stats.get('lookback_today', 0)} 个页面快照",
+    ]
+    agent_text = '\n'.join(agent_lines)
 
     errors_text = '\n'.join(f"  - {e}" for e in stats['errors']) if stats['errors'] else '  无'
 
@@ -181,19 +261,22 @@ def format_daily_report(stats):
   PV: {stats.get('pv', 'N/A')}{pv_change}  UV: {stats.get('uv', 'N/A')}
 
 **今日新增内容**
-  新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']}
+  新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']} | 重写: {stats.get('rewrites_done_today', 0)}
 
 **今日变现**
   出站点击: {stats['outbound_clicks']} | 联盟点击: {stats['affiliate_clicks']} | 已挂联盟工具: {stats.get('affiliate_tools', 0)}
+
+**🤖 Agent 自驱动状态（今日）**
+{agent_text}
+
+**🧑 今日 3 件事（已指派）**
+{tasks_text}
 
 **待优化页面**
 {pages_text}
 
 **有点击但无联盟链接的工具**
 {tools_text}
-
-**今日 3 件事**
-{tasks_text}
 
 **热门关键词**{kw_date_label}
 {kw_text}
