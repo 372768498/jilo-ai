@@ -104,3 +104,43 @@ def mark_skipped(supabase, action, reason):
         'completed_at': _now(),
         'updated_at': _now(),
     }).eq('id', action['id']).execute()
+
+
+def enqueue(supabase, action_type, payload, reason, priority, dedup_key, source_report_id=None):
+    """
+    Producer-side insert. Skips if an active (pending|in_progress) row already
+    exists for the same dedup_key, so the same logical action is never queued
+    twice while still open. Returns True if inserted, False if deduped.
+    """
+    existing = supabase.table('action_queue').select('id').eq(
+        'dedup_key', dedup_key
+    ).in_('status', ['pending', 'in_progress']).execute()
+    if existing.data:
+        return False
+    supabase.table('action_queue').insert({
+        'action_type': action_type,
+        'payload': payload,
+        'reason': reason,
+        'priority': priority,
+        'dedup_key': dedup_key,
+        'source_report_id': source_report_id,
+    }).execute()
+    return True
+
+
+def resolve(supabase, dedup_key, result):
+    """
+    Close any active rows for a dedup_key as done — used when the underlying
+    problem that opened a flag has been fixed (self-healing). Returns count closed.
+    """
+    rows = supabase.table('action_queue').select('id').eq(
+        'dedup_key', dedup_key
+    ).in_('status', ['pending', 'in_progress']).execute()
+    for row in (rows.data or []):
+        supabase.table('action_queue').update({
+            'status': 'done',
+            'result': result,
+            'completed_at': _now(),
+            'updated_at': _now(),
+        }).eq('id', row['id']).execute()
+    return len(rows.data or [])

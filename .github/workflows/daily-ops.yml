@@ -8,6 +8,7 @@ on:
     - cron: '0 2 * * *'   # UTC 02:00 - SEO articles
     - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
     - cron: '0 20 * * *'   # UTC 20:00 - Analytics collection (delayed to allow GA4 to finalize previous day's data)
+    - cron: '20 20 * * *'  # UTC 20:20 - Monitor agent (after analytics, before strategy)
     - cron: '30 20 * * *'  # UTC 20:30 - Strategy engine
     - cron: '0 21 * * *'   # UTC 21:00 - Daily report
     - cron: '0 21 * * 1'   # UTC 21:00 Monday - Weekly report
@@ -25,6 +26,7 @@ on:
           - seo
           - compare
           - analytics
+          - monitor
           - strategy
           - report
           - weekly
@@ -135,6 +137,28 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python analytics_collector.py
+
+  # ─── Job 5b: Monitor Agent ─────────────────────────────────────
+  # Watches system state (monetization gaps, etc.) and surfaces fixable
+  # problems into action_queue as flag_for_review items.
+  monitor-agent:
+    name: "🩺 Monitor Agent"
+    if: |
+      always() && (
+        (github.event_name == 'schedule' && github.event.schedule == '20 20 * * *') ||
+        (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'monitor'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [analytics]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python monitor_agent.py
 
   # ─── Job 6: Strategy Engine ────────────────────────────────────
   # FIX: same always() pattern so it runs independently via job=strategy
