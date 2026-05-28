@@ -1,9 +1,11 @@
 -- scripts/create-page-lookback.sql
 --
--- Learning-feedback layer: when a generated page reaches 7/14/28 days old,
--- snapshot how it's actually performing (GSC position/ctr/clicks + GA views).
--- The baseline must be captured AS pages age — it can't be reconstructed
--- later — so this starts recording from day one even at low traffic.
+-- Learning-feedback layer: snapshot how a generated page performs as it ages.
+-- Cadence is content-type-aware (see lookback_agent.py): time-sensitive news
+-- is captured at 1/3/7 days (GA pageviews signal, since GSC ranking data lags),
+-- evergreen comparisons at 7/14/28 days (GSC ranking signal). The baseline
+-- must be captured AS pages age — it can't be reconstructed later — so this
+-- records from day one even at low traffic.
 --
 -- Apply once in Supabase SQL editor.
 

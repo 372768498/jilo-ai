@@ -12,7 +12,15 @@ from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 
-AGE_BUCKETS = [7, 14, 28]
+# Content-type-aware cadence. GSC ranking data is inherently lagged (Google
+# needs days to index + accumulate search impressions), so fast feedback can
+# only come from GA pageviews — which is exactly what time-sensitive news
+# needs. Evergreen content takes weeks to rank, so slow buckets fit it.
+AGE_BUCKETS_BY_TYPE = {
+    'seo_article': [1, 3, 7],    # news / hot topics — watch GA pageviews early
+    'compare': [7, 14, 28],      # evergreen — watch GSC rankings over time
+}
+ALL_BUCKETS = sorted({b for buckets in AGE_BUCKETS_BY_TYPE.values() for b in buckets})
 
 
 def get_supabase():
@@ -85,7 +93,8 @@ def capture_due_snapshots(supabase):
             continue
         age = (today - pub_date).days
 
-        if age not in AGE_BUCKETS:
+        buckets = AGE_BUCKETS_BY_TYPE.get(page['content_type'], [7, 14, 28])
+        if age not in buckets:
             continue
 
         slug = page['slug']
