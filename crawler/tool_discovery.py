@@ -160,12 +160,25 @@ def save_tools_to_db(tools):
     for tool in tools:
         try:
             raw_name = tool['name']
+            # NOTE: slug generation here diverges from tool_crawler.generate_slug
+            # (one strips punctuation, the other hyphenates it), which produced
+            # duplicate tools like dall-e-3 vs dalle-3 across import batches.
+            # The name-based guard below is the real dedup; consolidate the two
+            # slug functions when convenient.
             slug = raw_name.lower().replace(' ', '-').replace('/', '-')[:100]
             slug = ''.join(c for c in slug if c.isalnum() or c == '-')
             slug = '-'.join(filter(None, slug.split('-')))[:80]
 
             existing_slug = supabase.table('tools').select('id').eq('slug', slug).execute()
             if existing_slug.data:
+                continue
+
+            # Name-based dedup: catches the same tool arriving with a divergently
+            # normalized slug, regardless of which slug function produced it.
+            existing_name = supabase.table('tools').select('id').ilike(
+                'name_en', raw_name.strip()
+            ).execute()
+            if existing_name.data:
                 continue
 
             existing_url = supabase.table('tools').select('id').eq(

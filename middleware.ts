@@ -3,11 +3,32 @@ import type { NextRequest } from "next/server";
 
 import { ADMIN_SESSION_COOKIE, hasValidAdminKey } from "@/lib/admin-auth";
 
+// Dead tool slugs from the duplicate cleanup → their canonical slug.
+// 301-redirect so any indexed/linked dupe URL lands on the kept page.
+const TOOL_SLUG_REDIRECTS: Record<string, string> = {
+  "dalle-3": "dall-e-3",
+  "leonardo-ai": "leonardoai",
+  "copyai": "copy-ai",
+  "removebg": "remove-bg",
+  "otterai": "otter-ai",
+};
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname === "/") {
     return NextResponse.redirect(new URL("/en", request.url));
+  }
+
+  const toolMatch = pathname.match(/^\/(en|zh)\/tools\/([^/]+)\/?$/);
+  if (toolMatch) {
+    const canonical = TOOL_SLUG_REDIRECTS[toolMatch[2]];
+    if (canonical) {
+      return NextResponse.redirect(
+        new URL(`/${toolMatch[1]}/tools/${canonical}`, request.url),
+        301,
+      );
+    }
   }
 
   const needsAdminAuth =
