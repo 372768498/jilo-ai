@@ -87,14 +87,14 @@ const taskEntrances = [
   },
   {
     icon: Search,
-    href: "tools",
+    href: "categories",
     en: {
       title: "I need a tool for writing, video, coding, or work",
-      desc: "Browse tools by task, pricing, category, and practical use case.",
+      desc: "Browse by category to compare the best tools for each task.",
     },
     zh: {
       title: "我想找写作、视频、编程或办公工具",
-      desc: "按任务、价格、分类和真实使用场景筛选。",
+      desc: "按分类浏览，直接对比每类最好的工具。",
     },
   },
   {

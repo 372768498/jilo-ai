@@ -118,6 +118,30 @@ async function getToolData(slug: string) {
   return data;
 }
 
+async function getRelated(categoryCanonical: string | null, selfSlug: string, locale: string) {
+  let alternatives: any[] = [];
+  if (categoryCanonical) {
+    const { data: alts } = await supabase
+      .from("tools")
+      .select("slug, name_en, name_zh, tagline_en, tagline_zh, logo_url, pricing_type, rating")
+      .eq("category_canonical", categoryCanonical)
+      .eq("status", "published")
+      .neq("slug", selfSlug)
+      .order("rating", { ascending: false })
+      .order("click_count", { ascending: false })
+      .limit(6);
+    alternatives = alts || [];
+  }
+  const { data: cmps } = await supabase
+    .from("compare_articles")
+    .select("slug, title, locale")
+    .eq("locale", locale)
+    .eq("status", "published")
+    .limit(60);
+  const comparisons = (cmps || []).filter((c: any) => (c.slug || "").includes(selfSlug)).slice(0, 6);
+  return { alternatives, comparisons };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<import("next").Metadata> {
   const data = await getToolData(params.slug);
   if (!data) return { title: "Tool Not Found | Jilo.ai" };
@@ -156,6 +180,8 @@ export default async function ToolDetailPage({ params }: PageProps) {
   const data = await getToolData(slug);
 
   if (!data) return notFound();
+
+  const { alternatives, comparisons } = await getRelated(data.category_canonical, data.slug, locale);
 
   const isZh = locale === "zh";
   const name = isZh ? data.name_zh : data.name_en;
@@ -445,7 +471,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
 
       {/* Tags */}
       {((isZh && data.tags_zh) || (!isZh && data.tags_en)) && (
-        <section>
+        <section className="mb-12">
           <h2 className="text-2xl font-bold mb-4">{isZh ? "标签" : "Tags"}</h2>
           <div className="flex flex-wrap gap-2">
             {(isZh ? data.tags_zh : data.tags_en)?.map((tag: string, i: number) => (
@@ -453,6 +479,68 @@ export default async function ToolDetailPage({ params }: PageProps) {
                 {tag}
               </span>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Key comparisons involving this tool */}
+      {comparisons.length > 0 && (
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold mb-6">{isZh ? "相关对比" : "Key Comparisons"}</h2>
+          <div className="grid md:grid-cols-2 gap-3">
+            {comparisons.map((c: any) => (
+              <Link
+                key={c.slug}
+                href={`/${locale}/compare/${c.slug.replace(/-zh$/, "")}`}
+                className="flex items-center justify-between p-4 border rounded-xl hover:border-emerald-300 hover:shadow-sm transition"
+              >
+                <span className="font-medium">{c.title}</span>
+                <span className="text-emerald-600">→</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Alternatives — same category */}
+      {alternatives.length > 0 && (
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">{isZh ? `${name} 的替代品` : `${name} Alternatives`}</h2>
+            {data.category_canonical && (
+              <Link href={`/${locale}/c/${data.category_canonical}`} className="text-sm font-medium text-emerald-700 hover:underline">
+                {isZh ? "查看全部同类 →" : "Browse all →"}
+              </Link>
+            )}
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {alternatives.map((alt: any) => {
+              const altName = isZh ? alt.name_zh || alt.name_en : alt.name_en || alt.name_zh;
+              const altTagline = isZh ? alt.tagline_zh || alt.tagline_en : alt.tagline_en || alt.tagline_zh;
+              return (
+                <Link
+                  key={alt.slug}
+                  href={`/${locale}/tools/${alt.slug}`}
+                  className="flex flex-col p-5 border rounded-xl hover:border-emerald-300 hover:shadow-md transition"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    {alt.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={alt.logo_url} alt={altName} className="w-9 h-9 rounded-md object-contain" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-md bg-secondary flex items-center justify-center text-sm font-bold">{altName?.[0]}</div>
+                    )}
+                    <div>
+                      <div className="font-semibold">{altName}</div>
+                      <div className="text-xs text-muted-foreground capitalize">
+                        {alt.pricing_type || "-"}{alt.rating ? ` · ${alt.rating}★` : ""}
+                      </div>
+                    </div>
+                  </div>
+                  {altTagline && <p className="text-sm text-muted-foreground line-clamp-2">{altTagline}</p>}
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}
