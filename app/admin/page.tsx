@@ -47,6 +47,11 @@ export default async function AdminDashboard() {
             <h3 className="text-xl font-bold mb-2">Add New Tool</h3>
             <p className="text-gray-600">Manually add a new AI tool</p>
           </Link>
+
+          <Link href="/admin/queue" className="block bg-white rounded-lg shadow p-6 hover:shadow-xl transition">
+            <h3 className="text-xl font-bold mb-2">Monetization Gaps</h3>
+            <p className="text-gray-600">Tools getting clicks with no affiliate link</p>
+          </Link>
         </div>
       </div>
     </div>
