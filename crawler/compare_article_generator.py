@@ -46,11 +46,15 @@ Tool B data: {context_b}
 
 Requirements:
 - 2000-2500 words in content_en
-- Include a markdown comparison table (features, pricing, ease of use, best for)
+- Include a markdown comparison table (features, ease of use, best for)
 - Include scenario-based recommendations ("If you need X, choose A; if you need Y, choose B")
 - Include FAQ section (3-5 questions)
 - Be balanced and factual
 - Year is 2026
+
+DO NOT FABRICATE: no invented statistics, percentages, case studies, or company
+names. Don't guess exact prices — state the pricing tier and say "check the
+official site for current pricing". If you lack a verifiable fact, write generally.
 
 Return a single JSON object with EXACTLY these keys (all required, none empty):
 {{

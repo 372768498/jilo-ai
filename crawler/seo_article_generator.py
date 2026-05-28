@@ -63,23 +63,36 @@ def generate_seo_article(keyword):
     tools_context = ""
     if related_tools:
         tool_lines = [
-            f"- {t['name_en']} (/{t['slug']}, {t.get('pricing_type','freemium')}, affiliate: {t.get('affiliate_url', 'N/A')})"
+            f"- {t['name_en']} (slug: {t['slug']}, pricing: {t.get('pricing_type','freemium')})"
             for t in related_tools
         ]
-        tools_context = "\n\nTools from our directory to mention (use /slug for internal links, use affiliate_url when available):\n" + '\n'.join(tool_lines)
+        tools_context = (
+            "\n\nOnly these tools exist in our directory — link ONLY to these, never invent a tool or slug:\n"
+            + '\n'.join(tool_lines)
+        )
 
     prompt = f"""Write a comprehensive, SEO-optimized article about: "{keyword}"
 
 Requirements:
 - 5000-7000 words in content_en (detailed, in-depth content)
 - H2 and H3 headings (markdown)
-- Multiple comparison tables (features, pricing, use cases)
-- Real-world examples and case studies
+- Multiple comparison tables (features, use cases)
 - Step-by-step tutorials where applicable
 - FAQ section (5-8 questions) at the end
-- Internal links to at least 10 tools from our directory
 - Factual, practical, genuinely helpful — not generic filler
 - Current year is 2026{tools_context}
+
+INTERNAL LINKS — exact path format (other formats 404):
+- In content_en link as /en/tools/<slug>   e.g. [Pictory](/en/tools/pictory)
+- In content_zh link as /zh/tools/<slug>   e.g. [Pictory](/zh/tools/pictory)
+- Use ONLY slugs from the directory list above. Link 8-12 of them.
+
+DO NOT FABRICATE (this is critical for trust and SEO):
+- No invented statistics, percentages, case studies, university/company names,
+  or "X increased by Y%" claims. If you lack a verifiable fact, write generally
+  without fake numbers.
+- For pricing, do NOT guess exact prices; say pricing tier (free/freemium/paid)
+  and "check the official site for current pricing".
 
 Return a single JSON object with EXACTLY these keys (all required, none empty):
 {{
