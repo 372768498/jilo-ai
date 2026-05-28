@@ -5,6 +5,7 @@
 # Does NOT self-select keywords — single source of truth is the policy layer.
 import time
 import re
+import json
 import hashlib
 from datetime import datetime
 from supabase import create_client
@@ -70,7 +71,7 @@ def generate_seo_article(keyword):
     prompt = f"""Write a comprehensive, SEO-optimized article about: "{keyword}"
 
 Requirements:
-- 5000-7000 words (detailed, in-depth content)
+- 5000-7000 words in content_en (detailed, in-depth content)
 - H2 and H3 headings (markdown)
 - Multiple comparison tables (features, pricing, use cases)
 - Real-world examples and case studies
@@ -80,53 +81,37 @@ Requirements:
 - Factual, practical, genuinely helpful — not generic filler
 - Current year is 2026{tools_context}
 
-Respond in this EXACT format:
-TITLE_EN: [SEO title including "{keyword}", max 70 chars]
-META_DESC_EN: [Meta description, 140-155 chars]
-CONTENT_EN:
-[full article in markdown]
----SEPARATOR---
-TITLE_ZH: [Chinese title]
-META_DESC_ZH: [Chinese meta description, 80-100 chars]
-CONTENT_ZH:
-[Chinese translation of full article in markdown]"""
+Return a single JSON object with EXACTLY these keys (all required, none empty):
+{{
+  "title_en": "SEO title including \\"{keyword}\\", max 70 chars",
+  "meta_description_en": "140-155 char meta description",
+  "content_en": "full article in markdown",
+  "title_zh": "Chinese title",
+  "meta_description_zh": "80-100 char Chinese meta description",
+  "content_zh": "Chinese translation of the full article in markdown"
+}}"""
 
     try:
         response = _get_openai_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an expert AI technology writer. Write in-depth, well-structured articles with genuine value. Use markdown. Never write generic filler."},
+                {"role": "system", "content": "You are an expert AI technology writer. Write in-depth, well-structured articles with genuine value, using markdown inside the content fields. Respond with a single valid JSON object only — no code fences, no commentary."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.65,
-            max_tokens=12000
+            max_tokens=12000,
+            response_format={"type": "json_object"},
         )
 
-        raw = response.choices[0].message.content
-        parts = raw.split('---SEPARATOR---')
-        en_part = parts[0].strip()
-        zh_part = parts[1].strip() if len(parts) > 1 else ''
-
-        def extract_field(text, key):
-            for line in text.split('\n'):
-                if line.startswith(f'{key}:'):
-                    return line.split(':', 1)[1].strip()
-            return ''
-
-        def extract_multiline(text, key):
-            marker = f'{key}:\n'
-            idx = text.find(marker)
-            if idx == -1:
-                return extract_field(text, key)
-            return text[idx + len(marker):].strip()
+        data = json.loads(response.choices[0].message.content)
 
         return {
-            'title_en': extract_field(en_part, 'TITLE_EN'),
-            'meta_description_en': extract_field(en_part, 'META_DESC_EN'),
-            'content_en': extract_multiline(en_part, 'CONTENT_EN'),
-            'title_zh': extract_field(zh_part, 'TITLE_ZH'),
-            'meta_description_zh': extract_field(zh_part, 'META_DESC_ZH'),
-            'content_zh': extract_multiline(zh_part, 'CONTENT_ZH'),
+            'title_en': data.get('title_en', ''),
+            'meta_description_en': data.get('meta_description_en', ''),
+            'content_en': data.get('content_en', ''),
+            'title_zh': data.get('title_zh', ''),
+            'meta_description_zh': data.get('meta_description_zh', ''),
+            'content_zh': data.get('content_zh', ''),
             'target_keyword': keyword,
         }
 

@@ -5,6 +5,7 @@
 # Does NOT self-select pairs — single source of truth is the policy layer.
 import time
 import re
+import json
 from datetime import datetime
 from supabase import create_client
 from openai import OpenAI
@@ -44,57 +45,36 @@ Tool A data: {context_a}
 Tool B data: {context_b}
 
 Requirements:
-- 2000-2500 words
+- 2000-2500 words in content_en
 - Include a markdown comparison table (features, pricing, ease of use, best for)
 - Include scenario-based recommendations ("If you need X, choose A; if you need Y, choose B")
 - Include FAQ section (3-5 questions)
 - Be balanced and factual
 - Year is 2026
 
-Respond in this exact format:
-TITLE_EN: [{tool_a_name} vs {tool_b_name}: comprehensive comparison title]
-META_DESC_EN: [155 char meta description]
-CONTENT_EN: [full comparison article in markdown]
----SEPARATOR---
-TITLE_ZH: [Chinese title]
-META_DESC_ZH: [Chinese meta description]
-CONTENT_ZH: [Chinese translation of full article]"""
+Return a single JSON object with EXACTLY these keys (all required, none empty):
+{{
+  "title_en": "SEO comparison title, max 80 chars",
+  "meta_description_en": "100-160 char meta description",
+  "content_en": "full comparison article in markdown",
+  "title_zh": "Chinese title",
+  "meta_description_zh": "Chinese meta description",
+  "content_zh": "Chinese translation of the full article in markdown"
+}}"""
 
     try:
         response = _get_openai_client().chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are an expert AI tool reviewer. Write fair, detailed comparisons that help users make informed decisions."},
+                {"role": "system", "content": "You are an expert AI tool reviewer. Write fair, detailed comparisons. Respond with a single valid JSON object only — no markdown code fences, no commentary."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.7,
-            max_tokens=5000
+            max_tokens=5000,
+            response_format={"type": "json_object"},
         )
 
-        content = response.choices[0].message.content
-        parts = content.split('---SEPARATOR---')
-        en_part = parts[0]
-        zh_part = parts[1] if len(parts) > 1 else ''
-
-        def extract(text, key):
-            for line in text.split('\n'):
-                if line.startswith(f'{key}:'):
-                    return line.split(':', 1)[1].strip()
-            return ''
-
-        def extract_content(text, key):
-            lines = text.split('\n')
-            collecting = False
-            collected = []
-            for line in lines:
-                if line.startswith(f'{key}:'):
-                    collected.append(line.split(':', 1)[1].strip())
-                    collecting = True
-                elif collecting and not any(line.startswith(f'{k}:') for k in ['TITLE_EN', 'META_DESC_EN', 'TITLE_ZH', 'META_DESC_ZH']):
-                    collected.append(line)
-                elif collecting:
-                    break
-            return '\n'.join(collected).strip()
+        data = json.loads(response.choices[0].message.content)
 
         slug_base = f"{tool_a_name}-vs-{tool_b_name}".lower()
         slug = re.sub(r'[^a-z0-9-]', '', slug_base.replace(' ', '-'))
@@ -102,13 +82,13 @@ CONTENT_ZH: [Chinese translation of full article]"""
 
         return {
             'slug': slug,
-            'title_en': extract(en_part, 'TITLE_EN') or f"{tool_a_name} vs {tool_b_name}: Complete Comparison",
-            'meta_title_en': extract(en_part, 'TITLE_EN'),
-            'meta_description_en': extract(en_part, 'META_DESC_EN'),
-            'content_en': extract_content(en_part, 'CONTENT_EN'),
-            'title_zh': extract(zh_part, 'TITLE_ZH'),
-            'meta_description_zh': extract(zh_part, 'META_DESC_ZH'),
-            'content_zh': extract_content(zh_part, 'CONTENT_ZH'),
+            'title_en': data.get('title_en', ''),
+            'meta_title_en': data.get('title_en', ''),
+            'meta_description_en': data.get('meta_description_en', ''),
+            'content_en': data.get('content_en', ''),
+            'title_zh': data.get('title_zh', ''),
+            'meta_description_zh': data.get('meta_description_zh', ''),
+            'content_zh': data.get('content_zh', ''),
         }
     except Exception as e:
         print(f"  GPT-4o comparison error: {e}")
