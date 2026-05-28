@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Star, ExternalLink } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -21,6 +21,7 @@ type Category = {
 };
 
 async function getCategory(slug: string): Promise<Category | null> {
+  const supabase = await createServerClient();
   const { data } = await supabase
     .from("categories")
     .select("slug, name_en, name_zh, description_en, description_zh")
@@ -30,6 +31,7 @@ async function getCategory(slug: string): Promise<Category | null> {
 }
 
 async function getTools(slug: string) {
+  const supabase = await createServerClient();
   const { data } = await supabase
     .from("tools")
     .select("slug, name_en, name_zh, tagline_en, tagline_zh, pricing_type, rating, logo_url, affiliate_url, official_url, is_featured, click_count")
@@ -44,6 +46,7 @@ async function getTools(slug: string) {
 
 async function getComparisons(locale: string, toolSlugs: string[]) {
   if (!toolSlugs.length) return [];
+  const supabase = await createServerClient();
   const { data } = await supabase
     .from("compare_articles")
     .select("slug, title, locale")

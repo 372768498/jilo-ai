@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, LayoutGrid } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -30,6 +30,7 @@ export default async function CategoriesIndexPage({ params }: PageProps) {
   const isZh = locale === "zh";
   const t = (en: string, zh: string) => (isZh ? zh : en);
 
+  const supabase = await createServerClient();
   const { data: categories } = await supabase
     .from("categories")
     .select("slug, name_en, name_zh, description_en, description_zh")
