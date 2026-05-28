@@ -105,6 +105,7 @@ async function getToolData(slug: string) {
       logo_url, cover_image_url,
       pricing_type, pricing_details_en, pricing_details_zh, price_range,
       rating, review_count,
+      category, category_canonical,
       features, pros, cons, use_cases,
       meta_title_en, meta_title_zh,
       meta_description_en, meta_description_zh,
@@ -209,6 +210,14 @@ export default async function ToolDetailPage({ params }: PageProps) {
           {isZh ? "工具" : "Tools"}
         </Link>
         {" / "}
+        {data.category_canonical && (
+          <>
+            <Link href={`/${locale}/c/${data.category_canonical}`} className="hover:text-foreground">
+              {data.category || data.category_canonical}
+            </Link>
+            {" / "}
+          </>
+        )}
         <span className="text-foreground">{name}</span>
       </div>
 

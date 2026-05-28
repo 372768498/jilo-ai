@@ -11,6 +11,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/zh`, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${baseUrl}/en/tools`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/zh/tools`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
+    { url: `${baseUrl}/en/tools/ai-subscription-cost-calculator`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.85 },
+    { url: `${baseUrl}/zh/tools/ai-subscription-cost-calculator`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.85 },
     { url: `${baseUrl}/en/access`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
     { url: `${baseUrl}/zh/access`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
     { url: `${baseUrl}/en/workflows`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.85 },
@@ -31,7 +33,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/zh/news`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.8 },
     { url: `${baseUrl}/en/submit`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/zh/submit`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${baseUrl}/en/categories`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${baseUrl}/zh/categories`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
   ]
+
+  // ── Dynamic: Category hubs ─────────────────────────────────────
+  const categoryRoutes: MetadataRoute.Sitemap = []
+  try {
+    const { data: categories } = await supabase
+      .from('categories')
+      .select('slug')
+      .order('display_order', { ascending: true })
+    for (const cat of categories || []) {
+      categoryRoutes.push(
+        { url: `${baseUrl}/en/c/${cat.slug}`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
+        { url: `${baseUrl}/zh/c/${cat.slug}`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
+      )
+    }
+  } catch (e) {
+    console.error('Sitemap: failed to fetch categories', e)
+  }
 
   // ── Dynamic: Tool pages ────────────────────────────────────────
   const toolRoutes: MetadataRoute.Sitemap = []
@@ -106,5 +127,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Sitemap: failed to fetch compare articles', e)
   }
 
-  return [...staticRoutes, ...toolRoutes, ...newsRoutes, ...compareRoutes]
+  return [...staticRoutes, ...categoryRoutes, ...toolRoutes, ...newsRoutes, ...compareRoutes]
 }
