@@ -23,6 +23,8 @@ def build_dedup_key(action):
     if t == 'generate_seo_content':
         if action.get('mode') == 'rewrite':
             return f"rewrite:{action['slug']}"
+        if action.get('mode') == 'hub':
+            return f"hub:{action['category_slug']}"
         return f"seo:{_slugify(action['keyword'])}"
     if t == 'generate_comparison':
         a, b = sorted([_slugify(action['tool_a']), _slugify(action['tool_b'])])
@@ -93,6 +95,62 @@ def check_underperforming_pages():
     return actions
 
 
+# Category-level queries are owned by the corresponding hub (/c/<slug>), not
+# by standalone /news articles — this is what kills the "best X" cannibalization.
+CATEGORY_QUERY_TERMS = {
+    'video': ['video'],
+    'image': ['image', 'photo', 'logo', 'avatar', 'art generator'],
+    'writing': ['writing', 'write', 'copywriting', 'essay', 'paraphras'],
+    'code': ['coding', 'code', 'developer', 'programming'],
+    'audio': ['audio', 'music', 'voice', 'speech', 'podcast', 'transcription'],
+    'chat': ['chatbot', 'chat assistant'],
+    'marketing': ['marketing', 'seo tool', 'ads', 'social media'],
+    'design': ['design', 'presentation', 'slides', 'website builder'],
+    'productivity': ['productivity', 'ai agent', 'automation', 'note-taking', 'workflow'],
+}
+
+HUB_MIN_TOOLS = 3  # a hub needs enough tools to be worth an intro
+
+
+def route_to_hub(query):
+    """Return the category slug a query belongs to, or None. Category-level
+    queries are served by the hub, so they shouldn't spawn /news articles."""
+    q = query.lower()
+    for slug, terms in CATEGORY_QUERY_TERMS.items():
+        if any(term in q for term in terms):
+            return slug
+    return None
+
+
+def check_empty_hubs():
+    """Category hubs with enough tools but no intro yet → generate SEO intro
+    into categories.description. This is the engine feeding the hubs."""
+    supabase = get_supabase()
+    cats = supabase.table('categories').select('slug, name_en, description_en').execute()
+    tools = supabase.table('tools').select('category_canonical').eq('status', 'published').execute()
+    counts = defaultdict(int)
+    for t in (tools.data or []):
+        if t.get('category_canonical'):
+            counts[t['category_canonical']] += 1
+
+    actions = []
+    for c in (cats.data or []):
+        slug = c['slug']
+        if counts.get(slug, 0) < HUB_MIN_TOOLS:
+            continue
+        if (c.get('description_en') or '').strip():
+            continue  # already has an intro
+        actions.append({
+            'type': 'generate_seo_content',
+            'mode': 'hub',
+            'category_slug': slug,
+            'keyword': f"best {c['name_en']} AI tools",
+            'reason': f"分类 Hub /c/{slug} 有 {counts[slug]} 个工具但缺简介，生成 SEO 引言",
+            'priority': 'high',
+        })
+    return actions
+
+
 # Keyword-opportunity thresholds. The old rule ("improved from 10+ into 5-10")
 # never fires on a young site whose queries all sit at position 40-90, so the
 # SEO generator starved. Instead: target queries with real demand that we
@@ -138,6 +196,9 @@ def check_keyword_opportunities():
     for q, a in agg.items():
         # 'X vs Y' queries are the comparison generator's job — don't double up.
         if ' vs ' in q.lower():
+            continue
+        # Category-level queries belong to the hub, not a standalone article.
+        if route_to_hub(q):
             continue
         if a['impr'] < OPP_MIN_IMPRESSIONS:
             continue
@@ -310,6 +371,7 @@ if __name__ == "__main__":
     print("Starting L2 strategy engine...")
     try:
         all_actions = []
+        all_actions.extend(check_empty_hubs())
         all_actions.extend(check_keyword_opportunities())
         all_actions.extend(check_vs_queries_without_articles())
         all_actions.extend(check_high_bounce_pages())

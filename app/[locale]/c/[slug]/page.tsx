@@ -118,14 +118,24 @@ export default async function CategoryHubPage({ params }: PageProps) {
               {t(`Best ${name} Tools in 2026`, `2026 年最佳${name}工具`)}
             </h1>
             <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-600">
-              {description ||
-                t(
-                  `${tools.length} hand-picked ${name} tools, compared by features, pricing, and best use case.`,
-                  `精选 ${tools.length} 款${name}工具，按功能、价格、适用场景为你对比，帮你最快选对。`,
-                )}
+              {t(
+                `${tools.length} hand-picked ${name} tools, compared by features, pricing, and best use case.`,
+                `精选 ${tools.length} 款${name}工具，按功能、价格、适用场景为你对比，帮你最快选对。`,
+              )}
             </p>
           </div>
         </section>
+
+        {/* Engine-written intro */}
+        {description ? (
+          <section className="mx-auto max-w-3xl px-4 pt-10">
+            <div className="space-y-4 text-base leading-7 text-slate-700">
+              {description.split(/\n\n+/).map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {/* Comparison table */}
         {tools.length > 0 && (

@@ -188,6 +188,66 @@ def rewrite_article(article, slug, supabase):
     return slug
 
 
+def generate_hub_intro(category_slug, keyword, supabase):
+    """
+    Generate a bilingual SEO intro for a category hub and write it to
+    categories.description_*. Returns True on success.
+    """
+    cat = supabase.table('categories').select('name_en, name_zh').eq(
+        'slug', category_slug
+    ).limit(1).execute()
+    if not cat.data:
+        return False
+    name_en = cat.data[0]['name_en']
+
+    tools = supabase.table('tools').select('name_en').eq(
+        'category_canonical', category_slug
+    ).eq('status', 'published').limit(15).execute()
+    tool_names = ', '.join(t['name_en'] for t in (tools.data or []) if t.get('name_en'))
+
+    prompt = f"""Write a concise, helpful SEO intro for a category hub page titled "Best {name_en} AI Tools in 2026".
+
+Tools featured on this page: {tool_names}
+
+Requirements:
+- 180-280 words in description_en (2-3 short paragraphs)
+- Explain what {name_en} AI tools do, who they're for, and how to choose between them (what criteria matter)
+- Natural, genuinely useful — it sits above a comparison table and tool list
+- DO NOT fabricate statistics, prices, or case studies. No invented numbers.
+
+Return a single JSON object with EXACTLY these keys (all required, none empty):
+{{
+  "description_en": "the English intro",
+  "description_zh": "the Chinese (Simplified) intro"
+}}"""
+
+    try:
+        resp = _get_openai_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You write tight, useful category intros for an AI-tools site. Respond with a single valid JSON object only."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.5,
+            max_tokens=1200,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(resp.choices[0].message.content)
+        desc_en = (data.get('description_en') or '').strip()
+        desc_zh = (data.get('description_zh') or '').strip()
+        if len(desc_en) < 120 or len(desc_zh) < 60:
+            print(f"  Hub intro too short for {category_slug}")
+            return False
+        supabase.table('categories').update({
+            'description_en': desc_en,
+            'description_zh': desc_zh,
+        }).eq('slug', category_slug).execute()
+        return True
+    except Exception as e:
+        print(f"  Hub intro generation error for {category_slug}: {e}")
+        return False
+
+
 if __name__ == "__main__":
     print("Starting SEO article generator (queue consumer)...")
     try:
@@ -205,7 +265,28 @@ if __name__ == "__main__":
             for action in actions:
                 payload = action.get('payload') or {}
                 keyword = payload.get('keyword')
-                is_rewrite = payload.get('mode') == 'rewrite'
+                mode = payload.get('mode')
+
+                # Hub mode: fill a category hub's intro instead of writing /news.
+                if mode == 'hub':
+                    cat_slug = payload.get('category_slug')
+                    print(f"\nHub intro: /c/{cat_slug}  (priority={action['priority']})")
+                    try:
+                        if generate_hub_intro(cat_slug, keyword, supabase):
+                            aq.mark_done(supabase, action, {'category_slug': cat_slug, 'outcome': 'hub_intro'})
+                            saved += 1
+                            print(f"  DONE (hub_intro): /c/{cat_slug}")
+                        else:
+                            aq.mark_failed(supabase, action, f"hub intro generation failed for {cat_slug}")
+                            failed += 1
+                    except Exception as hub_err:
+                        aq.mark_failed(supabase, action, str(hub_err))
+                        failed += 1
+                        print(f"  FAIL: {hub_err}")
+                    time.sleep(2)
+                    continue
+
+                is_rewrite = mode == 'rewrite'
                 if not keyword:
                     aq.mark_failed(supabase, action, "payload missing 'keyword'")
                     failed += 1
