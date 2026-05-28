@@ -1,11 +1,15 @@
 # crawler/trend_agent.py
 #
 # Forward loop — catches a topic while it's hot instead of judging it after.
-# Reads the last 48h of ingested industry_news, lets the LLM cluster the
-# near-duplicate rewrites and surface topics that are genuinely surging across
-# multiple distinct sources AND worth an evergreen content page, then enqueues
-# high-priority generate_seo_content actions. The existing SEO generator
-# consumes them; high priority makes them jump ahead of routine GSC work.
+# Combines three free signals: ingested RSS news (breadth), Hacker News and
+# AI subreddits (engagement). The LLM clusters near-duplicate stories and
+# surfaces topics that are genuinely surging — by multi-source corroboration
+# OR by raw engagement (a 500-point HN story is hot even from one source).
+# Qualifying topics enqueue high-priority generate_seo_content, which the
+# existing SEO generator consumes ahead of routine GSC work.
+#
+# Pulls HN/Reddit live, so it isn't bottlenecked by the once-daily RSS crawl
+# and can catch intraday surges when run several times a day.
 import re
 import json
 from datetime import datetime, timedelta
@@ -15,10 +19,12 @@ from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_UR
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
+import trend_sources
 
 LOOKBACK_HOURS = 48
-MIN_ARTICLES = 8           # not enough fresh news → no reliable trend signal
-MIN_SOURCES_PER_TOPIC = 2  # multi-source co-occurrence = a real trend, not one outlet
+MIN_SIGNALS = 8            # too little input → no reliable trend read
+MIN_SOURCES_PER_TOPIC = 2  # multi-source corroboration path
+ENGAGEMENT_THRESHOLD = 150 # OR single-source-but-very-hot path (HN points / Reddit upvotes)
 MAX_TOPICS = 3             # cap new high-priority work per run
 
 
@@ -31,54 +37,67 @@ def _slugify(text):
     return re.sub(r'[\s-]+', '-', s).strip('-')
 
 
-def fetch_recent_headlines(supabase):
+def fetch_rss_signals(supabase):
+    """Ingested RSS news (engagement unknown → 0)."""
     since = (datetime.utcnow() - timedelta(hours=LOOKBACK_HOURS)).isoformat()
     rows = supabase.table('news').select(
-        'title_en, source, published_at'
+        'title_en, source'
     ).eq('news_type', 'industry_news').gte('published_at', since).order(
         'published_at', desc=True
-    ).limit(200).execute()
-    return [r for r in (rows.data or []) if r.get('title_en')]
+    ).limit(150).execute()
+    return [{'title': r['title_en'], 'source': r.get('source') or 'RSS', 'engagement': 0}
+            for r in (rows.data or []) if r.get('title_en')]
 
 
-def detect_trends(headlines):
-    """Ask the LLM to cluster rewrites and surface multi-source surging topics."""
+def detect_trends(signals):
+    """Cluster rewrites and surface topics hot by multi-source OR by engagement."""
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY not configured")
 
-    lines = [f"- [{(h.get('source') or '?')}] {h['title_en']}" for h in headlines]
-    headlines_block = "\n".join(lines)
+    lines = []
+    for s in signals:
+        eng = s.get('engagement') or 0
+        tag = f"{s['source']}|{eng}pts" if eng else s['source']
+        lines.append(f"- [{tag}] {s['title']}")
+    block = "\n".join(lines)
 
-    prompt = f"""These are AI news headlines ingested in the last {LOOKBACK_HOURS} hours, each tagged with its source:
+    prompt = f"""These are AI signals from the last {LOOKBACK_HOURS} hours. Each is tagged [source|engagement] — engagement is Hacker News points or Reddit upvotes (RSS items have none).
 
-{headlines_block}
+{block}
 
-Many headlines are near-duplicate rewrites of the same story — cluster those together.
-A topic only counts as SURGING if it is covered by {MIN_SOURCES_PER_TOPIC}+ DISTINCT source names
-(the names in [brackets]). Coverage from a single source repeated many times does NOT count,
-no matter how many headlines. Also require it to be worth a durable SEO content page on an
-AI-tools site (a new tool/model launch, a major capability, a comparison-worthy rivalry).
-Ignore one-off opinion pieces and generic "AI is changing X" stories.
+Cluster near-duplicate rewrites of the same story together. A topic is SURGING if EITHER:
+  (a) it appears under {MIN_SOURCES_PER_TOPIC}+ DISTINCT source names, OR
+  (b) any single item about it has engagement >= {ENGAGEMENT_THRESHOLD}.
 
-For each qualifying topic, list the EXACT distinct source names it appeared under.
-Return a single JSON object (up to {MAX_TOPICS} topics):
+CRITICAL relevance filter — jilo.ai monetizes AI-TOOL content via affiliate links.
+Only surface a topic if it maps to a page a tool-shopper would search for, such as:
+  "best <category> AI tools", "<tool A> vs <tool B>", "how to use <tool>",
+  "<tool/model> review", "<new tool> alternatives".
+The keyword MUST name a concrete AI tool, model, or tool category with buyer/usage intent.
+REJECT (do not return), regardless of engagement: memes/jokes, celebrity or design stories,
+business/finance/politics/regulation news, philosophical "future of AI" takes, and discussion
+threads with no specific tool to evaluate.
+
+Return a single JSON object (up to {MAX_TOPICS} topics), each with the EXACT distinct source
+names and the peak engagement you saw for it:
 {{
   "trends": [
     {{
       "topic": "short human-readable topic",
       "keyword": "the search keyword a content page should target",
       "sources": ["Source A", "Source B"],
+      "peak_engagement": <int>,
       "why": "one sentence on why it's worth a page now"
     }}
   ]
 }}
-If nothing is covered by {MIN_SOURCES_PER_TOPIC}+ distinct sources, return {{"trends": []}}."""
+If nothing qualifies, return {{"trends": []}}."""
 
     client = OpenAI(api_key=OPENAI_API_KEY)
     resp = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You spot real, multi-source trends and reject noise. Respond with a single valid JSON object only."},
+            {"role": "system", "content": "You spot real trends and reject noise. Respond with a single valid JSON object only."},
             {"role": "user", "content": prompt},
         ],
         temperature=0.3,
@@ -92,25 +111,26 @@ def enqueue_trends(supabase, trends):
     opened = 0
     for t in trends:
         keyword = (t.get('keyword') or '').strip()
-        # Count DISTINCT source names, case-insensitively — don't trust a
-        # self-reported integer; the LLM tends to report article count.
+        # Verify qualification in code — don't trust the LLM blindly.
         sources = {s.strip().lower() for s in (t.get('sources') or []) if s and s.strip()}
-        if not keyword or len(sources) < MIN_SOURCES_PER_TOPIC:
-            print(f"  [reject] {keyword or t.get('topic')}: only {len(sources)} distinct source(s)")
+        peak = int(t.get('peak_engagement') or 0)
+        qualifies = len(sources) >= MIN_SOURCES_PER_TOPIC or peak >= ENGAGEMENT_THRESHOLD
+        if not keyword or not qualifies:
+            print(f"  [reject] {keyword or t.get('topic')}: {len(sources)} source(s), {peak} peak engagement")
             continue
         dedup_key = f"seo:{_slugify(keyword)}"
         if aq.enqueue(
             supabase,
             action_type='generate_seo_content',
-            payload={'keyword': keyword, 'source': 'trend',
-                     'topic': t.get('topic'), 'distinct_sources': len(sources),
-                     'source_names': sorted(sources)},
-            reason=f"Trending across {len(sources)} sources: {t.get('why') or t.get('topic')}",
+            payload={'keyword': keyword, 'source': 'trend', 'topic': t.get('topic'),
+                     'distinct_sources': len(sources), 'source_names': sorted(sources),
+                     'peak_engagement': peak},
+            reason=f"Trending ({len(sources)} sources, peak {peak}): {t.get('why') or t.get('topic')}",
             priority='high',
             dedup_key=dedup_key,
         ):
             opened += 1
-            print(f"  [TREND high] {keyword}  ({len(sources)} sources)")
+            print(f"  [TREND high] {keyword}  ({len(sources)} src, {peak} peak)")
         else:
             print(f"  [dedup] {keyword} already queued")
     return opened
@@ -120,16 +140,16 @@ if __name__ == "__main__":
     print("Starting trend agent...")
     try:
         supabase = get_supabase()
-        headlines = fetch_recent_headlines(supabase)
-        print(f"  {len(headlines)} headlines in last {LOOKBACK_HOURS}h")
+        signals = fetch_rss_signals(supabase) + trend_sources.gather_engagement_signals()
+        print(f"  {len(signals)} total signals (RSS + HN + Reddit)")
 
-        if len(headlines) < MIN_ARTICLES:
-            print(f"  Too few fresh articles (<{MIN_ARTICLES}); skipping.")
-            log_operation("trend_agent", "success", "skipped: too few articles",
-                          {"enqueued": 0, "headlines": len(headlines)})
+        if len(signals) < MIN_SIGNALS:
+            print(f"  Too few signals (<{MIN_SIGNALS}); skipping.")
+            log_operation("trend_agent", "success", "skipped: too few signals",
+                          {"enqueued": 0, "signals": len(signals)})
         else:
-            trends = detect_trends(headlines)
-            print(f"  LLM surfaced {len(trends)} trend(s)")
+            trends = detect_trends(signals)
+            print(f"  LLM surfaced {len(trends)} candidate trend(s)")
             enqueued = enqueue_trends(supabase, trends)
             print(f"\n  Enqueued {enqueued} high-priority trend action(s)")
             log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
