@@ -134,74 +134,74 @@ def format_daily_report(stats):
     for kw in stats.get('top_keywords', [])[:5]:
         kw_lines.append(f"  - \"{kw['query']}\" pos:{kw['position']:.0f} clicks:{kw['clicks']}")
     kw_date_label = f" (数据日期: {stats.get('keywords_date', '?')})" if stats.get('keywords_date') else ""
-    kw_text = '\n'.join(kw_lines) if kw_lines else '  No data yet (GSC 通常延迟 2~3 天)'
+    kw_text = '\n'.join(kw_lines) if kw_lines else '  暂无数据（GSC 通常延迟 2~3 天）'
 
     # Strategy actions
     action_lines = []
     for a in stats.get('strategy_actions', [])[:5]:
         action_lines.append(f"  - [{a.get('priority', '?').upper()}] {a.get('reason', '')[:60]}")
-    action_text = '\n'.join(action_lines) if action_lines else '  No actions today'
+    action_text = '\n'.join(action_lines) if action_lines else '  今日无策略动作'
 
     page_lines = []
     for page in stats.get('pages_to_update', [])[:5]:
         page_lines.append(
             f"  - {page.get('page_path', '?')} | \"{page.get('query', '')}\" pos:{page.get('position', 0):.0f} imp:{page.get('impressions', 0)}"
         )
-    pages_text = '\n'.join(page_lines) if page_lines else '  None'
+    pages_text = '\n'.join(page_lines) if page_lines else '  无'
 
     tool_lines = []
     for tool in stats.get('clicked_tools_without_affiliate', [])[:5]:
-        tool_lines.append(f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} clicks")
-    tools_text = '\n'.join(tool_lines) if tool_lines else '  None'
+        tool_lines.append(f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} 次点击")
+    tools_text = '\n'.join(tool_lines) if tool_lines else '  无'
 
     tasks = []
     if stats.get('pages_to_update'):
         first_page = stats['pages_to_update'][0]
-        tasks.append(f"Update GEO page: {first_page.get('page_path', '?')} for \"{first_page.get('query', '')}\"")
+        tasks.append(f"优化 GEO 页面：{first_page.get('page_path', '?')}（关键词 \"{first_page.get('query', '')}\"）")
     else:
-        tasks.append("Create or improve one GEO answer page from the priority list")
+        tasks.append("从优先级清单里新建或优化一个 GEO 答案页")
 
     if stats.get('clicked_tools_without_affiliate'):
         first_tool = stats['clicked_tools_without_affiliate'][0]
-        tasks.append(f"Apply/follow up affiliate program for {first_tool.get('name_en') or first_tool.get('slug')}")
+        tasks.append(f"申请/跟进 {first_tool.get('name_en') or first_tool.get('slug')} 的联盟项目")
     else:
-        tasks.append("Apply/follow up one priority affiliate program")
+        tasks.append("申请/跟进一个优先级联盟项目")
 
     if stats.get('outbound_clicks', 0) == 0:
-        tasks.append("Improve one CTA path to generate outbound clicks")
+        tasks.append("优化一条 CTA 路径以产生出站点击")
     else:
-        tasks.append("Review outbound click sources and improve the highest-intent page")
+        tasks.append("复盘出站点击来源，优化意图最强的页面")
     tasks_text = '\n'.join(f"  {idx + 1}. {task}" for idx, task in enumerate(tasks[:3]))
 
-    errors_text = '\n'.join(f"  - {e}" for e in stats['errors']) if stats['errors'] else '  None'
+    errors_text = '\n'.join(f"  - {e}" for e in stats['errors']) if stats['errors'] else '  无'
 
-    return f"""**jilo.ai Daily Report - {today}**
+    return f"""**jilo.ai 日报 - {today}**
 
-**Traffic (Yesterday)**
+**流量（昨日）**
   PV: {stats.get('pv', 'N/A')}{pv_change}  UV: {stats.get('uv', 'N/A')}
 
-**Content Created Today**
-  News: {stats['news_saved']} | Tools: {stats['tools_saved']} | SEO: {stats['seo_articles']} | Compare: {stats['compare_articles']}
+**今日新增内容**
+  新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']}
 
-**Monetization Today**
-  Outbound clicks: {stats['outbound_clicks']} | Affiliate clicks: {stats['affiliate_clicks']} | Affiliate tools live: {stats.get('affiliate_tools', 0)}
+**今日变现**
+  出站点击: {stats['outbound_clicks']} | 联盟点击: {stats['affiliate_clicks']} | 已挂联盟工具: {stats.get('affiliate_tools', 0)}
 
-**Pages To Update**
+**待优化页面**
 {pages_text}
 
-**Clicked Tools Without Affiliate**
+**有点击但无联盟链接的工具**
 {tools_text}
 
-**Today's 3 Tasks**
+**今日 3 件事**
 {tasks_text}
 
-**Top Keywords**{kw_date_label}
+**热门关键词**{kw_date_label}
 {kw_text}
 
-**L2 Strategy Actions**
+**策略动作**
 {action_text}
 
-**Errors**
+**错误**
 {errors_text}"""
 
 
@@ -217,7 +217,7 @@ def send_daily_report():
 
     success = send_feishu_card(
         FEISHU_WEBHOOK_URL,
-        f"jilo.ai Daily Report - {today}",
+        f"jilo.ai 日报 - {today}",
         content,
         color="blue"
     )

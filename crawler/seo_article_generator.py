@@ -255,5 +255,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("seo_articles", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "SEO Article Error", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "SEO 文章生成出错", str(e), "error")
         raise

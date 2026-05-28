@@ -238,5 +238,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("tool_discovery", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "Tool Discovery Error", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "工具发现出错", str(e), "error")
         raise

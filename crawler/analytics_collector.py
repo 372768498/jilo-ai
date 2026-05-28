@@ -174,5 +174,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("analytics_collector", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "Analytics Collection Error", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "数据采集出错", str(e), "error")
         raise

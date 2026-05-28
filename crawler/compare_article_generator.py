@@ -188,5 +188,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("compare_articles", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "Compare Article Error", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "对比文章生成出错", str(e), "error")
         raise

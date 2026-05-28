@@ -157,5 +157,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("trend_agent", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "Trend Agent Error", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "趋势 Agent 出错", str(e), "error")
         raise

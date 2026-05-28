@@ -134,5 +134,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("lookback_agent", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "Lookback Agent Error", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "回看 Agent 出错", str(e), "error")
         raise

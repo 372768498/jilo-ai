@@ -27,5 +27,6 @@ def send_feishu_card(webhook_url: str, title: str, content: str, color: str = "b
 def send_feishu_alert(webhook_url: str, title: str, message: str, level: str = "warning") -> bool:
     """Send an alert message. level: 'warning' (yellow) or 'error' (red)."""
     color = "red" if level == "error" else "yellow"
-    content = f"**Level:** {level.upper()}\n\n{message}"
+    level_label = "严重错误" if level == "error" else "警告"
+    content = f"**级别：** {level_label}\n\n{message}"
     return send_feishu_card(webhook_url, title, content, color=color)

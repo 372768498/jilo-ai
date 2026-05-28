@@ -115,30 +115,30 @@ def generate_ai_strategy(weekly_data):
         for q in weekly_data['top_queries'][:15]
     )
 
-    prompt = f"""Analyze this week's data for jilo.ai (AI tool discovery platform) and provide strategic recommendations.
+    prompt = f"""分析 jilo.ai（一个 AI 工具发现平台）本周数据，并给出策略建议。
 
-Weekly Traffic: PV {weekly_data['total_pv']}, UV {weekly_data['total_uv']}
-Monetization: outbound clicks {weekly_data.get('outbound_clicks', 0)}, affiliate clicks {weekly_data.get('affiliate_clicks', 0)}, live affiliate tools {weekly_data.get('affiliate_tools', 0)}
+本周流量：PV {weekly_data['total_pv']}，UV {weekly_data['total_uv']}
+变现：出站点击 {weekly_data.get('outbound_clicks', 0)}，联盟点击 {weekly_data.get('affiliate_clicks', 0)}，已挂联盟的工具 {weekly_data.get('affiliate_tools', 0)} 个
 
-Top Pages by Pageviews:
+按浏览量排名的页面：
 {top_pages_text}
 
-Top Search Queries (by impressions):
+按曝光量排名的搜索词：
 {top_queries_text}
 
-Based on this data, provide:
-1. **Performance Summary** (3-4 sentences)
-2. **Content Recommendations** (3-5 specific actionable items)
-3. **Keyword Opportunities** (top 3 keywords to target next week, with reasoning)
-4. **Risks & Warnings** (anything concerning in the data)
+基于这些数据，请输出以下四节（必须用简体中文，markdown 二级标题）：
+1. **表现总结**（3–4 句）
+2. **内容建议**（3–5 条具体可执行项）
+3. **关键词机会**（下周值得攻的 3 个关键词，附理由）
+4. **风险与警示**（数据里值得警惕的地方）
 
-Be specific and actionable. Reference actual data points."""
+要具体、可执行，引用真实数据点。"""
 
     try:
         response = _get_openai_client().chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a senior SEO and content strategist for an AI tool discovery platform. Provide data-driven, actionable recommendations."},
+                {"role": "system", "content": "你是一个 AI 工具发现平台的资深 SEO 与内容策略师，用简体中文输出数据驱动、可执行的建议。"},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.5,
@@ -147,7 +147,7 @@ Be specific and actionable. Reference actual data points."""
         return response.choices[0].message.content
     except Exception as e:
         print(f"GPT-4o strategy error: {e}")
-        return f"AI strategy generation failed: {e}"
+        return f"AI 策略生成失败：{e}"
 
 
 def send_weekly_report():
@@ -174,19 +174,19 @@ def send_weekly_report():
     }, on_conflict='report_date,report_type').execute()
 
     # Send to Feishu
-    content = f"""**jilo.ai Weekly Strategy Report - {today}**
+    content = f"""**jilo.ai 周策略报告 - {today}**
 
-**Traffic Summary**
-  Weekly PV: {weekly_data['total_pv']}  UV: {weekly_data['total_uv']}
+**流量汇总**
+  本周 PV: {weekly_data['total_pv']}  UV: {weekly_data['total_uv']}
 
-**Monetization**
-  Outbound clicks: {weekly_data.get('outbound_clicks', 0)}  Affiliate clicks: {weekly_data.get('affiliate_clicks', 0)}  Affiliate tools live: {weekly_data.get('affiliate_tools', 0)}
+**变现**
+  出站点击: {weekly_data.get('outbound_clicks', 0)}  联盟点击: {weekly_data.get('affiliate_clicks', 0)}  已挂联盟工具: {weekly_data.get('affiliate_tools', 0)}
 
 ---
 
 {strategy_text}"""
 
-    success = send_feishu_card(FEISHU_WEBHOOK_URL, f"Weekly Strategy - {today}", content, color="purple")
+    success = send_feishu_card(FEISHU_WEBHOOK_URL, f"周策略报告 - {today}", content, color="purple")
     status = "success" if success else "error"
     log_operation("weekly_report", status, f"Report sent: {success}")
     print(f"Weekly report sent: {success}")

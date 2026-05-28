@@ -294,5 +294,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("strategy_engine", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "Strategy Engine Error", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "策略引擎出错", str(e), "error")
         raise
