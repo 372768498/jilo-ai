@@ -70,12 +70,18 @@ def _bilingual_parity(article, en_field, zh_field, min_ratio):
     return OK
 
 
-def _no_dup_news(supabase, article):
-    """News table dedup by content_hash of (title_en + target_keyword)."""
+def _set_news_hash(article):
+    """Compute and stash the content hash the saver will persist."""
     h = hashlib.md5(
         f"{article['title_en']}{article.get('target_keyword', '')}".encode()
     ).hexdigest()
     article['_content_hash'] = h
+    return h
+
+
+def _no_dup_news(supabase, article):
+    """News table dedup by content_hash of (title_en + target_keyword)."""
+    h = _set_news_hash(article)
     existing = supabase.table('news').select('id').eq('content_hash', h).limit(1).execute()
     if existing.data:
         return GateResult(False, f"duplicate news content_hash {h[:8]}", terminal=True)
@@ -98,20 +104,27 @@ REQUIRED_BILINGUAL = [
 ]
 
 
-def check_seo_article(article, supabase):
+def check_seo_article(article, supabase, skip_dup=False):
+    """
+    skip_dup=True for rewrites: the page already exists under the same
+    title/keyword, so the duplicate check would wrongly reject it. The
+    content hash is still computed so the saver can persist it.
+    """
     gates = [
         lambda: _required(article, REQUIRED_BILINGUAL),
         lambda: _title_max(article, 'title_en', 70),
         lambda: _meta_desc_range(article, 'meta_description_en', 100, 170),
         lambda: _content_min(article, 'content_en', 3000),
         lambda: _bilingual_parity(article, 'content_en', 'content_zh', 0.3),
-        lambda: _no_dup_news(supabase, article),
     ]
     for g in gates:
         r = g()
         if not r.ok:
             return r
-    return OK
+    if skip_dup:
+        _set_news_hash(article)
+        return OK
+    return _no_dup_news(supabase, article)
 
 
 def check_compare_article(article, supabase):

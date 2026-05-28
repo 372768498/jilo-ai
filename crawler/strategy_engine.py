@@ -21,6 +21,8 @@ def build_dedup_key(action):
     """Stable, normalized key so the same logical action is never enqueued twice."""
     t = action['type']
     if t == 'generate_seo_content':
+        if action.get('mode') == 'rewrite':
+            return f"rewrite:{action['slug']}"
         return f"seo:{_slugify(action['keyword'])}"
     if t == 'generate_comparison':
         a, b = sorted([_slugify(action['tool_a']), _slugify(action['tool_b'])])
@@ -28,6 +30,67 @@ def build_dedup_key(action):
     if t == 'flag_for_review':
         return f"flag:{_slugify(action['page'])}"
     raise ValueError(f"Unknown action type: {t}")
+
+
+# Rewrite thresholds — a page that's had real search exposure but isn't winning.
+# Tune once page_performance_lookback has accumulated real snapshots.
+REWRITE_MIN_AGE = 7            # only judge pages that have had a fair chance
+REWRITE_MIN_IMPRESSIONS = 30   # Google is showing it, so ranking is the issue
+REWRITE_POSITION_FLOOR = 20    # ranking worse than ~page 2
+REWRITE_CTR_FLOOR = 0.01       # shown a lot, almost nobody clicks
+REWRITE_COOLDOWN_DAYS = 7      # don't re-rewrite the same page in a tight loop
+
+
+def check_underperforming_pages():
+    """
+    Read page_performance_lookback and queue rewrites for pages that have had
+    real search exposure but rank poorly or get no clicks. Pages with too few
+    impressions are left alone — they haven't had a fair chance yet, and a
+    rewrite wouldn't fix an indexing/age problem.
+    """
+    supabase = get_supabase()
+
+    rows = supabase.table('page_performance_lookback').select(
+        'content_type, slug, age_bucket, position, ctr, impressions'
+    ).gte('age_bucket', REWRITE_MIN_AGE).execute()
+
+    # Keep the most mature snapshot per slug.
+    by_slug = {}
+    for r in (rows.data or []):
+        cur = by_slug.get(r['slug'])
+        if not cur or r['age_bucket'] > cur['age_bucket']:
+            by_slug[r['slug']] = r
+
+    cutoff = (datetime.utcnow() - timedelta(days=REWRITE_COOLDOWN_DAYS)).isoformat()
+    actions = []
+    for slug, snap in by_slug.items():
+        impr = snap.get('impressions') or 0
+        if impr < REWRITE_MIN_IMPRESSIONS:
+            continue
+        pos = snap.get('position')
+        ctr = snap.get('ctr') or 0
+        underperforming = (pos is not None and pos > REWRITE_POSITION_FLOOR) or (ctr < REWRITE_CTR_FLOOR)
+        if not underperforming:
+            continue
+
+        # Cooldown: skip if we already rewrote this page recently.
+        recent = supabase.table('action_queue').select('id').eq(
+            'dedup_key', f'rewrite:{slug}'
+        ).eq('status', 'done').gte('completed_at', cutoff).execute()
+        if recent.data:
+            continue
+
+        actions.append({
+            'type': 'generate_seo_content',
+            'mode': 'rewrite',
+            'slug': slug,
+            'content_type': snap['content_type'],
+            'keyword': slug.replace('-', ' '),
+            'reason': f"Underperforming at {snap['age_bucket']}d: pos={pos}, ctr={ctr:.1%}, impressions={impr}",
+            'priority': 'medium',
+        })
+
+    return actions
 
 
 def check_keyword_opportunities():
@@ -218,6 +281,7 @@ if __name__ == "__main__":
         all_actions.extend(check_keyword_opportunities())
         all_actions.extend(check_vs_queries_without_articles())
         all_actions.extend(check_high_bounce_pages())
+        all_actions.extend(check_underperforming_pages())
 
         print(f"\nFound {len(all_actions)} actions:")
         enqueued = execute_actions(all_actions)

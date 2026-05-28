@@ -153,6 +153,28 @@ def save_article(article, supabase):
     return slug
 
 
+def rewrite_article(article, slug, supabase):
+    """
+    Refresh an existing page in place (used for underperformer rewrites).
+    Keeps slug and published_at so age tracking continues; swaps in the new
+    title/summary/content and bumps the content hash. Returns the slug, or
+    None if no row matched (page may have been removed).
+    """
+    existing = supabase.table('news').select('id').eq('slug', slug).limit(1).execute()
+    if not existing.data:
+        return None
+    supabase.table('news').update({
+        'title_en': article['title_en'],
+        'title_zh': article['title_zh'],
+        'summary_en': article['meta_description_en'],
+        'summary_zh': article['meta_description_zh'],
+        'content_en': article['content_en'],
+        'content_zh': article['content_zh'],
+        'content_hash': article['_content_hash'],
+    }).eq('slug', slug).execute()
+    return slug
+
+
 if __name__ == "__main__":
     print("Starting SEO article generator (queue consumer)...")
     try:
@@ -168,13 +190,16 @@ if __name__ == "__main__":
             failed = 0
             skipped = 0
             for action in actions:
-                keyword = (action.get('payload') or {}).get('keyword')
+                payload = action.get('payload') or {}
+                keyword = payload.get('keyword')
+                is_rewrite = payload.get('mode') == 'rewrite'
                 if not keyword:
                     aq.mark_failed(supabase, action, "payload missing 'keyword'")
                     failed += 1
                     continue
 
-                print(f"\nGenerating: {keyword}  (priority={action['priority']}, attempt={action['attempts']}/{action.get('max_attempts', 3)})")
+                mode_label = "Rewriting" if is_rewrite else "Generating"
+                print(f"\n{mode_label}: {keyword}  (priority={action['priority']}, attempt={action['attempts']}/{action.get('max_attempts', 3)})")
                 try:
                     article = generate_seo_article(keyword)
                     if not article:
@@ -182,7 +207,8 @@ if __name__ == "__main__":
                         failed += 1
                         continue
 
-                    gate = qg.check_seo_article(article, supabase)
+                    # Rewrites skip the duplicate gate (the page already exists).
+                    gate = qg.check_seo_article(article, supabase, skip_dup=is_rewrite)
                     if not gate.ok:
                         if gate.terminal:
                             aq.mark_skipped(supabase, action, gate.reason)
@@ -194,14 +220,26 @@ if __name__ == "__main__":
                             print(f"  FAIL gate: {gate.reason}")
                         continue
 
-                    slug = save_article(article, supabase)
+                    if is_rewrite:
+                        slug = rewrite_article(article, payload.get('slug'), supabase)
+                        if not slug:
+                            aq.mark_skipped(supabase, action, f"page gone, nothing to rewrite: {payload.get('slug')}")
+                            skipped += 1
+                            print(f"  SKIP: page {payload.get('slug')} not found")
+                            continue
+                        outcome = 'rewritten'
+                    else:
+                        slug = save_article(article, supabase)
+                        outcome = 'created'
+
                     aq.mark_done(supabase, action, {
                         'slug': slug,
                         'title_en': article['title_en'],
                         'keyword': keyword,
+                        'outcome': outcome,
                     })
                     saved += 1
-                    print(f"  DONE: {article['title_en'][:60]}")
+                    print(f"  DONE ({outcome}): {article['title_en'][:60]}")
                 except Exception as gen_err:
                     aq.mark_failed(supabase, action, str(gen_err))
                     failed += 1
