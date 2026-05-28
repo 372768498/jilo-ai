@@ -70,7 +70,7 @@ export default async function CategoriesIndexPage({ params }: PageProps) {
 
         <section className="mx-auto max-w-7xl px-4 py-12">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {(categories || []).map((c: any) => {
+            {(categories || []).filter((c: any) => (counts[c.slug] || 0) > 0).map((c: any) => {
               const name = isZh ? c.name_zh : c.name_en;
               const desc = isZh ? c.description_zh : c.description_en;
               return (
