@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 const INDEXNOW_KEY = process.env.INDEXNOW_KEY || "jilo-ai-indexnow-key";
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://jilo.ai";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://www.jilo.ai";
 
 export async function GET(request: Request) {
   // Verify cron or admin auth

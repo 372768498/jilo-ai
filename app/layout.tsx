@@ -11,7 +11,7 @@ export const metadata: Metadata = {
       "impact-site": "8b17145f-f60a-47b8-8ce5-c00d8dcf8092",
     },
   },
-  metadataBase: new URL("https://jilo.ai"),
+  metadataBase: new URL("https://www.jilo.ai"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

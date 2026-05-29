@@ -309,16 +309,16 @@ export function generateMetadata({ params }: PageProps): Metadata {
     title: `${copy.title} | Jilo.ai`,
     description: copy.description,
     alternates: {
-      canonical: `https://jilo.ai${path}`,
+      canonical: `https://www.jilo.ai${path}`,
       languages: {
-        en: `https://jilo.ai/en/answers/${page.slug}`,
-        zh: `https://jilo.ai/zh/answers/${page.slug}`,
+        en: `https://www.jilo.ai/en/answers/${page.slug}`,
+        zh: `https://www.jilo.ai/zh/answers/${page.slug}`,
       },
     },
     openGraph: {
       title: copy.title,
       description: copy.description,
-      url: `https://jilo.ai${path}`,
+      url: `https://www.jilo.ai${path}`,
       type: "article",
     },
   };
@@ -331,7 +331,7 @@ export default function AnswerPage({ params }: PageProps) {
   const locale = params.locale === "zh" ? "zh" : "en";
   const isZh = locale === "zh";
   const copy = page[locale];
-  const path = `https://jilo.ai/${locale}/answers/${page.slug}`;
+  const path = `https://www.jilo.ai/${locale}/answers/${page.slug}`;
 
   const faqJsonLd = {
     "@context": "https://schema.org",
@@ -352,7 +352,7 @@ export default function AnswerPage({ params }: PageProps) {
     datePublished: page.updatedAt,
     inLanguage: locale === "zh" ? "zh-CN" : "en",
     mainEntityOfPage: path,
-    publisher: { "@type": "Organization", name: "Jilo.ai", url: "https://jilo.ai" },
+    publisher: { "@type": "Organization", name: "Jilo.ai", url: "https://www.jilo.ai" },
   };
 
   return (

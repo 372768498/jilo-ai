@@ -15,6 +15,6 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: "anthropic-ai", allow: "/" },
       { userAgent: "PerplexityBot", allow: "/" },
     ],
-    sitemap: "https://jilo.ai/sitemap.xml",
+    sitemap: "https://www.jilo.ai/sitemap.xml",
   };
 }
