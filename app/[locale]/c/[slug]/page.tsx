@@ -34,7 +34,7 @@ async function getTools(slug: string) {
   const supabase = await createServerClient();
   const { data } = await supabase
     .from("tools")
-    .select("slug, name_en, name_zh, tagline_en, tagline_zh, pricing_type, rating, logo_url, affiliate_url, official_url, is_featured, click_count")
+    .select("slug, name_en, name_zh, tagline_en, tagline_zh, pricing_type, rating, logo_url, affiliate_url, official_url, is_featured, click_count, china_access")
     .eq("category_canonical", slug)
     .eq("status", "published")
     .order("is_featured", { ascending: false })
@@ -86,6 +86,12 @@ const PRICING_LABEL: Record<string, { en: string; zh: string }> = {
   freemium: { en: "Freemium", zh: "免费增值" },
   paid: { en: "Paid", zh: "付费" },
   subscription: { en: "Subscription", zh: "订阅" },
+};
+
+const CHINA_SHORT: Record<string, { en: string; zh: string }> = {
+  direct: { en: "🟢 Direct", zh: "🟢 可直连" },
+  proxy: { en: "🟡 VPN", zh: "🟡 需代理" },
+  blocked: { en: "🔴 Blocked", zh: "🔴 不可用" },
 };
 
 export default async function CategoryHubPage({ params }: PageProps) {
@@ -150,6 +156,7 @@ export default async function CategoryHubPage({ params }: PageProps) {
                   <tr>
                     <th className="px-4 py-3">{t("Tool", "工具")}</th>
                     <th className="px-4 py-3">{t("Pricing", "价格")}</th>
+                    <th className="px-4 py-3">{t("China", "中国可用")}</th>
                     <th className="px-4 py-3">{t("Rating", "评分")}</th>
                     <th className="px-4 py-3"></th>
                   </tr>
@@ -163,6 +170,9 @@ export default async function CategoryHubPage({ params }: PageProps) {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-slate-600">{pricing(x.pricing_type)}</td>
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                        {x.china_access && CHINA_SHORT[x.china_access] ? (isZh ? CHINA_SHORT[x.china_access].zh : CHINA_SHORT[x.china_access].en) : "—"}
+                      </td>
                       <td className="px-4 py-3 text-slate-600">{x.rating ? `${x.rating.toFixed(1)}★` : "—"}</td>
                       <td className="px-4 py-3 text-right">
                         <a href={cta(x)} target="_blank" rel="nofollow sponsored noopener" className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:underline">

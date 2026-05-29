@@ -7,6 +7,13 @@ import { CheckCircle2, XCircle } from "lucide-react";
 
 type PageProps = { params: { locale: string; slug: string } };
 
+// China-accessibility display (jilo's differentiator). null/unknown → not shown.
+const CHINA_ACCESS: Record<string, { en: string; zh: string; cls: string }> = {
+  direct:  { en: "🟢 Available in China",  zh: "🟢 中国可直连", cls: "bg-green-50 text-green-700 border-green-200" },
+  proxy:   { en: "🟡 VPN / proxy needed",  zh: "🟡 需代理/VPN", cls: "bg-amber-50 text-amber-700 border-amber-200" },
+  blocked: { en: "🔴 Blocked in China",    zh: "🔴 中国不可用", cls: "bg-red-50 text-red-700 border-red-200" },
+};
+
 // 通用英文→中文翻译映射
 const TRANSLATIONS: Record<string, string> = {
   // Feature Titles
@@ -105,7 +112,7 @@ async function getToolData(slug: string) {
       logo_url, cover_image_url,
       pricing_type, pricing_details_en, pricing_details_zh, price_range,
       rating, review_count,
-      category, category_canonical,
+      category, category_canonical, china_access,
       features, pros, cons, use_cases,
       meta_title_en, meta_title_zh,
       meta_description_en, meta_description_zh,
@@ -286,6 +293,11 @@ export default async function ToolDetailPage({ params }: PageProps) {
                 )}
               </div>
             )}
+            {data.china_access && CHINA_ACCESS[data.china_access] && (
+              <span className={`inline-flex items-center rounded-lg border px-3 py-2 text-sm font-medium ${CHINA_ACCESS[data.china_access].cls}`}>
+                {isZh ? CHINA_ACCESS[data.china_access].zh : CHINA_ACCESS[data.china_access].en}
+              </span>
+            )}
           </div>
           {data.affiliate_url && (
             <p className="mt-3 text-xs leading-5 text-muted-foreground">
@@ -453,6 +465,17 @@ export default async function ToolDetailPage({ params }: PageProps) {
                 {isZh ? "价格区间" : "Price Range"}
               </div>
               <div className="font-semibold">{data.price_range}</div>
+            </div>
+          )}
+
+          {data.china_access && CHINA_ACCESS[data.china_access] && (
+            <div className="p-4 border rounded-lg">
+              <div className="text-sm text-muted-foreground mb-1">
+                {isZh ? "中国可用性" : "China Access"}
+              </div>
+              <div className="font-semibold">
+                {isZh ? CHINA_ACCESS[data.china_access].zh : CHINA_ACCESS[data.china_access].en}
+              </div>
             </div>
           )}
 

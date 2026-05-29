@@ -10,6 +10,7 @@ on:
     - cron: '45 16 * * *' # UTC 16:45 - Trend agent (intraday surge check)
     - cron: '0 2 * * *'   # UTC 02:00 - SEO articles
     - cron: '0 2 * * 1,4' # UTC 02:00 Mon,Thu - Compare articles
+    - cron: '50 19 * * *'  # UTC 19:50 - China-access agent (fill null verdicts)
     - cron: '0 20 * * *'   # UTC 20:00 - Analytics collection (delayed to allow GA4 to finalize previous day's data)
     - cron: '10 20 * * *'  # UTC 20:10 - Lookback agent (snapshot aging pages)
     - cron: '20 20 * * *'  # UTC 20:20 - Monitor agent (after analytics, before strategy)
@@ -31,6 +32,7 @@ on:
           - seo
           - compare
           - analytics
+          - china
           - lookback
           - monitor
           - strategy
@@ -164,6 +166,24 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python analytics_collector.py
+
+  # ─── Job 4b: China-access Agent ────────────────────────────────
+  # Judges each tool's mainland-China accessibility (jilo's differentiator).
+  china-access:
+    name: "🇨🇳 China-access Agent"
+    if: |
+      (github.event_name == 'schedule' && github.event.schedule == '50 19 * * *') ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'china'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python china_access_agent.py
 
   # ─── Job 5a: Lookback Agent ────────────────────────────────────
   # Snapshots how generated pages perform at 7/14/28 days old into
