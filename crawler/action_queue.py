@@ -11,7 +11,7 @@ Lifecycle a generator follows:
         except Exception as e:
             mark_failed(supabase, action, str(e))
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 
 PRIORITY_SCORE = {'high': 0, 'medium': 1, 'low': 2}
 
@@ -144,3 +144,27 @@ def resolve(supabase, dedup_key, result):
             'updated_at': _now(),
         }).eq('id', row['id']).execute()
     return len(rows.data or [])
+
+
+def recover_stale_in_progress(supabase, older_than_minutes=120):
+    """
+    Return stale in_progress actions to pending.
+
+    GitHub Actions can time out or be cancelled after a row is claimed. Without
+    this recovery pass, those rows stay in_progress forever and the queue stops
+    being self-healing.
+    """
+    cutoff = (datetime.utcnow() - timedelta(minutes=older_than_minutes)).isoformat()
+    rows = supabase.table('action_queue').select(
+        'id, action_type, dedup_key, attempts'
+    ).eq('status', 'in_progress').lt('picked_at', cutoff).execute()
+
+    recovered = 0
+    for row in (rows.data or []):
+        supabase.table('action_queue').update({
+            'status': 'pending',
+            'error_reason': f"auto-recovered stale in_progress after {older_than_minutes}m",
+            'updated_at': _now(),
+        }).eq('id', row['id']).eq('status', 'in_progress').execute()
+        recovered += 1
+    return recovered

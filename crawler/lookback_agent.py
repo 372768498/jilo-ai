@@ -1,10 +1,10 @@
-# crawler/lookback_agent.py
+﻿# crawler/lookback_agent.py
 #
 # Learning-feedback layer. When a generated page turns 7/14/28 days old,
 # snapshot how it's actually performing into page_performance_lookback.
 # Matches GSC/GA rows by slug substring, so it doesn't depend on the exact
-# route structure. Captures the baseline as pages age — data that can't be
-# reconstructed after the fact — so it runs from day one even at low traffic.
+# route structure. Captures the baseline as pages age 鈥?data that can't be
+# reconstructed after the fact 鈥?so it runs from day one even at low traffic.
 from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
@@ -14,11 +14,12 @@ from feishu_bot import send_feishu_alert
 
 # Content-type-aware cadence. GSC ranking data is inherently lagged (Google
 # needs days to index + accumulate search impressions), so fast feedback can
-# only come from GA pageviews — which is exactly what time-sensitive news
+# only come from GA pageviews 鈥?which is exactly what time-sensitive news
 # needs. Evergreen content takes weeks to rank, so slow buckets fit it.
 AGE_BUCKETS_BY_TYPE = {
-    'seo_article': [1, 3, 7],    # news / hot topics — watch GA pageviews early
-    'compare': [7, 14, 28],      # evergreen — watch GSC rankings over time
+    'seo_article': [1, 3, 7],
+    'aeo_answer': [1, 3, 7],
+    'compare': [7, 14, 28],
 }
 ALL_BUCKETS = sorted({b for buckets in AGE_BUCKETS_BY_TYPE.values() for b in buckets})
 
@@ -31,11 +32,11 @@ def _collect_pages(supabase):
     """All generated pages with a slug + publish date, tagged by content_type."""
     pages = []
     news = supabase.table('news').select(
-        'slug, published_at'
-    ).eq('news_type', 'seo_article').execute()
+        'slug, published_at, news_type'
+    ).in_('news_type', ['seo_article', 'aeo_answer']).execute()
     for r in (news.data or []):
         if r.get('slug') and r.get('published_at'):
-            pages.append({'content_type': 'seo_article', 'slug': r['slug'], 'published_at': r['published_at']})
+            pages.append({'content_type': r.get('news_type') or 'seo_article', 'slug': r['slug'], 'published_at': r['published_at']})
 
     cmp = supabase.table('compare_articles').select(
         'slug, published_at'
@@ -134,5 +135,5 @@ if __name__ == "__main__":
     except Exception as e:
         log_operation("lookback_agent", "error", str(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "回看 Agent 出错", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "鍥炵湅 Agent 鍑洪敊", str(e), "error")
         raise

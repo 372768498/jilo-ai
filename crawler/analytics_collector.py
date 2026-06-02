@@ -103,6 +103,47 @@ def collect_ga_data():
         except Exception as e:
             print(f"  GA4 site totals skipped: {e}")
 
+    # Query 3: referrer/sourceMedium breakdown. This is the external loop for
+    # answer-engine traffic (ChatGPT, Perplexity, Claude, Gemini, etc.).
+    ref_request = RunReportRequest(
+        property=f"properties/{GA_PROPERTY_ID}",
+        date_ranges=[DateRange(start_date=yesterday, end_date=yesterday)],
+        dimensions=[
+            Dimension(name="pagePath"),
+            Dimension(name="sessionSourceMedium"),
+        ],
+        metrics=[
+            Metric(name="screenPageViews"),
+            Metric(name="sessions"),
+            Metric(name="totalUsers"),
+        ],
+    )
+    ref_response = ga_client.run_report(ref_request)
+    for row in ref_response.rows:
+        source_medium = row.dimension_values[1].value
+        lower = source_medium.lower()
+        is_ai_source = any(
+            marker in lower
+            for marker in [
+                'chatgpt', 'openai', 'perplexity', 'claude', 'anthropic',
+                'gemini', 'copilot', 'you.com', 'phind', 'poe',
+            ]
+        )
+        if not is_ai_source:
+            continue
+        try:
+            supabase.table('analytics_referrers_daily').upsert({
+                'date': yesterday,
+                'page_path': row.dimension_values[0].value,
+                'source_medium': source_medium,
+                'pageviews': int(row.metric_values[0].value),
+                'sessions': int(row.metric_values[1].value),
+                'users': int(row.metric_values[2].value),
+                'source_type': 'ai_answer_engine',
+            }, on_conflict='date,page_path,source_medium').execute()
+        except Exception as e:
+            print(f"  AI referrer tracking skipped: {e}")
+
     return rows_saved
 
 

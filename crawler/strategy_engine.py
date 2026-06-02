@@ -17,10 +17,36 @@ def _slugify(text):
     return re.sub(r'[\s-]+', '-', s).strip('-')
 
 
+def _clean_tool_name(text):
+    """Extract the actual tool name from noisy GSC comparison queries."""
+    text = (text or '').lower().strip()
+    text = re.split(r'[:?|\-–—]', text, maxsplit=1)[0]
+    text = re.sub(r'\b(202[0-9]|which|wins?|better|best|review|comparison|compare)\b', '', text)
+    text = re.sub(r'\s+', ' ', text).strip(' "\'.,')
+    return text
+
+
+def parse_vs_query(query):
+    """Return (tool_a, tool_b) only for clean two-tool comparison intent."""
+    q = (query or '').lower().strip()
+    if ' vs ' not in q:
+        return None
+    left, right = q.split(' vs ', 1)
+    tool_a = _clean_tool_name(left)
+    tool_b = _clean_tool_name(right)
+    if not tool_a or not tool_b:
+        return None
+    if len(tool_a.split()) > 4 or len(tool_b.split()) > 4:
+        return None
+    return tool_a, tool_b
+
+
 def build_dedup_key(action):
     """Stable, normalized key so the same logical action is never enqueued twice."""
     t = action['type']
     if t == 'generate_seo_content':
+        if action.get('mode') == 'aeo':
+            return f"aeo:{_slugify(action['keyword'])}"
         if action.get('mode') == 'rewrite':
             return f"rewrite:{action['slug']}"
         if action.get('mode') == 'hub':
@@ -116,6 +142,8 @@ def route_to_hub(query):
     """Return the category slug a query belongs to, or None. Category-level
     queries are served by the hub, so they shouldn't spawn /news articles."""
     q = query.lower()
+    if 'video' in q and any(term in q for term in ['editor', 'editing software', 'editing tools']):
+        return None
     for slug, terms in CATEGORY_QUERY_TERMS.items():
         if any(term in q for term in terms):
             return slug
@@ -240,28 +268,32 @@ def check_vs_queries_without_articles():
         'impressions', desc=True
     ).limit(10).execute()
 
-    # Aggregate impressions by query (deduplicate multi-day rows)
+    # Aggregate impressions by clean two-tool query. Ignore noisy one-off
+    # article titles such as "figma vs adobe firefly: which ... wins in 2025".
     query_impressions = defaultdict(int)
     for q in (vs_queries.data or []):
         q_lower = q['query'].lower()
-        if ' vs ' in q_lower:
+        if parse_vs_query(q_lower):
             query_impressions[q_lower] += q['impressions']
 
     actions = []
     for query, total_impressions in sorted(query_impressions.items(), key=lambda x: -x[1])[:10]:
-        parts = query.split(' vs ')
-        if len(parts) != 2:
+        if total_impressions < 3:
             continue
+        pair = parse_vs_query(query)
+        if not pair:
+            continue
+        tool_a, tool_b = pair
 
-        slug_guess = f"{parts[0].strip()}-vs-{parts[1].strip()}".replace(' ', '-')
+        slug_guess = f"{tool_a}-vs-{tool_b}".replace(' ', '-')
         existing = supabase.table('compare_articles').select('id').ilike('slug', f'%{slug_guess}%').execute()
 
         if not existing.data:
             actions.append({
                 'type': 'generate_comparison',
-                'reason': f'搜索词 "{query}" 有 {total_impressions} 次曝光但还没有对比文章',
-                'tool_a': parts[0].strip(),
-                'tool_b': parts[1].strip(),
+                'reason': f'搜索词 "{query}" 有 {total_impressions} 次曝光但还没有干净的对比页',
+                'tool_a': tool_a,
+                'tool_b': tool_b,
                 'priority': 'medium',
             })
 

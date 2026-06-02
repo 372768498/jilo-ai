@@ -7,6 +7,7 @@ import time
 import re
 import json
 import hashlib
+import os
 from datetime import datetime
 from supabase import create_client
 from openai import OpenAI
@@ -16,7 +17,7 @@ from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
 
-ACTIONS_PER_RUN = 2
+ACTIONS_PER_RUN = int(os.getenv("SEO_ACTIONS_PER_RUN", "5"))
 
 
 def _get_openai_client():
@@ -133,6 +134,83 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
         return None
 
 
+def generate_aeo_answer(keyword, context=None):
+    """
+    Generate an answer-engine-optimized page: direct answer first, citation
+    snippets, comparison table, FAQ, and internal links.
+    """
+    context = context or {}
+    related_tools = get_related_tools(keyword)
+    tool_lines = [
+        f"- {t['name_en']} (slug: {t['slug']}, pricing: {t.get('pricing_type','freemium')})"
+        for t in related_tools[:12]
+    ]
+    tools_context = "\n".join(tool_lines) or "- No exact tool matches; keep recommendations general."
+
+    prompt = f"""Create an answer-engine-optimized page for this query: "{keyword}"
+
+Context from our growth system:
+{json.dumps(context, ensure_ascii=False)}
+
+Tools available in our directory. Link ONLY to these slugs:
+{tools_context}
+
+Goal:
+This page should be easy for Google, ChatGPT, Perplexity, Claude, Gemini, and Copilot-style answer engines to quote and link.
+
+Required structure for content_en as clean HTML (not markdown):
+1. <section class="aeo-short-answer"> with an <h2>Short answer</h2> and a 2-4 sentence direct answer.
+2. <section class="aeo-citation-snippets"> with <h2>Quick citation snippets</h2> and 3 short standalone <p> snippets that can be quoted.
+3. A comparison <table> with practical decision criteria.
+4. A "Best next step" section with internal links to /en/tools/<slug> where relevant.
+5. An FAQ section with 4-6 questions using <h3> question headings and concise answers.
+6. A final "Last updated" line for 2026.
+
+Required structure for content_zh: faithful Simplified Chinese HTML translation using /zh/tools/<slug> links.
+
+Rules:
+- Give a clear answer near the top. No throat-clearing.
+- Do not invent statistics, prices, case studies, benchmarks, or citations.
+- Mention uncertainty where current pricing/features may change.
+- Internal links must use exact paths: /en/tools/<slug> and /zh/tools/<slug>.
+- Keep content_en around 900-1500 words. Keep it useful and dense.
+
+Return a single JSON object with EXACTLY these keys:
+{{
+  "title_en": "SEO title including the query, max 80 chars",
+  "meta_description_en": "140-160 char meta description",
+  "content_en": "full English HTML",
+  "title_zh": "Chinese title",
+  "meta_description_zh": "80-110 char Chinese meta description",
+  "content_zh": "full Chinese HTML"
+}}"""
+
+    try:
+        response = _get_openai_client().chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You create concise answer-engine-optimized pages that are useful, citeable, and factual. Respond with one valid JSON object only."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.45,
+            max_tokens=9000,
+            response_format={"type": "json_object"},
+        )
+        data = json.loads(response.choices[0].message.content)
+        return {
+            'title_en': data.get('title_en', ''),
+            'meta_description_en': data.get('meta_description_en', ''),
+            'content_en': data.get('content_en', ''),
+            'title_zh': data.get('title_zh', ''),
+            'meta_description_zh': data.get('meta_description_zh', ''),
+            'content_zh': data.get('content_zh', ''),
+            'target_keyword': keyword,
+        }
+    except Exception as e:
+        print(f"  GPT-4o-mini AEO generation error: {e}")
+        return None
+
+
 def save_article(article, supabase):
     """
     Save SEO article to news table. Assumes quality_gates already passed,
@@ -159,6 +237,36 @@ def save_article(article, supabase):
         'source': 'jilo.ai SEO',
         'news_type': 'seo_article',
         'category_tags': ['seo_content'],
+        'status': 'published',
+        'content_hash': content_hash,
+        'published_at': datetime.utcnow().isoformat(),
+    }).execute()
+    return slug
+
+
+def save_aeo_answer(article, supabase):
+    content_hash = article['_content_hash']
+    slug_base = re.sub(r'[^a-z0-9\s-]', '', article.get('target_keyword', article['title_en']).lower())[:76]
+    slug = re.sub(r'[\s-]+', '-', slug_base).strip('-')
+    if not slug:
+        slug = re.sub(r'[^a-z0-9\s-]', '', article['title_en'].lower())[:76]
+        slug = re.sub(r'[\s-]+', '-', slug).strip('-')
+
+    existing_slug = supabase.table('news').select('id').eq('slug', slug).execute()
+    if existing_slug.data:
+        slug = f"{slug}-{content_hash[:6]}"
+
+    supabase.table('news').insert({
+        'slug': slug,
+        'title_en': article['title_en'],
+        'title_zh': article['title_zh'],
+        'summary_en': article['meta_description_en'],
+        'summary_zh': article['meta_description_zh'],
+        'content_en': article['content_en'],
+        'content_zh': article['content_zh'],
+        'source': 'jilo.ai AEO',
+        'news_type': 'aeo_answer',
+        'category_tags': ['aeo_answer', 'answer_engine'],
         'status': 'published',
         'content_hash': content_hash,
         'published_at': datetime.utcnow().isoformat(),
@@ -283,6 +391,41 @@ if __name__ == "__main__":
                         aq.mark_failed(supabase, action, str(hub_err))
                         failed += 1
                         print(f"  FAIL: {hub_err}")
+                    time.sleep(2)
+                    continue
+
+                if mode == 'aeo':
+                    print(f"\nAEO answer: {keyword}  (priority={action['priority']})")
+                    try:
+                        article = generate_aeo_answer(keyword, payload)
+                        if not article:
+                            aq.mark_failed(supabase, action, "AEO generation returned None")
+                            failed += 1
+                            continue
+                        gate = qg.check_aeo_answer(article, supabase)
+                        if not gate.ok:
+                            if gate.terminal:
+                                aq.mark_skipped(supabase, action, gate.reason)
+                                skipped += 1
+                                print(f"  SKIP: {gate.reason}")
+                            else:
+                                aq.mark_failed(supabase, action, gate.reason)
+                                failed += 1
+                                print(f"  FAIL gate: {gate.reason}")
+                            continue
+                        slug = save_aeo_answer(article, supabase)
+                        aq.mark_done(supabase, action, {
+                            'slug': slug,
+                            'title_en': article['title_en'],
+                            'keyword': keyword,
+                            'outcome': 'aeo_answer',
+                        })
+                        saved += 1
+                        print(f"  DONE (aeo_answer): {article['title_en'][:60]}")
+                    except Exception as aeo_err:
+                        aq.mark_failed(supabase, action, str(aeo_err))
+                        failed += 1
+                        print(f"  FAIL: {aeo_err}")
                     time.sleep(2)
                     continue
 

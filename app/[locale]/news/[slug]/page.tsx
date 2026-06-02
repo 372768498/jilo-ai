@@ -18,6 +18,7 @@ type NewsItem = {
   content_zh: string | null;
   source: string | null;
   source_url: string | null;
+  news_type: string | null;
   cover_url: string | null;
   cover_image_url: string | null;
   published_at: string | null;
@@ -26,6 +27,22 @@ type NewsItem = {
   tags_en: string[] | null;
   tags_zh: string[] | null;
 };
+
+function textOnly(value: string) {
+  return (value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function extractFaq(content: string) {
+  const faqs: Array<{ q: string; a: string }> = [];
+  const h3Regex = /<h3[^>]*>([\s\S]*?)<\/h3>([\s\S]*?)(?=<h3[^>]*>|<\/section>|$)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = h3Regex.exec(content || "")) && faqs.length < 8) {
+    const q = textOnly(match[1]);
+    const a = textOnly(match[2]);
+    if (q && a && q.length <= 160) faqs.push({ q, a: a.slice(0, 800) });
+  }
+  return faqs;
+}
 
 function coalesceByLocale(
   locale: string,
@@ -101,6 +118,7 @@ export default async function NewsDetailPage({ params }: PageProps) {
   const cover = (n.cover_url || n.cover_image_url) || "";
   const published = n.published_at ? new Date(n.published_at).toISOString() : undefined;
   const updated = n.updated_at ? new Date(n.updated_at).toISOString() : published;
+  const faqs = n.news_type === "aeo_answer" ? extractFaq(content) : [];
 
   // JSON-LD（Article）
   const jsonLd = {
@@ -122,6 +140,20 @@ export default async function NewsDetailPage({ params }: PageProps) {
       "@id": `https://www.jilo.ai/${locale}/news/${slug}`,
     },
   };
+  const faqJsonLd = faqs.length
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.q,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: faq.a,
+          },
+        })),
+      }
+    : null;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-10">
@@ -170,6 +202,12 @@ export default async function NewsDetailPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {faqJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      ) : null}
     </div>
   );
 }

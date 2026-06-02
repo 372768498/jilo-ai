@@ -2,9 +2,10 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+load_dotenv(".env.local")
 
 # Supabase
-SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 # OpenAI

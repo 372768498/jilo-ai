@@ -119,7 +119,7 @@ export async function BestToolsFallbackPage({ locale, slug, mode = "best" }: { l
   const readable = rule?.label || titleFromSlug(slug);
   const title = isZh ? `${readable} 推荐` : `Best ${readable}`;
   const subtitle = isZh
-    ? "这是一个兼容旧 SEO 链接的推荐页。Jilo.ai 会继续补充更完整的实测、价格和替代品信息。"
+    ? "这是一个先承接搜索需求的工具推荐页。Jilo.ai 会继续补充更完整的实测、价格、适合人群和替代方案。"
     : "This page keeps an indexed SEO URL useful while Jilo.ai expands the full review, pricing, and alternatives coverage.";
 
   return (

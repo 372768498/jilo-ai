@@ -27,6 +27,17 @@ MIN_SOURCES_PER_TOPIC = 2  # multi-source corroboration path
 ENGAGEMENT_THRESHOLD = 150 # OR single-source-but-very-hot path (HN points / Reddit upvotes)
 MAX_TOPICS = 3             # cap new high-priority work per run
 
+TOOL_INTENT_TERMS = [
+    'best ', ' vs ', 'alternative', 'alternatives', 'review', 'pricing',
+    'worth it', 'how to use', 'tutorial', 'tool', 'tools', 'editor',
+    'generator', 'software', 'platform', 'app', 'apps',
+]
+NOISE_TERMS = [
+    'traffic surge', 'features impact', 'future of ai', 'regulation',
+    'stock', 'earnings', 'policy', 'lawsuit', 'labeling', 'watermark',
+    'how to build ai models',
+]
+
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -35,6 +46,16 @@ def get_supabase():
 def _slugify(text):
     s = re.sub(r'[^a-z0-9\s-]', '', text.lower())
     return re.sub(r'[\s-]+', '-', s).strip('-')
+
+
+def has_tool_shopper_intent(keyword):
+    """Code-level guardrail so hot news does not become bad SEO work."""
+    k = (keyword or '').lower().strip()
+    if not k:
+        return False
+    if any(term in k for term in NOISE_TERMS):
+        return False
+    return any(term in k for term in TOOL_INTENT_TERMS)
 
 
 def fetch_rss_signals(supabase):
@@ -117,6 +138,9 @@ def enqueue_trends(supabase, trends):
         qualifies = len(sources) >= MIN_SOURCES_PER_TOPIC or peak >= ENGAGEMENT_THRESHOLD
         if not keyword or not qualifies:
             print(f"  [reject] {keyword or t.get('topic')}: {len(sources)} source(s), {peak} peak engagement")
+            continue
+        if not has_tool_shopper_intent(keyword):
+            print(f"  [reject intent] {keyword}: not a tool-shopper query")
             continue
         dedup_key = f"seo:{_slugify(keyword)}"
         if aq.enqueue(

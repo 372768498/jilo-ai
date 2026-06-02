@@ -6,6 +6,7 @@
 import time
 import re
 import json
+import os
 from datetime import datetime
 from supabase import create_client
 from openai import OpenAI
@@ -15,7 +16,7 @@ from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
 
-ACTIONS_PER_RUN = 1
+ACTIONS_PER_RUN = int(os.getenv("COMPARE_ACTIONS_PER_RUN", "2"))
 
 
 def _get_openai_client():

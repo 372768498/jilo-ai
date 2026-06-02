@@ -127,6 +127,21 @@ def check_seo_article(article, supabase, skip_dup=False):
     return _no_dup_news(supabase, article)
 
 
+def check_aeo_answer(article, supabase):
+    gates = [
+        lambda: _required(article, REQUIRED_BILINGUAL),
+        lambda: _title_max(article, 'title_en', 80),
+        lambda: _meta_desc_range(article, 'meta_description_en', 100, 170),
+        lambda: _content_min(article, 'content_en', 1200),
+        lambda: _bilingual_parity(article, 'content_en', 'content_zh', 0.25),
+    ]
+    for g in gates:
+        r = g()
+        if not r.ok:
+            return r
+    return _no_dup_news(supabase, article)
+
+
 def check_compare_article(article, supabase):
     required = REQUIRED_BILINGUAL + ['slug']
     gates = [

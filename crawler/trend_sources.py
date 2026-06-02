@@ -9,6 +9,7 @@
 # Every fetch is wrapped so one dead source never sinks the whole agent.
 import time
 import requests
+from bs4 import BeautifulSoup
 
 UA = "jilo-trend/1.0 (+https://jilo.ai)"
 TIMEOUT = 20
@@ -18,6 +19,13 @@ TIMEOUT = 20
 # philosophy, not tool signals.
 DEFAULT_SUBREDDITS = [
     "LocalLLaMA", "OpenAI", "StableDiffusion", "artificial", "ClaudeAI",
+    "ArtificialInteligence", "perplexity_ai", "SaaS", "SideProject",
+]
+
+AI_TERMS = [
+    "ai", "agent", "llm", "gpt", "claude", "gemini", "perplexity",
+    "copilot", "cursor", "runway", "sora", "kling", "midjourney",
+    "stable diffusion", "chatbot", "automation", "voice", "video generator",
 ]
 
 
@@ -81,8 +89,71 @@ def fetch_reddit(subreddits=None, min_score=80, limit=15):
     return items
 
 
+def _looks_ai_related(text):
+    t = (text or "").lower()
+    return any(term in t for term in AI_TERMS)
+
+
+def fetch_product_hunt(max_items=30):
+    """Product Hunt launch feed. Good for fresh tools before they rank."""
+    items = []
+    try:
+        r = requests.get("https://www.producthunt.com/feed", headers={"User-Agent": UA}, timeout=TIMEOUT)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "xml")
+        for item in soup.find_all("item")[:max_items]:
+            title = item.title.get_text(" ", strip=True) if item.title else ""
+            desc = item.description.get_text(" ", strip=True) if item.description else ""
+            if not _looks_ai_related(f"{title} {desc}"):
+                continue
+            link = item.link.get_text(strip=True) if item.link else "https://www.producthunt.com/"
+            items.append({
+                "title": title,
+                "source": "Product Hunt",
+                "engagement": 120,
+                "comments": 0,
+                "url": link,
+            })
+    except Exception as e:
+        print(f"  Product Hunt fetch failed: {e}")
+    return items
+
+
+def fetch_github_trending(max_items=20):
+    """GitHub trending AI repos. Useful for developer/tooling searches."""
+    items = []
+    try:
+        r = requests.get(
+            "https://github.com/trending?since=daily&spoken_language_code=en",
+            headers={"User-Agent": UA},
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        for article in soup.select("article.Box-row")[:max_items]:
+            title_el = article.select_one("h2 a")
+            if not title_el:
+                continue
+            repo = " ".join(title_el.get_text(" ", strip=True).split())
+            desc_el = article.select_one("p")
+            desc = desc_el.get_text(" ", strip=True) if desc_el else ""
+            if not _looks_ai_related(f"{repo} {desc}"):
+                continue
+            stars_text = article.get_text(" ", strip=True)
+            items.append({
+                "title": f"{repo}: {desc}" if desc else repo,
+                "source": "GitHub Trending",
+                "engagement": 100,
+                "comments": 0,
+                "url": f"https://github.com{title_el.get('href', '')}",
+            })
+    except Exception as e:
+        print(f"  GitHub Trending fetch failed: {e}")
+    return items
+
+
 def gather_engagement_signals():
     """All free engagement sources combined, sorted by engagement desc."""
-    items = fetch_hn() + fetch_reddit()
+    items = fetch_hn() + fetch_reddit() + fetch_product_hunt() + fetch_github_trending()
     items.sort(key=lambda x: x.get("engagement", 0), reverse=True)
     return items
