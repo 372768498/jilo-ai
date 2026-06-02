@@ -145,7 +145,7 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python seo_article_generator.py
         env:
-          SEO_ACTIONS_PER_RUN: "8"
+          SEO_ACTIONS_PER_RUN: "16"
 
   # 鈹€鈹€鈹€ Job 4: Compare Article Generator 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   compare-articles:
