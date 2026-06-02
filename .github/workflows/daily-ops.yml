@@ -29,6 +29,7 @@ on:
     - cron: '30 20 * * *'  # UTC 20:30 - Strategy engine
     - cron: '35 20 * * *'  # UTC 20:35 - Traffic growth controller
     - cron: '40 20 * * *'  # UTC 20:40 - Self-iteration agent
+    - cron: '50 20 * * *'  # UTC 20:50 - Autonomy guardian
     - cron: '0 21 * * *'   # UTC 21:00 - Daily report
     - cron: '5 21 * * *'   # UTC 21:05 - Manual blockers report
     - cron: '0 21 * * 1'   # UTC 21:00 Monday - Weekly report
@@ -53,6 +54,7 @@ on:
           - growth
           - indexnow
           - self
+          - autonomy
           - report
           - manual-blockers
           - weekly
@@ -315,6 +317,25 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python self_iteration_agent.py
 
+  autonomy-guardian:
+    name: "Autonomy Guardian"
+    if: |
+      always() && (
+        (github.event_name == 'schedule' && github.event.schedule == '50 20 * * *') ||
+        (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'autonomy'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [self-iteration, monitor-agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python autonomy_guardian_agent.py
+
   # 鈹€鈹€鈹€ Job 7: Daily Report 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   daily-report:
     name: "馃搵 Daily Report 鈫?Feishu"
@@ -392,6 +413,7 @@ jobs:
       - strategy-engine
       - traffic-growth
       - self-iteration
+      - autonomy-guardian
       - daily-report
       - weekly-report
       - manual-blockers-report
