@@ -171,7 +171,8 @@ def resolve_recovered_system_flags(supabase):
         if not subtype.startswith('system_') or not job_name:
             continue
         success_at = latest_success.get(job_name)
-        if not success_at or success_at <= (row.get('created_at') or ''):
+        error_seen_at = payload.get('first_seen_in_window') or row.get('created_at') or ''
+        if not success_at or success_at <= error_seen_at:
             continue
         supabase.table('action_queue').update({
             'status': 'done',
