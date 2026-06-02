@@ -9,6 +9,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $Stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $Log = Join-Path $LogDir "autonomous-growth-$Stamp.log"
 $Results = New-Object System.Collections.Generic.List[object]
+$StartedAt = Get-Date
 
 function Import-DotEnv {
   param([string]$Path)
@@ -65,16 +66,20 @@ function Run-Step {
   Add-Content -Path $Log -Value ""
   Add-Content -Path $Log -Value "===== $Name ====="
   Add-Content -Path $Log -Value "$(Get-Date -Format o)"
+  $stepStartedAt = Get-Date
   try {
     powershell -NoProfile -ExecutionPolicy Bypass -Command $Command 2>&1 |
       Tee-Object -FilePath $Log -Append
     $code = $LASTEXITCODE
     if ($null -eq $code) { $code = 0 }
-    $Results.Add([pscustomobject]@{ Name = $Name; ExitCode = $code }) | Out-Null
+    $durationSeconds = [int]((Get-Date) - $stepStartedAt).TotalSeconds
+    $Results.Add([pscustomobject]@{ Name = $Name; ExitCode = $code; DurationSeconds = $durationSeconds }) | Out-Null
     Add-Content -Path $Log -Value "ExitCode: $code"
+    Add-Content -Path $Log -Value "DurationSeconds: $durationSeconds"
   } catch {
     Add-Content -Path $Log -Value "FAILED: $($_.Exception.Message)"
-    $Results.Add([pscustomobject]@{ Name = $Name; ExitCode = 999 }) | Out-Null
+    $durationSeconds = [int]((Get-Date) - $stepStartedAt).TotalSeconds
+    $Results.Add([pscustomobject]@{ Name = $Name; ExitCode = 999; DurationSeconds = $durationSeconds }) | Out-Null
   }
 }
 
@@ -103,18 +108,21 @@ Add-Content -Path $Log -Value ""
 Add-Content -Path $Log -Value "Completed autonomous growth loop at $(Get-Date -Format o)"
 
 $failed = @($Results | Where-Object { $_.ExitCode -ne 0 })
+$totalDurationSeconds = [int]((Get-Date) - $StartedAt).TotalSeconds
 $summary = ($Results | ForEach-Object {
-  if ($_.ExitCode -eq 0) { "- 通过：$($_.Name)" } else { "- 失败（退出码 $($_.ExitCode)）：$($_.Name)" }
+  $minutes = [math]::Round($_.DurationSeconds / 60, 1)
+  if ($_.ExitCode -eq 0) { "- 通过：$($_.Name)（${minutes} 分钟）" } else { "- 失败（退出码 $($_.ExitCode)）：$($_.Name)（${minutes} 分钟）" }
 }) -join "`n"
+$totalMinutes = [math]::Round($totalDurationSeconds / 60, 1)
 
 if ($failed.Count -gt 0) {
   Send-Feishu `
     -Title "jilo.ai 自动增长循环完成：有失败" `
-    -Content "**时间：** $(Get-Date -Format o)`n`n**失败步骤：** $($failed.Count)`n`n$summary`n`n**日志：** $Log" `
+    -Content "**时间：** $(Get-Date -Format o)`n`n**总耗时：** ${totalMinutes} 分钟`n`n**失败步骤：** $($failed.Count)`n`n$summary`n`n**日志：** $Log" `
     -Color "yellow"
 } else {
   Send-Feishu `
     -Title "jilo.ai 自动增长循环完成：全部通过" `
-    -Content "**时间：** $(Get-Date -Format o)`n`n$summary`n`n**日志：** $Log" `
+    -Content "**时间：** $(Get-Date -Format o)`n`n**总耗时：** ${totalMinutes} 分钟`n`n$summary`n`n**日志：** $Log" `
     -Color "green"
 }

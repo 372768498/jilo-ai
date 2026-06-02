@@ -384,11 +384,14 @@ jobs:
           RUN_ATTEMPT: ${{ github.run_attempt }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
           NEEDS_JSON: ${{ toJson(needs) }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
         run: |
           python - <<'PY'
           import json
           import os
           import urllib.request
+          from datetime import datetime, timezone
 
           webhook = os.getenv("FEISHU_WEBHOOK_URL")
           if not webhook:
@@ -413,10 +416,35 @@ jobs:
           failed = []
           skipped = []
           succeeded = []
+          durations = {}
+          try:
+              jobs_url = f"https://api.github.com/repos/{os.getenv('REPOSITORY')}/actions/runs/{os.getenv('RUN_ID')}/jobs?per_page=100"
+              req = urllib.request.Request(
+                  jobs_url,
+                  headers={
+                      "Authorization": f"Bearer {os.getenv('GITHUB_TOKEN')}",
+                      "User-Agent": "jilo-ai-ops-heartbeat",
+                  },
+              )
+              with urllib.request.urlopen(req, timeout=10) as resp:
+                  jobs_data = json.loads(resp.read().decode("utf-8"))
+              for job in jobs_data.get("jobs", []):
+                  started = job.get("started_at")
+                  completed = job.get("completed_at")
+                  if not started or not completed:
+                      continue
+                  s = datetime.fromisoformat(started.replace("Z", "+00:00"))
+                  c = datetime.fromisoformat(completed.replace("Z", "+00:00"))
+                  durations[job.get("name")] = round((c - s).total_seconds() / 60, 1)
+          except Exception as e:
+              print(f"job duration fetch failed: {e}")
+
           for name, data in sorted(needs.items()):
               result = data.get("result") or "unknown"
               label = result_labels.get(result, result)
-              line = f"- {name}: {label}"
+              minutes = durations.get(name)
+              suffix = f"（{minutes} 分钟）" if minutes is not None else ""
+              line = f"- {name}: {label}{suffix}"
               if result == "success":
                   succeeded.append(line)
               elif result == "skipped":
@@ -437,6 +465,11 @@ jobs:
               template = "green"
               status = "本轮已完成，没有失败任务。"
 
+          run_minutes = None
+          all_minutes = [v for v in durations.values() if isinstance(v, (int, float))]
+          if all_minutes:
+              run_minutes = round(sum(all_minutes), 1)
+
           summary_parts = []
           if failed:
               summary_parts.append("**失败/异常任务：**\n" + "\n".join(failed))
@@ -452,6 +485,7 @@ jobs:
               f"**触发时间表：** {schedule}",
               f"**运行编号：** {os.getenv('RUN_ID')}（第 {os.getenv('RUN_ATTEMPT')} 次尝试）",
               f"**状态：** {status}",
+              f"**任务总耗时：** {run_minutes} 分钟" if run_minutes is not None else "**任务总耗时：** 暂未获取",
               f"**运行链接：** {os.getenv('RUN_URL')}",
               "",
               jobs_summary,
