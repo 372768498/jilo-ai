@@ -86,25 +86,25 @@ Send-Feishu `
   -Content "**时间：** $(Get-Date -Format o)`n`n**仓库：** $Repo`n`n**日志：** $Log" `
   -Color "blue"
 
-Run-Step "RSS news crawler" "python crawler/rss_news_crawler.py"
-Run-Step "Tool discovery" "python crawler/tool_discovery.py"
-Run-Step "Trend agent" "python crawler/trend_agent.py"
-Run-Step "Analytics collector" "python crawler/analytics_collector.py"
-Run-Step "Strategy engine" "python crawler/strategy_engine.py"
-Run-Step "Traffic growth agent" "python crawler/traffic_growth_agent.py"
-Run-Step "SEO/AEO generator" "`$env:SEO_ACTIONS_PER_RUN='8'; python crawler/seo_article_generator.py"
-Run-Step "Compare generator" "`$env:COMPARE_ACTIONS_PER_RUN='5'; python crawler/compare_article_generator.py"
-Run-Step "IndexNow submitter" "python crawler/indexnow_submitter.py"
-Run-Step "Lookback agent" "python crawler/lookback_agent.py"
-Run-Step "Monitor agent" "python crawler/monitor_agent.py"
-Run-Step "Self-iteration agent" "python crawler/self_iteration_agent.py"
+Run-Step "新闻抓取" "python crawler/rss_news_crawler.py"
+Run-Step "工具发现" "python crawler/tool_discovery.py"
+Run-Step "热点探测" "python crawler/trend_agent.py"
+Run-Step "数据采集" "python crawler/analytics_collector.py"
+Run-Step "策略引擎" "python crawler/strategy_engine.py"
+Run-Step "PV 增长控制器" "python crawler/traffic_growth_agent.py"
+Run-Step "SEO/AEO 内容生成" "`$env:SEO_ACTIONS_PER_RUN='8'; python crawler/seo_article_generator.py"
+Run-Step "对比文章生成" "`$env:COMPARE_ACTIONS_PER_RUN='5'; python crawler/compare_article_generator.py"
+Run-Step "IndexNow 提交" "python crawler/indexnow_submitter.py"
+Run-Step "页面表现回看" "python crawler/lookback_agent.py"
+Run-Step "变现/系统监控" "python crawler/monitor_agent.py"
+Run-Step "自修复/自迭代" "python crawler/self_iteration_agent.py"
 
 Add-Content -Path $Log -Value ""
 Add-Content -Path $Log -Value "Completed autonomous growth loop at $(Get-Date -Format o)"
 
 $failed = @($Results | Where-Object { $_.ExitCode -ne 0 })
 $summary = ($Results | ForEach-Object {
-  if ($_.ExitCode -eq 0) { "- OK: $($_.Name)" } else { "- FAIL($($_.ExitCode)): $($_.Name)" }
+  if ($_.ExitCode -eq 0) { "- 通过：$($_.Name)" } else { "- 失败（退出码 $($_.ExitCode)）：$($_.Name)" }
 }) -join "`n"
 
 if ($failed.Count -gt 0) {

@@ -394,13 +394,20 @@ jobs:
               print("FEISHU_WEBHOOK_URL not configured; heartbeat skipped")
               raise SystemExit(0)
 
-          schedule = os.getenv("EVENT_SCHEDULE") or "manual"
+          event_name = os.getenv("EVENT_NAME") or "unknown"
+          schedule = os.getenv("EVENT_SCHEDULE") or "手动/推送触发"
+          trigger_label = {
+              "schedule": "定时任务",
+              "workflow_dispatch": "手动运行",
+              "push": "代码推送",
+          }.get(event_name, event_name)
           content = "\n".join([
-              f"**Workflow:** {os.getenv('WORKFLOW')}",
-              f"**Trigger:** {os.getenv('EVENT_NAME')} / {schedule}",
-              f"**Run:** {os.getenv('RUN_ID')} attempt {os.getenv('RUN_ATTEMPT')}",
-              f"**Status:** workflow reached heartbeat job",
-              f"**URL:** {os.getenv('RUN_URL')}",
+              f"**流水线：** {os.getenv('WORKFLOW')}",
+              f"**触发方式：** {trigger_label}",
+              f"**触发时间表：** {schedule}",
+              f"**运行编号：** {os.getenv('RUN_ID')}（第 {os.getenv('RUN_ATTEMPT')} 次尝试）",
+              "**状态：** 已跑到心跳通知步骤；如果上游任务失败或跳过，也可以通过下面链接查看明细。",
+              f"**运行链接：** {os.getenv('RUN_URL')}",
           ])
           payload = {
               "msg_type": "interactive",
