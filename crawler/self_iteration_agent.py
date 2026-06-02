@@ -72,6 +72,20 @@ def classify_error(job_name, message):
             'summary': 'OPENAI_API_KEY is missing',
             'repair_hint': 'Add OPENAI_API_KEY to GitHub Actions secrets.',
         }
+    if 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' in msg:
+        return {
+            'subtype': 'system_env_missing',
+            'priority': 'high',
+            'summary': 'GOOGLE_SERVICE_ACCOUNT_JSON is missing',
+            'repair_hint': 'Add GOOGLE_SERVICE_ACCOUNT_JSON to GitHub Actions secrets, or disable analytics-dependent decisions.',
+        }
+    if '_ssl.c' in msg or 'SSL:' in msg or 'handshake operation timed out' in msg:
+        return {
+            'subtype': 'system_transient_network',
+            'priority': 'medium',
+            'summary': f'{job_name} hit a transient network/SSL failure',
+            'repair_hint': 'Rerun automatically on the next schedule; only escalate if it remains unresolved after the next successful run window.',
+        }
     if '403 Client Error' in msg and 'googleapis.com' in msg:
         return {
             'subtype': 'system_external_access',
@@ -129,6 +143,50 @@ def open_system_error_flags(supabase):
             opened += 1
             print(f"  [SYSTEM FLAG {info['priority'].upper()}] {job}: {info['summary']}")
     return opened
+
+
+def resolve_recovered_system_flags(supabase):
+    """Close system error flags once the same job has a later success log."""
+    since = (datetime.utcnow() - timedelta(hours=ERROR_LOOKBACK_HOURS)).isoformat()
+    logs = supabase.table('ops_logs').select(
+        'job_name, status, created_at'
+    ).gte('created_at', since).order('created_at', desc=False).limit(200).execute()
+
+    latest_success = {}
+    for row in (logs.data or []):
+        if row.get('status') == 'success':
+            latest_success[row.get('job_name')] = row.get('created_at')
+
+    rows = supabase.table('action_queue').select(
+        'id, payload, created_at'
+    ).eq('action_type', 'flag_for_review').in_(
+        'status', ['pending', 'in_progress']
+    ).execute()
+
+    resolved = 0
+    for row in (rows.data or []):
+        payload = row.get('payload') or {}
+        subtype = payload.get('subtype') or ''
+        job_name = payload.get('job_name')
+        if not subtype.startswith('system_') or not job_name:
+            continue
+        success_at = latest_success.get(job_name)
+        if not success_at or success_at <= (row.get('created_at') or ''):
+            continue
+        supabase.table('action_queue').update({
+            'status': 'done',
+            'result': {
+                'resolved': 'job later succeeded',
+                'job_name': job_name,
+                'success_at': success_at,
+            },
+            'completed_at': _now(),
+            'updated_at': _now(),
+        }).eq('id', row['id']).execute()
+        resolved += 1
+    if resolved:
+        print(f"  Resolved {resolved} recovered system error flag(s)")
+    return resolved
 
 
 def recover_stale_actions(supabase):
@@ -206,6 +264,7 @@ def run():
     steps = [
         ('stale_recovered', recover_stale_actions),
         ('system_flags_opened', open_system_error_flags),
+        ('system_flags_resolved', resolve_recovered_system_flags),
         ('backlog_flags_opened_or_resolved', open_backlog_flags),
     ]
     for name, fn in steps:

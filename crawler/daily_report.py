@@ -6,6 +6,19 @@ from feishu_bot import send_feishu_card
 from ops_logger import log_operation
 
 
+def unresolved_errors(logs):
+    """Return only errors that have not been followed by a success for the same job today."""
+    latest_by_job = {}
+    for log in sorted(logs, key=lambda r: r.get('created_at') or ''):
+        latest_by_job[log.get('job_name') or 'unknown'] = log
+
+    errors = []
+    for job_name, log in latest_by_job.items():
+        if log.get('status') == 'error':
+            errors.append(f"{job_name}: {log.get('message')}")
+    return errors
+
+
 def get_today_stats():
     """Get today's content + analytics stats."""
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -15,6 +28,7 @@ def get_today_stats():
 
     # Content stats from ops_logs
     logs = supabase.table('ops_logs').select('*').gte('created_at', f'{today}T00:00:00Z').execute()
+    log_rows = logs.data or []
     stats = {
         'news_saved': 0,
         'news_skipped': 0,
@@ -25,11 +39,11 @@ def get_today_stats():
         'affiliate_clicks': 0,
         'errors': [],
     }
-    for log in (logs.data or []):
+    for log in log_rows:
         details = log.get('details', {})
         if log['status'] == 'error':
-            stats['errors'].append(f"{log['job_name']}: {log['message']}")
-        elif log['job_name'] == 'news_crawler':
+            continue
+        if log['job_name'] == 'news_crawler':
             stats['news_saved'] += details.get('saved', 0)
             stats['news_skipped'] += details.get('skipped', 0)
         elif log['job_name'] == 'tool_discovery':
@@ -42,6 +56,7 @@ def get_today_stats():
             stats['outbound_clicks'] += 1
             if details.get('has_affiliate'):
                 stats['affiliate_clicks'] += 1
+    stats['errors'] = unresolved_errors(log_rows)
 
     tools = supabase.table('tools').select('id, affiliate_url').eq('status', 'published').execute()
     stats['affiliate_tools'] = sum(1 for t in (tools.data or []) if t.get('affiliate_url'))
