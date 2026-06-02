@@ -2,6 +2,9 @@
 name: Daily Ops Pipeline
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 0 * * *'   # UTC 00:00 - News crawler
     - cron: '30 0 * * *'  # UTC 00:30 - Tool discovery
