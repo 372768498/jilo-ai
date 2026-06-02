@@ -10,6 +10,7 @@ Pipelines (check_seo_article, check_compare_article) run gates in order
 and short-circuit on first failure so the failure reason is specific.
 """
 import hashlib
+import re
 
 
 class GateResult:
@@ -53,6 +54,16 @@ def _content_min(article, field, lo):
     n = _len(article.get(field))
     if n < lo:
         return GateResult(False, f"{field} {n} chars < {lo} min")
+    return OK
+
+
+def _no_unrequested_stale_year(article, field):
+    text = article.get(field) or ''
+    keyword = article.get('target_keyword') or ''
+    stale_years = re.findall(r'\b20(?:2[0-5])\b', text)
+    for year in stale_years:
+        if year not in keyword:
+            return GateResult(False, f"{field} contains stale year {year} not present in target keyword")
     return OK
 
 
@@ -131,6 +142,7 @@ def check_aeo_answer(article, supabase):
     gates = [
         lambda: _required(article, REQUIRED_BILINGUAL),
         lambda: _title_max(article, 'title_en', 80),
+        lambda: _no_unrequested_stale_year(article, 'title_en'),
         lambda: _meta_desc_range(article, 'meta_description_en', 100, 170),
         lambda: _content_min(article, 'content_en', 1200),
         lambda: _bilingual_parity(article, 'content_en', 'content_zh', 0.25),

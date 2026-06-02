@@ -158,6 +158,8 @@ Tools available in our directory. Link ONLY to these slugs:
 Goal:
 This page should be easy for Google, ChatGPT, Perplexity, Claude, Gemini, and Copilot-style answer engines to quote and link.
 
+Current year is 2026. Do not put 2025, 2024, 2023, or older years in titles unless the user query itself contains that year.
+
 Required structure for content_en as clean HTML (not markdown):
 1. <section class="aeo-short-answer"> with an <h2>Short answer</h2> and a 2-4 sentence direct answer.
 2. <section class="aeo-citation-snippets"> with <h2>Quick citation snippets</h2> and 3 short standalone <p> snippets that can be quoted.
