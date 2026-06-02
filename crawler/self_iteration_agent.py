@@ -22,6 +22,13 @@ BACKLOG_LIMITS = {
     'flag_for_review': 80,
 }
 
+REQUIRED_TABLES = [
+    ('analytics_site_daily', 'scripts/create-ops-tables.sql'),
+    ('analytics_referrers_daily', 'scripts/create-ai-referrers.sql'),
+    ('action_queue', 'scripts/create-action-queue.sql'),
+    ('page_performance_lookback', 'scripts/create-page-lookback.sql'),
+]
+
 ACTIVE_OPS_JOBS = {
     'analytics_collector',
     'compare_articles',
@@ -150,11 +157,11 @@ def resolve_recovered_system_flags(supabase):
     since = (datetime.utcnow() - timedelta(hours=ERROR_LOOKBACK_HOURS)).isoformat()
     logs = supabase.table('ops_logs').select(
         'job_name, status, created_at'
-    ).gte('created_at', since).order('created_at', desc=False).limit(200).execute()
+    ).gte('created_at', since).order('created_at', desc=True).limit(1000).execute()
 
     latest_success = {}
     for row in (logs.data or []):
-        if row.get('status') == 'success':
+        if row.get('status') == 'success' and row.get('job_name') not in latest_success:
             latest_success[row.get('job_name')] = row.get('created_at')
 
     rows = supabase.table('action_queue').select(
@@ -237,6 +244,38 @@ def open_backlog_flags(supabase):
     return opened
 
 
+def open_schema_health_flags(supabase):
+    opened = 0
+    for table_name, migration_script in REQUIRED_TABLES:
+        try:
+            supabase.table(table_name).select('*').limit(1).execute()
+            aq.resolve(
+                supabase,
+                f"flag:system:schema:{table_name}",
+                {'resolved': 'required table exists', 'table': table_name},
+            )
+            continue
+        except Exception as e:
+            message = str(e)
+        if aq.enqueue(
+            supabase,
+            action_type='flag_for_review',
+            payload={
+                'subtype': 'system_schema_missing',
+                'table_name': table_name,
+                'message': message[:1000],
+                'migration_script': migration_script,
+                'repair_hint': f'Run {migration_script} in Supabase SQL editor.',
+            },
+            reason=f'Required table {table_name} is missing or unavailable; run {migration_script}.',
+            priority='high',
+            dedup_key=f"flag:system:schema:{table_name}",
+        ):
+            opened += 1
+            print(f"  [SCHEMA FLAG] {table_name}: {migration_script}")
+    return opened
+
+
 def write_learning_snapshot(supabase, results):
     today = datetime.utcnow().strftime('%Y-%m-%d')
     payload = {
@@ -266,6 +305,7 @@ def run():
         ('stale_recovered', recover_stale_actions),
         ('system_flags_opened', open_system_error_flags),
         ('system_flags_resolved', resolve_recovered_system_flags),
+        ('schema_flags_opened_or_resolved', open_schema_health_flags),
         ('backlog_flags_opened_or_resolved', open_backlog_flags),
     ]
     for name, fn in steps:

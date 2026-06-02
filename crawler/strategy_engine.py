@@ -421,8 +421,8 @@ def check_gsc_page_rewrite_opportunities():
     return actions[:10]
 
 
-def check_high_bounce_pages():
-    """Find pages with bounce rate > 80% that need attention."""
+def check_high_bounce_pages_legacy():
+    """Legacy implementation kept only for audit; runtime uses check_high_bounce_pages below."""
     supabase = get_supabase()
     week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
 

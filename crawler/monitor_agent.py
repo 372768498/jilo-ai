@@ -15,6 +15,7 @@ import action_queue as aq
 
 # Below this click count an affiliate application isn't worth the effort yet.
 MIN_CLICKS = 5
+MAX_ACTIVE_MONETIZATION_FLAGS = 25
 
 
 def _priority(clicks):
@@ -38,6 +39,15 @@ def check_monetization_gaps(supabase):
 
     opened = 0
     resolved = 0
+    candidates = []
+    for t in (tools.data or []):
+        clicks = t.get('click_count') or 0
+        has_affiliate = bool((t.get('affiliate_url') or '').strip())
+        if not has_affiliate and clicks >= MIN_CLICKS:
+            candidates.append(t)
+    candidates.sort(key=lambda t: t.get('click_count') or 0, reverse=True)
+    active_slugs = {t['slug'] for t in candidates[:MAX_ACTIVE_MONETIZATION_FLAGS]}
+
     for t in (tools.data or []):
         slug = t['slug']
         clicks = t.get('click_count') or 0
@@ -48,7 +58,7 @@ def check_monetization_gaps(supabase):
             resolved += aq.resolve(supabase, dedup_key, {'resolved': 'affiliate_url added'})
             continue
 
-        if clicks >= MIN_CLICKS:
+        if clicks >= MIN_CLICKS and slug in active_slugs:
             name = t.get('name_en') or slug
             priority = _priority(clicks)
             if aq.enqueue(
@@ -62,6 +72,16 @@ def check_monetization_gaps(supabase):
             ):
                 opened += 1
                 print(f"  [FLAG {priority.upper()}] {name}: {clicks} clicks, no affiliate")
+        elif clicks >= MIN_CLICKS:
+            resolved += aq.resolve(
+                supabase,
+                dedup_key,
+                {
+                    'resolved': 'below active monetization priority window',
+                    'click_count': clicks,
+                    'active_limit': MAX_ACTIVE_MONETIZATION_FLAGS,
+                },
+            )
 
     return opened, resolved
 
