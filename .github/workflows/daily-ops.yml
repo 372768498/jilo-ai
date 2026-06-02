@@ -383,6 +383,7 @@ jobs:
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          NEEDS_JSON: ${{ toJson(needs) }}
         run: |
           python - <<'PY'
           import json
@@ -396,25 +397,71 @@ jobs:
 
           event_name = os.getenv("EVENT_NAME") or "unknown"
           schedule = os.getenv("EVENT_SCHEDULE") or "手动/推送触发"
+          needs = json.loads(os.getenv("NEEDS_JSON") or "{}")
           trigger_label = {
               "schedule": "定时任务",
               "workflow_dispatch": "手动运行",
               "push": "代码推送",
           }.get(event_name, event_name)
+
+          result_labels = {
+              "success": "成功",
+              "failure": "失败",
+              "cancelled": "取消",
+              "skipped": "跳过",
+          }
+          failed = []
+          skipped = []
+          succeeded = []
+          for name, data in sorted(needs.items()):
+              result = data.get("result") or "unknown"
+              label = result_labels.get(result, result)
+              line = f"- {name}: {label}"
+              if result == "success":
+                  succeeded.append(line)
+              elif result == "skipped":
+                  skipped.append(line)
+              else:
+                  failed.append(line)
+
+          if failed:
+              title = "jilo.ai 自动增长流水线：有失败"
+              template = "red"
+              status = f"有 {len(failed)} 个任务失败/异常，需要查看运行链接。"
+          elif event_name == "push":
+              title = "jilo.ai 自动增长流水线：心跳成功"
+              template = "green"
+              status = "代码推送触发，仅心跳任务执行成功；业务增长任务会按定时任务运行。"
+          else:
+              title = "jilo.ai 自动增长流水线：本轮完成"
+              template = "green"
+              status = "本轮已完成，没有失败任务。"
+
+          summary_parts = []
+          if failed:
+              summary_parts.append("**失败/异常任务：**\n" + "\n".join(failed))
+          if succeeded:
+              summary_parts.append("**成功任务：**\n" + "\n".join(succeeded[:20]))
+          if skipped:
+              summary_parts.append("**跳过任务：**\n" + "\n".join(skipped[:20]))
+          jobs_summary = "\n\n".join(summary_parts) or "无上游任务结果。"
+
           content = "\n".join([
               f"**流水线：** {os.getenv('WORKFLOW')}",
               f"**触发方式：** {trigger_label}",
               f"**触发时间表：** {schedule}",
               f"**运行编号：** {os.getenv('RUN_ID')}（第 {os.getenv('RUN_ATTEMPT')} 次尝试）",
-              "**状态：** 已跑到心跳通知步骤；如果上游任务失败或跳过，也可以通过下面链接查看明细。",
+              f"**状态：** {status}",
               f"**运行链接：** {os.getenv('RUN_URL')}",
+              "",
+              jobs_summary,
           ])
           payload = {
               "msg_type": "interactive",
               "card": {
                   "header": {
-                      "title": {"tag": "plain_text", "content": "jilo.ai 自动增长流水线心跳"},
-                      "template": "green",
+                      "title": {"tag": "plain_text", "content": title},
+                      "template": template,
                   },
                   "elements": [{"tag": "markdown", "content": content}],
               },
