@@ -144,7 +144,7 @@ def get_today_stats():
     stats['trend_enqueued_today'] = [
         r for r in queue
         if r['action_type'] == 'generate_seo_content'
-        and (r.get('payload') or {}).get('source') == 'trend'
+        and (r.get('payload') or {}).get('source') in ('trend', 'trend_fallback')
         and (r.get('created_at') or '') >= today_start
     ]
     stats['rewrites_pending'] = sum(

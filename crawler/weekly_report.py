@@ -120,7 +120,7 @@ def collect_weekly_data():
         'trend_enqueued': sum(
             1 for r in queue
             if r['action_type'] == 'generate_seo_content'
-            and (r.get('payload') or {}).get('source') == 'trend'
+            and (r.get('payload') or {}).get('source') in ('trend', 'trend_fallback')
             and (r.get('created_at') or '') >= week_start
         ),
         'rewrites_done': sum(

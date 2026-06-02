@@ -188,6 +188,39 @@ OPP_POS_MIN = 11           # not already top-10 (those are winning, leave them)
 OPP_POS_MAX = 80           # ranking exists but poor; beyond this it's noise
 OPP_MAX_PER_RUN = 10       # cap new evergreen targets per run
 
+FORCED_AEO_QUERIES = [
+    {
+        'keyword': 'best ai video editor',
+        'reason': 'Forced growth query: high-intent video-editor demand already appears in GSC and needs an AEO answer page',
+        'priority': 'high',
+    },
+    {
+        'keyword': 'best ai video editing tools',
+        'reason': 'Forced growth query: video editing tool shoppers need a citeable answer page',
+        'priority': 'high',
+    },
+    {
+        'keyword': 'kling ai vs runway gen-3 vs luma dream machine vs sora',
+        'reason': 'Forced growth query: multi-tool video model comparison is better served as an AEO decision page',
+        'priority': 'high',
+    },
+]
+
+FORCED_COMPARE_QUERIES = [
+    {
+        'tool_a': 'Claude',
+        'tool_b': 'ChatGPT',
+        'reason': 'Forced growth query: claude vs chatgpt has GSC exposure and needs a dedicated comparison page',
+        'priority': 'high',
+    },
+    {
+        'tool_a': 'HeyGen',
+        'tool_b': 'Synthesia',
+        'reason': 'Forced growth query: heygen vs synthesia has GSC exposure and needs a dedicated comparison page',
+        'priority': 'medium',
+    },
+]
+
 
 def _opp_priority(impressions):
     if impressions >= 20:
@@ -195,6 +228,30 @@ def _opp_priority(impressions):
     if impressions >= 10:
         return 'medium'
     return 'low'
+
+
+def check_forced_growth_queries():
+    """Seed known high-intent growth targets until the queue has handled them."""
+    actions = []
+    for item in FORCED_AEO_QUERIES:
+        actions.append({
+            'type': 'generate_seo_content',
+            'mode': 'aeo',
+            'keyword': item['keyword'],
+            'reason': item['reason'],
+            'priority': item['priority'],
+            'source': 'forced_growth',
+        })
+    for item in FORCED_COMPARE_QUERIES:
+        actions.append({
+            'type': 'generate_comparison',
+            'tool_a': item['tool_a'],
+            'tool_b': item['tool_b'],
+            'reason': item['reason'],
+            'priority': item['priority'],
+            'source': 'forced_growth',
+        })
+    return actions
 
 
 def check_keyword_opportunities():
@@ -300,6 +357,70 @@ def check_vs_queries_without_articles():
     return actions
 
 
+def _slug_from_page(page):
+    path = (page or '').split('?', 1)[0].rstrip('/')
+    parts = [p for p in path.split('/') if p]
+    if len(parts) < 3:
+        return None
+    if parts[-2] in ('news', 'answers'):
+        return parts[-1]
+    return None
+
+
+def check_gsc_page_rewrite_opportunities():
+    """
+    Queue rewrites from direct GSC evidence, not only age-bucket lookback.
+    Young sites need this because 7-day/30-impression thresholds starve rewrites.
+    """
+    supabase = get_supabase()
+    since = (datetime.utcnow() - timedelta(days=14)).strftime('%Y-%m-%d')
+    rows = supabase.table('search_console_daily').select(
+        'query, page, impressions, clicks, position'
+    ).gte('date', since).execute()
+
+    by_slug = defaultdict(lambda: {'impr': 0, 'clicks': 0, 'wpos': 0.0, 'queries': defaultdict(int)})
+    for row in (rows.data or []):
+        slug = _slug_from_page(row.get('page'))
+        if not slug:
+            continue
+        impressions = row.get('impressions') or 0
+        if impressions <= 0:
+            continue
+        by_slug[slug]['impr'] += impressions
+        by_slug[slug]['clicks'] += row.get('clicks') or 0
+        by_slug[slug]['wpos'] += (row.get('position') or 0) * impressions
+        by_slug[slug]['queries'][row.get('query') or slug.replace('-', ' ')] += impressions
+
+    actions = []
+    cutoff = (datetime.utcnow() - timedelta(days=REWRITE_COOLDOWN_DAYS)).isoformat()
+    for slug, data in by_slug.items():
+        impressions = data['impr']
+        if impressions < 3:
+            continue
+        position = data['wpos'] / impressions if impressions else 999
+        ctr = data['clicks'] / impressions if impressions else 0.0
+        if not (data['clicks'] == 0 and (position >= 25 or impressions >= 5)):
+            continue
+
+        recent = supabase.table('action_queue').select('id').eq(
+            'dedup_key', f'rewrite:{slug}'
+        ).in_('status', ['pending', 'in_progress', 'done']).gte('updated_at', cutoff).execute()
+        if recent.data:
+            continue
+
+        top_query = max(data['queries'].items(), key=lambda x: x[1])[0]
+        actions.append({
+            'type': 'generate_seo_content',
+            'mode': 'rewrite',
+            'slug': slug,
+            'content_type': 'seo_article',
+            'keyword': top_query,
+            'reason': f'GSC rewrite: /news/{slug} has {impressions} impressions, pos {position:.1f}, CTR {ctr:.1%}; refresh for "{top_query}"',
+            'priority': 'high' if impressions >= 10 else 'medium',
+        })
+    return actions[:10]
+
+
 def check_high_bounce_pages():
     """Find pages with bounce rate > 80% that need attention."""
     supabase = get_supabase()
@@ -329,6 +450,50 @@ def check_high_bounce_pages():
                 'page': page_path,
                 'priority': 'low',
             })
+
+    return actions
+
+
+def check_high_bounce_pages():
+    """Turn high-bounce pages into automatic queue work where safe."""
+    supabase = get_supabase()
+    week_ago = (datetime.utcnow() - timedelta(days=7)).strftime('%Y-%m-%d')
+
+    raw = supabase.table('analytics_daily').select(
+        'page_path, bounce_rate, pageviews'
+    ).gte('date', week_ago).execute()
+
+    page_bounce = defaultdict(list)
+    page_views = defaultdict(int)
+    for r in (raw.data or []):
+        page_bounce[r['page_path']].append(r['bounce_rate'])
+        page_views[r['page_path']] += r['pageviews']
+
+    actions = []
+    for page_path, bounce_rates in page_bounce.items():
+        if page_views[page_path] < 10:
+            continue
+        avg_bounce = sum(bounce_rates) / len(bounce_rates)
+        if avg_bounce <= 0.8:
+            continue
+        if page_path.rstrip('/') in ('/zh/tools', '/en/tools'):
+            locale = 'zh' if page_path.startswith('/zh/') else 'en'
+            actions.append({
+                'type': 'generate_seo_content',
+                'mode': 'aeo',
+                'keyword': 'best ai tools directory' if locale == 'en' else 'best ai tools for Chinese users',
+                'source': 'high_bounce_tools_index',
+                'page': page_path,
+                'reason': f'{page_path} bounce rate is {avg_bounce:.0%}; create a citeable tools-directory answer page and route tool shoppers into deeper pages',
+                'priority': 'high',
+            })
+            continue
+        actions.append({
+            'type': 'flag_for_review',
+            'reason': f'High bounce page {page_path}: {avg_bounce:.0%}; needs manual UX review',
+            'page': page_path,
+            'priority': 'low',
+        })
 
     return actions
 
@@ -403,11 +568,13 @@ if __name__ == "__main__":
     print("Starting L2 strategy engine...")
     try:
         all_actions = []
+        all_actions.extend(check_forced_growth_queries())
         all_actions.extend(check_empty_hubs())
         all_actions.extend(check_keyword_opportunities())
         all_actions.extend(check_vs_queries_without_articles())
         all_actions.extend(check_high_bounce_pages())
         all_actions.extend(check_underperforming_pages())
+        all_actions.extend(check_gsc_page_rewrite_opportunities())
 
         print(f"\nFound {len(all_actions)} actions:")
         enqueued = execute_actions(all_actions)

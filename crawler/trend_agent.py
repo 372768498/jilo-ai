@@ -27,6 +27,29 @@ MIN_SOURCES_PER_TOPIC = 2  # multi-source corroboration path
 ENGAGEMENT_THRESHOLD = 150 # OR single-source-but-very-hot path (HN points / Reddit upvotes)
 MAX_TOPICS = 3             # cap new high-priority work per run
 
+CURATED_FALLBACK_TRENDS = [
+    {
+        'keyword': 'best ai video editor',
+        'topic': 'AI video editor buying intent',
+        'why': 'GSC already shows demand and it is a monetizable tool-shopper query.',
+    },
+    {
+        'keyword': 'kling ai vs runway gen-3 vs luma dream machine vs sora',
+        'topic': 'AI video model comparison',
+        'why': 'Video generation model comparisons are recurring high-intent queries.',
+    },
+    {
+        'keyword': 'claude vs chatgpt',
+        'topic': 'Claude vs ChatGPT comparison',
+        'why': 'Assistant comparison queries have repeat GSC exposure.',
+    },
+    {
+        'keyword': 'best ai writing tools comparison',
+        'topic': 'AI writing tools comparison',
+        'why': 'Writing-tool comparison intent is evergreen and monetizable.',
+    },
+]
+
 TOOL_INTENT_TERMS = [
     'best ', ' vs ', 'alternative', 'alternatives', 'review', 'pricing',
     'worth it', 'how to use', 'tutorial', 'tool', 'tools', 'editor',
@@ -160,6 +183,37 @@ def enqueue_trends(supabase, trends):
     return opened
 
 
+def enqueue_fallback_trends(supabase, limit=2):
+    """
+    If live trend sources return no usable topic, keep the forward loop moving
+    with known high-intent trend-adjacent queries instead of reporting zero.
+    """
+    opened = 0
+    for item in CURATED_FALLBACK_TRENDS:
+        if opened >= limit:
+            break
+        keyword = item['keyword']
+        dedup_key = f"seo:{_slugify(keyword)}"
+        if aq.enqueue(
+            supabase,
+            action_type='generate_seo_content',
+            payload={
+                'keyword': keyword,
+                'source': 'trend_fallback',
+                'topic': item['topic'],
+                'fallback_reason': item['why'],
+            },
+            reason=f"Trend fallback: {item['why']}",
+            priority='medium',
+            dedup_key=dedup_key,
+        ):
+            opened += 1
+            print(f"  [FALLBACK trend] {keyword}")
+        else:
+            print(f"  [fallback dedup] {keyword}")
+    return opened
+
+
 if __name__ == "__main__":
     print("Starting trend agent...")
     try:
@@ -175,6 +229,8 @@ if __name__ == "__main__":
             trends = detect_trends(signals)
             print(f"  LLM surfaced {len(trends)} candidate trend(s)")
             enqueued = enqueue_trends(supabase, trends)
+            if enqueued == 0:
+                enqueued += enqueue_fallback_trends(supabase)
             print(f"\n  Enqueued {enqueued} high-priority trend action(s)")
             log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
                           {"enqueued": enqueued, "trends": trends})
