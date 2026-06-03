@@ -17,6 +17,25 @@ import action_queue as aq
 MIN_CLICKS = 5
 MAX_ACTIVE_MONETIZATION_FLAGS = 25
 
+# rank12 — a non-empty affiliate_url is NOT proof of monetization. A bare
+# official URL pasted into the field leaks revenue while looking resolved
+# (invariant I5: resolve must mean "actually tracked", not "field non-empty").
+# A real affiliate link carries one of these tracking markers.
+AFFILIATE_MARKERS = (
+    'ref=', 'aff=', 'aff_id', 'affiliate', 'utm_', 'partner', 'fpr=', 'via=',
+    'tap_a', 'pscd', 'impact', 'sjv.io', 'partnerstack', 'sovrn', 'cj.com',
+    'shareasale', 'avantlink', 'clickbank', 'sld=', 'irclickid', 'gid=',
+)
+
+
+def is_valid_affiliate_url(url):
+    """True only if the URL is an http(s) link carrying an affiliate tracking
+    marker. A generic 'https://tool.com' returns False — it earns nothing."""
+    u = (url or '').strip().lower()
+    if not u.startswith(('http://', 'https://')):
+        return False
+    return any(marker in u for marker in AFFILIATE_MARKERS)
+
 
 def _priority(clicks):
     if clicks >= 20:
@@ -42,8 +61,7 @@ def check_monetization_gaps(supabase):
     candidates = []
     for t in (tools.data or []):
         clicks = t.get('click_count') or 0
-        has_affiliate = bool((t.get('affiliate_url') or '').strip())
-        if not has_affiliate and clicks >= MIN_CLICKS:
+        if not is_valid_affiliate_url(t.get('affiliate_url')) and clicks >= MIN_CLICKS:
             candidates.append(t)
     candidates.sort(key=lambda t: t.get('click_count') or 0, reverse=True)
     active_slugs = {t['slug'] for t in candidates[:MAX_ACTIVE_MONETIZATION_FLAGS]}
@@ -52,26 +70,36 @@ def check_monetization_gaps(supabase):
         slug = t['slug']
         clicks = t.get('click_count') or 0
         dedup_key = f"flag:monetization:{slug}"
-        has_affiliate = bool((t.get('affiliate_url') or '').strip())
+        raw = (t.get('affiliate_url') or '').strip()
 
-        if has_affiliate:
-            resolved += aq.resolve(supabase, dedup_key, {'resolved': 'affiliate_url added'})
+        if is_valid_affiliate_url(raw):
+            resolved += aq.resolve(supabase, dedup_key, {'resolved': 'valid tracked affiliate_url'})
             continue
 
         if clicks >= MIN_CLICKS and slug in active_slugs:
             name = t.get('name_en') or slug
             priority = _priority(clicks)
+            # rank12: a present-but-untracked link is a different, sneakier leak
+            # than a missing one — surface it as its own subtype so it gets fixed
+            # rather than silently counted as monetized.
+            broken = bool(raw)
+            subtype = 'affiliate_link_broken' if broken else 'monetization_gap'
+            reason = (
+                f"{name}: affiliate_url 不含 tracking 参数（{raw[:60]}），点击不计佣金 — 修正联盟链接"
+                if broken else
+                f"{name}: {clicks} outbound clicks, no affiliate link — apply for affiliate program"
+            )
             if aq.enqueue(
                 supabase,
                 action_type='flag_for_review',
-                payload={'subtype': 'monetization_gap', 'slug': slug,
-                         'name': name, 'click_count': clicks},
-                reason=f"{name}: {clicks} outbound clicks, no affiliate link — apply for affiliate program",
+                payload={'subtype': subtype, 'slug': slug, 'name': name,
+                         'click_count': clicks, 'affiliate_url': raw or None},
+                reason=reason,
                 priority=priority,
                 dedup_key=dedup_key,
             ):
                 opened += 1
-                print(f"  [FLAG {priority.upper()}] {name}: {clicks} clicks, no affiliate")
+                print(f"  [FLAG {priority.upper()}] {name}: {clicks} clicks, {subtype}")
         elif clicks >= MIN_CLICKS:
             resolved += aq.resolve(
                 supabase,

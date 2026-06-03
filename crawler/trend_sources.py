@@ -7,12 +7,28 @@
 # corroboration, which jilo's narrow RSS set can't provide on its own.
 #
 # Every fetch is wrapped so one dead source never sinks the whole agent.
+import re
 import time
+from datetime import datetime, timedelta
+
 import requests
 from bs4 import BeautifulSoup
 
 UA = "jilo-trend/1.0 (+https://jilo.ai)"
 TIMEOUT = 20
+
+COMPETITOR_RECENT_DAYS = 3  # a competitor page is "new" if lastmod is this fresh
+
+
+def _parse_count(text):
+    """First integer in a string, commas tolerated. e.g. '1,234 stars today' -> 1234."""
+    m = re.search(r'([\d,]+)', text or '')
+    if not m:
+        return 0
+    try:
+        return int(m.group(1).replace(',', ''))
+    except ValueError:
+        return 0
 
 # Tool/launch-focused AI subreddits. Deliberately excludes meme-heavy
 # communities (r/ChatGPT, r/singularity) whose top posts are jokes and
@@ -139,11 +155,14 @@ def fetch_github_trending(max_items=20):
             desc = desc_el.get_text(" ", strip=True) if desc_el else ""
             if not _looks_ai_related(f"{repo} {desc}"):
                 continue
-            stars_text = article.get_text(" ", strip=True)
+            # rank10: use the real "stars today" count as engagement instead of a
+            # flat constant, so a genuinely surging repo outranks a quiet one.
+            stars_el = article.select_one("a[href$='/stargazers'], span.d-inline-block.float-sm-right")
+            stars_today = _parse_count(stars_el.get_text(" ", strip=True)) if stars_el else 0
             items.append({
                 "title": f"{repo}: {desc}" if desc else repo,
                 "source": "GitHub Trending",
-                "engagement": 100,
+                "engagement": stars_today or 100,
                 "comments": 0,
                 "url": f"https://github.com{title_el.get('href', '')}",
             })
@@ -152,8 +171,73 @@ def fetch_github_trending(max_items=20):
     return items
 
 
+def _slug_to_keyword(url):
+    """Last meaningful path segment of a competitor URL -> a keyword guess."""
+    path = re.sub(r'[?#].*$', '', url or '').rstrip('/')
+    seg = path.rsplit('/', 1)[-1] if '/' in path else ''
+    seg = re.sub(r'\.(html?|php|aspx)$', '', seg)
+    return re.sub(r'[-_]+', ' ', seg).strip()
+
+
+def parse_sitemap_recent(xml_text, now=None, recent_days=COMPETITOR_RECENT_DAYS):
+    """Pure: sitemap XML -> [{'url', 'keyword'}] for <url>s whose <lastmod> is
+    within recent_days. Diffing by lastmod avoids needing a seen-URL store."""
+    now = now or datetime.utcnow()
+    cutoff = now - timedelta(days=recent_days)
+    soup = BeautifulSoup(xml_text or '', 'xml')
+    out = []
+    for url_el in soup.find_all('url'):
+        loc = url_el.find('loc')
+        lastmod = url_el.find('lastmod')
+        if not loc or not lastmod:
+            continue
+        try:
+            mod = datetime.fromisoformat(lastmod.get_text(strip=True).replace('Z', '+00:00'))
+            mod = mod.replace(tzinfo=None)
+        except Exception:
+            continue
+        if mod < cutoff:
+            continue
+        url = loc.get_text(strip=True)
+        keyword = _slug_to_keyword(url)
+        if keyword:
+            out.append({'url': url, 'keyword': keyword})
+    return out
+
+
+def fetch_competitor_new_pages(sitemaps=None):
+    """New competitor pages as mid-weight signals. Each carries the URL so the
+    enqueue side can route it to a compare/rewrite rather than a plain generate."""
+    if sitemaps is None:
+        try:
+            from config import COMPETITOR_SITEMAPS
+            sitemaps = COMPETITOR_SITEMAPS
+        except Exception:
+            sitemaps = []
+    items = []
+    for sm in (sitemaps or []):
+        try:
+            r = requests.get(sm, headers={"User-Agent": UA}, timeout=TIMEOUT)
+            r.raise_for_status()
+            for page in parse_sitemap_recent(r.text):
+                if not _looks_ai_related(page['keyword']):
+                    continue
+                items.append({
+                    "title": page['keyword'],
+                    "source": "Competitor New Page",
+                    "engagement": 90,
+                    "comments": 0,
+                    "url": page['url'],
+                    "competitor_page": True,
+                })
+        except Exception as e:
+            print(f"  Competitor sitemap {sm} fetch failed: {e}")
+    return items
+
+
 def gather_engagement_signals():
     """All free engagement sources combined, sorted by engagement desc."""
-    items = fetch_hn() + fetch_reddit() + fetch_product_hunt() + fetch_github_trending()
+    items = (fetch_hn() + fetch_reddit() + fetch_product_hunt()
+             + fetch_github_trending() + fetch_competitor_new_pages())
     items.sort(key=lambda x: x.get("engagement", 0), reverse=True)
     return items

@@ -3,6 +3,7 @@ import re
 from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
+import growth_state
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
@@ -314,6 +315,43 @@ def check_keyword_opportunities():
     return actions
 
 
+MONETIZATION_MIN_CLICKS = 5
+MONETIZATION_MAX_PER_RUN = 5
+
+
+def _monetization_actions_from_tools(tools, min_clicks=MONETIZATION_MIN_CLICKS, limit=MONETIZATION_MAX_PER_RUN):
+    """Pure: tools with an affiliate link AND real outbound clicks deserve a
+    dedicated citeable landing page so the traffic actually converts (rank2 —
+    wires monetization into content production instead of leaving it as a
+    human-only flag)."""
+    actions = []
+    for t in tools:
+        if len(actions) >= limit:
+            break
+        if not (t.get('affiliate_url') or '').strip():
+            continue
+        if (t.get('click_count') or 0) < min_clicks:
+            continue
+        name = t.get('name_en') or t.get('slug') or 'tool'
+        actions.append({
+            'type': 'generate_seo_content',
+            'mode': 'aeo',
+            'keyword': f"{name} review",
+            'reason': f"变现机会：{name} 有联盟链接且 {t.get('click_count') or 0} 次出站点击，做可引用落地页承接转化",
+            'priority': 'high',
+            'source': 'monetization',
+        })
+    return actions
+
+
+def check_monetization_opportunities():
+    supabase = get_supabase()
+    tools = supabase.table('tools').select(
+        'slug, name_en, category, click_count, affiliate_url'
+    ).eq('status', 'published').order('click_count', desc=True).limit(50).execute()
+    return _monetization_actions_from_tools(tools.data or [])
+
+
 def check_vs_queries_without_articles():
     """Find 'vs' queries with no corresponding compare article."""
     supabase = get_supabase()
@@ -498,6 +536,31 @@ def check_high_bounce_pages():
     return actions
 
 
+def filter_actions_for_health(actions, verdict, blockers):
+    """rank4: gate strategy output on the autonomy guardian's last verdict.
+
+    Under a degraded verdict we stop producing NEW content and keep only
+    rewrites — clear the backlog before adding to it. A seo_backlog blocker
+    additionally drops new SEO even if the overall verdict is healthier.
+    Mirrors traffic_growth_agent.apply_verdict_gate so both producers freeze
+    the same way (invariant I2 — the VERDICT_KEY write changes behavior here).
+    """
+    degraded = isinstance(verdict, str) and verdict.startswith('degraded')
+    blockers = blockers or []
+    kept = []
+    for a in actions:
+        is_rewrite = a.get('mode') == 'rewrite'
+        is_new_content = a['type'] in ('generate_seo_content', 'generate_comparison') and not is_rewrite
+        if degraded and is_new_content:
+            continue
+        if 'seo_backlog' in blockers and a['type'] == 'generate_seo_content' and not is_rewrite:
+            continue
+        if 'compare_backlog' in blockers and a['type'] == 'generate_comparison':
+            continue
+        kept.append(a)
+    return kept
+
+
 def enqueue_action(supabase, action, source_report_id):
     """
     Upsert action into action_queue keyed by dedup_key.
@@ -567,14 +630,27 @@ def execute_actions(actions):
 if __name__ == "__main__":
     print("Starting L2 strategy engine...")
     try:
+        # Turn-head read of the shared decision state (G0 foundation). Logged for
+        # observability now; rank4 turns the verdict into quota gating and rank2
+        # adds monetization-driven actions keyed off this same state.
+        state = growth_state.get_verdict(get_supabase())
+        print(f"  growth_state: verdict={state['verdict']} blockers={state['blockers']}")
+
         all_actions = []
         all_actions.extend(check_forced_growth_queries())
         all_actions.extend(check_empty_hubs())
         all_actions.extend(check_keyword_opportunities())
+        all_actions.extend(check_monetization_opportunities())
         all_actions.extend(check_vs_queries_without_articles())
         all_actions.extend(check_high_bounce_pages())
         all_actions.extend(check_underperforming_pages())
         all_actions.extend(check_gsc_page_rewrite_opportunities())
+
+        # rank4: freeze new content under a degraded verdict, keep rewrites.
+        before = len(all_actions)
+        all_actions = filter_actions_for_health(all_actions, state['verdict'], state['blockers'])
+        if len(all_actions) != before:
+            print(f"  health gate ({state['verdict']}): {before} -> {len(all_actions)} actions")
 
         print(f"\nFound {len(all_actions)} actions:")
         enqueued = execute_actions(all_actions)

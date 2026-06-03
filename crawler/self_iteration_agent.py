@@ -278,13 +278,29 @@ def open_schema_health_flags(supabase):
 
 def write_learning_snapshot(supabase, results):
     today = datetime.utcnow().strftime('%Y-%m-%d')
+
+    # rank3 (A3b): derive the lesson from real measured effectiveness instead of
+    # the old hardcoded sentence (which was a dead string the audit flagged).
+    import growth_state
+    modes = (growth_state.get_mode_effectiveness(supabase).get('modes') or {})
+    suppress = growth_state.get_suppress(supabase)
+    ranked = sorted(modes.items(), key=lambda kv: (kv[1].get('avg_pv') or 0), reverse=True)
+    if ranked:
+        top_mode, top = ranked[0]
+        lesson = (
+            f"Top PV mode: {top_mode} ({top.get('avg_pv')} pv/page over "
+            f"{top.get('samples')} pages). Suppressed: "
+            f"{', '.join(suppress) if suppress else 'none'}."
+        )
+    else:
+        lesson = "No per-mode PV signal yet — need more aged snapshots before reallocating budget."
+
     payload = {
         'ran_at': _now(),
         'results': results,
-        'lesson': (
-            'The system is self-iterating when it can recover stale work, '
-            'surface recurring errors as durable queue items, and flag throughput gaps.'
-        ),
+        'mode_effectiveness': modes,
+        'suppress': suppress,
+        'lesson': lesson,
     }
     existing = supabase.table('strategy_reports').select('id').eq(
         'report_date', today

@@ -130,8 +130,20 @@ if __name__ == "__main__":
         supabase = get_supabase()
         captured = capture_due_snapshots(supabase)
         print(f"\n  Captured {captured} age-bucket snapshots")
+
+        # rank3: aggregate per-mode PV effectiveness into growth_state right after
+        # capture, so traffic_growth_agent (later this run) reads a fresh signal.
+        # Isolated so an aggregation failure never loses the snapshot capture.
+        effectiveness = None
+        try:
+            import effectiveness_lookback
+            effectiveness = effectiveness_lookback.aggregate_and_store(supabase)
+            print(f"  Effectiveness: {effectiveness}")
+        except Exception as e:
+            print(f"  [effectiveness aggregation failed] {e}")
+
         log_operation("lookback_agent", "success", f"captured {captured} snapshots",
-                      {"captured": captured})
+                      {"captured": captured, "effectiveness": effectiveness})
     except Exception as e:
         log_operation("lookback_agent", "error", str(e))
         if FEISHU_WEBHOOK_URL:
