@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from supabase import create_client
 
@@ -8,6 +8,13 @@ import self_iteration_agent
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_card
 from ops_logger import log_operation
+
+
+CN_TZ = timezone(timedelta(hours=8))
+
+
+def display_date():
+    return datetime.now(CN_TZ).strftime('%Y-%m-%d')
 
 
 def get_supabase():
@@ -197,7 +204,7 @@ def run():
         color = 'green' if result['verdict'] == 'healthy' else 'yellow'
         send_feishu_card(
             FEISHU_WEBHOOK_URL,
-            f"jilo.ai 自驱动总控检查 - {datetime.utcnow().strftime('%Y-%m-%d')}",
+            f"jilo.ai 自驱动总控检查 - {display_date()}",
             format_report(result),
             color=color,
         )

@@ -1,11 +1,18 @@
 # crawler/weekly_report.py
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from supabase import create_client
 from openai import OpenAI
 from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_card
 from ops_logger import log_operation
+
+
+CN_TZ = timezone(timedelta(hours=8))
+
+
+def display_date():
+    return datetime.now(CN_TZ).strftime('%Y-%m-%d')
 
 
 def _get_openai_client():
@@ -220,7 +227,7 @@ def send_weekly_report():
     weekly_data = collect_weekly_data()
     strategy_text = generate_ai_strategy(weekly_data)
 
-    today = datetime.utcnow().strftime('%Y-%m-%d')
+    today = display_date()
 
     # Save to strategy_reports (upsert to avoid duplicates on re-runs)
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)

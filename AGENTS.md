@@ -81,7 +81,7 @@ AEO 页面是 AI 入口流量的核心。高价值 query 应优先生成可被 C
 - `autonomy_guardian_agent.py`：总控健康检查。
 - `manual_blockers_report.py`：只列人工阻塞项。
 - `daily_report.py` / `weekly_report.py`：业务日报/周报。
-- GitHub Actions `ops-heartbeat`：每轮任务状态。
+- GitHub Actions `ops-heartbeat`：只在失败、异常或手动全量运行时推送；例行成功任务默认静默，避免飞书刷屏。
 
 如果事项已经解决，系统应自动检测并销账。例如：表建好、`affiliate_url` 补上、job 后续成功。
 

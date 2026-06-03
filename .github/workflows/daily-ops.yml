@@ -423,6 +423,7 @@ jobs:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           EVENT_NAME: ${{ github.event_name }}
           EVENT_SCHEDULE: ${{ github.event.schedule }}
+          DISPATCH_JOB: ${{ github.event.inputs.job }}
           WORKFLOW: ${{ github.workflow }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
@@ -444,6 +445,8 @@ jobs:
 
           event_name = os.getenv("EVENT_NAME") or "unknown"
           schedule = os.getenv("EVENT_SCHEDULE") or "手动/推送触发"
+          dispatch_job = os.getenv("DISPATCH_JOB") or ""
+          schedule_display = f"`{schedule}`" if schedule != "手动/推送触发" else schedule
           needs = json.loads(os.getenv("NEEDS_JSON") or "{}")
           trigger_label = {
               "schedule": "定时任务",
@@ -479,7 +482,7 @@ jobs:
                       continue
                   s = datetime.fromisoformat(started.replace("Z", "+00:00"))
                   c = datetime.fromisoformat(completed.replace("Z", "+00:00"))
-                  durations[job.get("name")] = round((c - s).total_seconds() / 60, 1)
+                  durations[job.get("name")] = max(0, round((c - s).total_seconds() / 60, 1))
           except Exception as e:
               print(f"job duration fetch failed: {e}")
 
@@ -495,6 +498,17 @@ jobs:
                   skipped.append(line)
               else:
                   failed.append(line)
+
+          if not failed:
+              if event_name == "push":
+                  print("Push success heartbeat suppressed; business jobs run on schedules.")
+                  raise SystemExit(0)
+              if event_name == "schedule":
+                  print(f"Routine schedule success heartbeat suppressed: {schedule}")
+                  raise SystemExit(0)
+              if event_name == "workflow_dispatch" and dispatch_job and dispatch_job != "all":
+                  print(f"Single-job manual success heartbeat suppressed: {dispatch_job}")
+                  raise SystemExit(0)
 
           if failed:
               title = "jilo.ai 自动增长流水线：有失败"
@@ -520,13 +534,13 @@ jobs:
           if succeeded:
               summary_parts.append("**成功任务：**\n" + "\n".join(succeeded[:20]))
           if skipped:
-              summary_parts.append("**跳过任务：**\n" + "\n".join(skipped[:20]))
+              summary_parts.append(f"**跳过任务：** {len(skipped)} 个（本次触发不需要执行）")
           jobs_summary = "\n\n".join(summary_parts) or "无上游任务结果。"
 
           content = "\n".join([
               f"**流水线：** {os.getenv('WORKFLOW')}",
               f"**触发方式：** {trigger_label}",
-              f"**触发时间表：** {schedule}",
+              f"**触发时间表：** {schedule_display}",
               f"**运行编号：** {os.getenv('RUN_ID')}（第 {os.getenv('RUN_ATTEMPT')} 次尝试）",
               f"**状态：** {status}",
               f"**任务总耗时：** {run_minutes} 分钟" if run_minutes is not None else "**任务总耗时：** 暂未获取",

@@ -1,10 +1,17 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from supabase import create_client
 
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_card
 from ops_logger import log_operation
+
+
+CN_TZ = timezone(timedelta(hours=8))
+
+
+def display_date():
+    return datetime.now(CN_TZ).strftime('%Y-%m-%d')
 
 
 def get_supabase():
@@ -92,7 +99,7 @@ def send_manual_blockers_report():
 
     data = load_manual_blockers()
     content = format_message(data)
-    today = datetime.utcnow().strftime('%Y-%m-%d')
+    today = display_date()
     ok = send_feishu_card(
         FEISHU_WEBHOOK_URL,
         f'jilo.ai 人工阻塞项 - {today}',

@@ -1,9 +1,16 @@
 # crawler/daily_report.py
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_card
 from ops_logger import log_operation
+
+
+CN_TZ = timezone(timedelta(hours=8))
+
+
+def display_date():
+    return datetime.now(CN_TZ).strftime('%Y-%m-%d')
 
 
 def unresolved_errors(logs):
@@ -183,7 +190,7 @@ def get_today_stats():
 
 
 def format_daily_report(stats):
-    today = datetime.utcnow().strftime('%Y-%m-%d')
+    today = display_date()
 
     # PV change
     pv_change = ""
@@ -323,7 +330,7 @@ def send_daily_report():
 
     stats = get_today_stats()
     content = format_daily_report(stats)
-    today = datetime.utcnow().strftime('%Y-%m-%d')
+    today = display_date()
 
     success = send_feishu_card(
         FEISHU_WEBHOOK_URL,
