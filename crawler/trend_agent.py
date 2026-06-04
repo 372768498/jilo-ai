@@ -21,6 +21,7 @@ from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import trend_sources
+from strategy_engine import brand_alternatives_keyword
 
 LOOKBACK_HOURS = 48
 MIN_SIGNALS = 8            # too little input → no reliable trend read
@@ -145,13 +146,35 @@ def fetch_gsc_emerging_signals(supabase):
     return detect_emerging_queries(rows.data or [])
 
 
+def _gsc_actionable_keyword(query):
+    """Turn a GSC breakout query into a keyword worth a page, or None.
+
+    The old guard rejected anything without tool-shopper intent — which threw
+    away the most valuable signals: bare competitor-brand queries Google already
+    ranks us for (e.g. 'marketmuse' at pos 22). We reframe those into a
+    monetizable 'best <brand> alternatives' page (reusing strategy_engine's
+    guarded logic, which also skips our own brand). Queries that are neither a
+    competitor brand nor tool-shopper intent (our own brand, generic noise) are
+    still dropped."""
+    raw = (query or '').strip()
+    if not raw:
+        return None
+    reframed = brand_alternatives_keyword(raw)
+    if reframed != raw:
+        return reframed                 # competitor brand -> alternatives page
+    if has_tool_shopper_intent(raw):
+        return raw                       # already a buyer query
+    return None                          # own brand / generic -> skip
+
+
 def enqueue_gsc_emerging(supabase, emerging, limit=MAX_TOPICS):
-    """Enqueue breakout queries directly as high-priority SEO work — no LLM gate,
-    just the same tool-shopper intent guard the rest of the agent uses."""
+    """Enqueue breakout queries directly as high-priority SEO work — no LLM gate.
+    Competitor-brand demand is reframed into alternatives pages; non-actionable
+    queries (our own brand, generic) are skipped."""
     opened = 0
     for e in emerging[:limit]:
-        keyword = (e.get('query') or '').strip()
-        if not keyword or not has_tool_shopper_intent(keyword):
+        keyword = _gsc_actionable_keyword(e.get('query'))
+        if not keyword:
             continue
         dedup_key = f"seo:{_slugify(keyword)}"
         if aq.enqueue(
