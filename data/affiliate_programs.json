@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "updated": "2026-06-04",
+  "_README": [
+    "Affiliate program registry — the monetization last-mile.",
+    "monitor_agent detects which tools leak revenue (clicks, no tracked link).",
+    "This file tells the system HOW to close each leak, so the only human step",
+    "left is the irreducible one: sign up for the program.",
+    "",
+    "Per-tool status:",
+    "  ready       -> signup_url known; apply, then paste affiliate_id OR affiliate_url here.",
+    "  needs_check -> program likely exists; verify signup_url + network first (signup_search helps).",
+    "  no_program  -> no affiliate program exists (e.g. OpenAI). monitor_agent stops flagging it.",
+    "  self        -> monetize via your OWN offer (no external approval); route CTA through /api/out.",
+    "",
+    "How one human action monetizes a tool (and stays automatic):",
+    "  1. Apply to the program (use signup_url / signup_search).",
+    "  2a. Templated network -> put your affiliate_id below (username/code). System builds the link.",
+    "  2b. Opaque network (Impact/PartnerStack) -> paste your full tracked link into affiliate_url.",
+    "  3. affiliate_autofill.py writes tools.affiliate_url; monitor_agent auto-resolves the flag.",
+    "  Newly discovered tools on a registered program get monetized automatically on the next run.",
+    "",
+    "NEVER invent an affiliate_id/affiliate_url. Only real values you obtained by signing up.",
+    "signup_url values left null are unverified on purpose — use signup_search to find the real page."
+  ],
+  "networks": {
+    "rewardful":     { "template": "{base}?via={id}", "id_kind": "username or code", "opaque": false },
+    "firstpromoter": { "template": "{base}?fpr={id}", "id_kind": "username",         "opaque": false },
+    "tolt":          { "template": "{base}?via={id}", "id_kind": "username",         "opaque": false },
+    "generic_ref":   { "template": "{base}?ref={id}", "id_kind": "ref code",         "opaque": false },
+    "generic_aff":   { "template": "{base}?aff={id}", "id_kind": "aff id",           "opaque": false },
+    "impact":        { "template": null, "opaque": true, "note": "Impact.com links are per-creative and opaque. Paste the full tracked link into affiliate_url." },
+    "partnerstack":  { "template": null, "opaque": true, "note": "PartnerStack links are opaque. Paste the full tracked link into affiliate_url." },
+    "cj":            { "template": null, "opaque": true, "note": "CJ Affiliate links are opaque. Paste the full tracked link into affiliate_url." },
+    "shareasale":    { "template": null, "opaque": true, "note": "ShareASale links are opaque. Paste the full tracked link into affiliate_url." }
+  },
+  "programs": {
+    "elevenlabs": {
+      "name": "ElevenLabs", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "ElevenLabs affiliate program signup",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Audio, highest single leak. Verify program + network before applying."
+    },
+    "descript": {
+      "name": "Descript", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Descript affiliate program signup",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Video category, EPC ~1.2."
+    },
+    "canva": {
+      "name": "Canva", "status": "needs_check", "network": "impact",
+      "signup_url": null, "signup_search": "Canva affiliate program",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Canva runs a well-known affiliate program (Impact). Opaque link -> paste full URL into affiliate_url."
+    },
+    "notion-ai": {
+      "name": "Notion", "status": "needs_check", "network": "partnerstack",
+      "signup_url": null, "signup_search": "Notion affiliate program PartnerStack",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Notion affiliate runs via PartnerStack. Opaque link -> paste full URL into affiliate_url."
+    },
+    "manychat": {
+      "name": "ManyChat", "status": "needs_check", "network": "partnerstack",
+      "signup_url": null, "signup_search": "ManyChat affiliate partner program",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Marketing, high EPC. Partner program likely via PartnerStack."
+    },
+    "writesonic": {
+      "name": "Writesonic", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Writesonic affiliate program signup",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Writing, EPC ~1.0. Many writing SaaS use FirstPromoter (?fpr=) or Tolt (?via=) — confirm."
+    },
+    "leonardoai": {
+      "name": "Leonardo.AI", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Leonardo AI affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Image generation."
+    },
+    "pixlr-ai": {
+      "name": "Pixlr AI", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Pixlr affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Image editing."
+    },
+    "photoroom": {
+      "name": "Photoroom", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Photoroom affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Image / e-commerce."
+    },
+    "nightcafe": {
+      "name": "NightCafe", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "NightCafe Creator affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Image generation."
+    },
+    "ideogram": {
+      "name": "Ideogram", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Ideogram AI affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Image generation / typography."
+    },
+    "runway": {
+      "name": "Runway", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Runway ML affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Video generation, high EPC."
+    },
+    "kapwing": {
+      "name": "Kapwing", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Kapwing affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Video editing."
+    },
+    "framer": {
+      "name": "Framer", "status": "needs_check", "network": "partnerstack",
+      "signup_url": null, "signup_search": "Framer affiliate partner program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Design / web builder."
+    },
+    "replicate": {
+      "name": "Replicate", "status": "needs_check", "network": null,
+      "signup_url": null, "signup_search": "Replicate affiliate program",
+      "affiliate_id": null, "affiliate_url": null, "notes": "Developer / model hosting."
+    },
+    "dall-e-3": {
+      "name": "DALL-E 3", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "OpenAI has no affiliate program. Suppress monetization flag; revenue here must come from comparison/alternative pages routing to monetizable tools."
+    },
+    "chatgpt": {
+      "name": "ChatGPT", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "OpenAI — no affiliate program. Suppress flag. See strategic opportunity zh-chatgpt-access for the real money here."
+    },
+    "perplexity-ai": {
+      "name": "Perplexity AI", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "No public affiliate program as of 2026-01. Suppress flag; revisit if one launches."
+    },
+    "craiyon": {
+      "name": "Craiyon", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Free tool, ad-supported, no affiliate program. Suppress flag."
+    }
+  },
+  "strategic_opportunities": [
+    {
+      "id": "zh-chatgpt-access",
+      "title": "中文 ChatGPT 接入需求 — 站内最大单一搜索需求",
+      "evidence": "GSC: 'chatgpt 充值/产品/怎么用' 查询簇约 900 impressions/月，远超任何单个工具页需求。",
+      "monetizable_today": true,
+      "approval_needed": false,
+      "status": "wired",
+      "implemented": "2026-06-04: /access (ZH) hero + exit CTA 经 /api/out?target=chatgpt-access 指向佣金联盟 https://nf.video/65JGC，已计入 outbound 追踪 + tool_outbound_click 转化事件。",
+      "next": "扩展到 ZH answer 页（/answers/* 命中 chatgpt 接入意图的）；起量后看 outbound_click(target=chatgpt-access) 转化数据校准。",
+      "owner": "human"
+    }
+  ]
+}

@@ -51,6 +51,18 @@ AEO_INTENT_TERMS = [
     'beginner', 'beginners', 'alternative to', 'can i', 'do i need',
 ]
 
+# Chinese high-intent terms. The English list above is space-delimited and never
+# matches CJK queries, so the site's single largest demand cluster (ChatGPT /
+# Sora "怎么用 / 充值 / 国内怎么用 / plus 订阅") was silently routed to low-priority
+# SEO instead of citeable AEO answer pages. These are substring matches (Chinese
+# has no word spaces). Kept tight to access/how-to/pricing intent to avoid
+# over-claiming generic queries as AEO.
+AEO_INTENT_TERMS_ZH = [
+    '怎么', '如何', '怎样', '教程', '能用', '可以用', '怎么用', '怎么开通', '开通',
+    '充值', '订阅', '注册', '购买', '多少钱', '价格', '收费', '免费',
+    '国内', '中国', '镜像', '入口', '官网', '会员', 'plus', '账号', '下载',
+]
+
 
 def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -223,7 +235,12 @@ def is_aeo_query(query):
     q = f" {(query or '').lower().strip()} "
     if ' vs ' in q:
         return False
-    return any(term in q for term in AEO_INTENT_TERMS)
+    if any(term in q for term in AEO_INTENT_TERMS):
+        return True
+    # CJK intent: match raw substrings (no surrounding spaces) on the original
+    # query so Chinese access/how-to/pricing demand routes to AEO, not SEO.
+    raw = (query or '').lower()
+    return any(term in raw for term in AEO_INTENT_TERMS_ZH)
 
 
 def enqueue_gsc_growth_actions(supabase, deficit, budget):

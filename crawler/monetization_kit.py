@@ -41,7 +41,25 @@ def priority_from_roi(roi):
 
 
 def suggest_networks(tool):
-    """Best-effort hints for where to apply — the human verifies the real one."""
+    """Where to apply. Prefer the concrete entry from the affiliate_programs
+    registry (real signup URL / one-click search / network); fall back to generic
+    hints only when the tool isn't registered yet."""
+    slug = (tool or {}).get('slug')
+    try:
+        import affiliate_registry as ar
+        prog = ar.program_for(slug) if slug else None
+    except Exception:
+        prog = None
+    if prog and prog.get('status') != 'no_program':
+        hints = []
+        if prog.get('signup_url'):
+            hints.append(f"申请入口：{prog['signup_url']}")
+        if prog.get('signup_search'):
+            hints.append(f"搜索直达：「{prog['signup_search']}」")
+        if prog.get('network'):
+            hints.append(f"联盟网络：{prog['network']}")
+        if hints:
+            return hints
     return [
         '工具官网 footer 找 "Affiliate" / "Partners" / "Referral"',
         'Impact.com', 'PartnerStack', 'FirstPromoter', 'Rewardful',
