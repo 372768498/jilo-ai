@@ -1,10 +1,34 @@
 // app/[locale]/news/[slug]/page.tsx
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import ArticleToolStrip from "@/components/ArticleToolStrip";
+
+// Access/China-intent signals. AEO answer pages matching these are where the
+// site's #1 demand (ChatGPT/Claude access, "怎么用 / 充值 / 订阅") lands — they
+// get a contextual CTA to /access, the hub that carries the commissioned access
+// affiliate + risk disclosure. Without this the engine's dynamically generated
+// answer pages have no conversion exit.
+const ACCESS_INTENT_SIGNALS = [
+  "access", "china", "chinese", "chatgpt", "claude", "gemini", "subscription",
+  "vpn", "plus", "account", "充值", "订阅", "接入", "怎么用", "国内", "镜像",
+  "账号", "会员", "怎么", "如何",
+];
+
+function isAccessIntent(n: NewsItem) {
+  if (n.news_type !== "aeo_answer") return false;
+  const hay = [
+    n.title_en, n.title_zh, n.summary_en, n.summary_zh, n.slug,
+    ...(n.tags_en || []), ...(n.tags_zh || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return ACCESS_INTENT_SIGNALS.some((s) => hay.includes(s));
+}
 
 type PageProps = {
   params: { locale: string; slug: string };
@@ -217,6 +241,26 @@ export default async function NewsDetailPage({ params }: PageProps) {
           <div className="prose max-w-none whitespace-pre-line">{content}</div>
         )
       ) : null}
+
+      {isAccessIntent(n) && (
+        <div className="mt-8 rounded-lg border border-emerald-200 bg-emerald-50 p-5">
+          <p className="text-sm font-semibold text-emerald-950">
+            {locale === "zh" ? "想知道怎么稳定访问 / 订阅？" : "Need a stable way to access or subscribe?"}
+          </p>
+          <p className="mt-1 text-sm leading-6 text-emerald-900">
+            {locale === "zh"
+              ? "对比主流访问与订阅方案（含官方、替代工具与风险披露），选最适合你的那个。"
+              : "Compare mainstream access and subscription options — official plans, alternatives, and risk disclosure."}
+          </p>
+          <Link
+            href={`/${locale}/access`}
+            className="mt-3 inline-flex items-center gap-2 rounded-md bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+          >
+            {locale === "zh" ? "看访问 / 订阅方案对比" : "Compare access & subscription options"}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      )}
 
       <ArticleToolStrip locale={locale} />
 
