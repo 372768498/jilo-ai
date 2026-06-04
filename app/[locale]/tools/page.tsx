@@ -329,6 +329,10 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
                             {tool.rating}
                             {tool.review_count ? <span className="text-slate-400">({tool.review_count})</span> : null}
                           </span>
+                        ) : (tool.click_count || 0) > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+                            🔥 {tool.click_count} {isZh ? "次访问" : "visits"}
+                          </span>
                         ) : <span />}
                         {canVisit ? (
                           <a
