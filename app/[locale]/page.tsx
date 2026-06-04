@@ -185,10 +185,10 @@ export default async function HomePage({ params }: PageProps) {
 
   const t = isZh
     ? {
-        eyebrow: "从这里开始",
-        title: "告诉我们你想用 AI 做什么，我们帮你选工具和上手路径",
+        eyebrow: "AI 工具目录 · 每日更新",
+        title: "找到、对比、用上最好的 AI 工具",
         subtitle:
-          "不用先理解复杂概念。你只需要选择任务、预算和使用条件，Jilo.ai 会把工具、访问方式、替代方案和是否值得付费整理成可执行路径。",
+          "搜索 100+ 经过整理的 AI 工具，按热度和评分对比，直接拿到访问方式、替代方案和是否值得付费的结论。",
         search: "搜索 AI 工具、访问方案或工作流...",
         browse: "按任务找工具",
         submit: "提交工具",
@@ -201,10 +201,10 @@ export default async function HomePage({ params }: PageProps) {
         viewAll: "查看全部",
       }
     : {
-        eyebrow: "Start here",
-        title: "Tell us what you want to do with AI. We will point you to the right tools.",
+        eyebrow: "AI tools directory · updated daily",
+        title: "Find, compare, and use the best AI tools",
         subtitle:
-          "Choose a task, budget, and setup. Jilo.ai turns tool discovery, access notes, alternatives, and paid-tool decisions into a practical path.",
+          "Search 100+ curated AI tools, compare them by popularity and rating, and get the access, alternatives, and is-it-worth-paying answers — fast.",
         search: "Search AI tools, access guides, or workflows...",
         browse: "Find tools by task",
         submit: "Submit Tool",
@@ -272,61 +272,48 @@ export default async function HomePage({ params }: PageProps) {
     <>
       <Navbar locale={locale} />
       <main className="bg-white text-slate-950">
-        <section className="border-b bg-slate-50">
-          <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 lg:grid-cols-[1.05fr_0.95fr] lg:py-20">
-            <div>
-              <div className="mb-5 inline-flex items-center gap-2 rounded-md border bg-white px-3 py-1 text-sm font-medium text-slate-700">
-                <Compass className="h-4 w-4 text-emerald-600" />
-                {t.eyebrow}
-              </div>
-              <h1 className="max-w-4xl text-4xl font-bold leading-tight tracking-normal text-slate-950 md:text-6xl">
-                {t.title}
-              </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">{t.subtitle}</p>
+        <section className="border-b bg-gradient-to-b from-slate-50 to-white">
+          <div className="mx-auto max-w-4xl px-4 py-14 text-center lg:py-20">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-sm font-medium text-slate-700">
+              <Compass className="h-4 w-4 text-emerald-600" />
+              {t.eyebrow}
+            </div>
+            <h1 className="mx-auto max-w-3xl text-4xl font-bold leading-tight tracking-tight text-slate-950 md:text-5xl">
+              {t.title}
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-600">{t.subtitle}</p>
 
-              <div className="mt-8 max-w-2xl">
-                <SearchBar locale={locale} placeholder={t.search} />
-              </div>
-
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href={`/${locale}/tools`}
-                  className="inline-flex h-11 items-center justify-center rounded-md bg-slate-950 px-5 text-sm font-semibold text-white hover:bg-slate-800"
-                >
-                  {t.browse}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-                <Link
-                  href={`/${locale}/submit`}
-                  className="inline-flex h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-900 hover:bg-slate-100"
-                >
-                  {t.submit}
-                </Link>
-              </div>
+            <div className="mx-auto mt-8 max-w-2xl">
+              <SearchBar locale={locale} placeholder={t.search} />
             </div>
 
-            <div className="grid content-start gap-3 sm:grid-cols-2">
-              {taskEntrances.map((task) => {
-                const Icon = task.icon;
-                const copy = isZh ? task.zh : task.en;
-                return (
-                  <Link
-                    key={task.href}
-                    href={`/${locale}/${task.href}`}
-                    className="group rounded-lg border bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md"
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="rounded-md bg-emerald-50 p-2 text-emerald-700">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h2 className="font-semibold text-slate-950 group-hover:text-emerald-700">{copy.title}</h2>
-                        <p className="mt-1 text-sm leading-6 text-slate-600">{copy.desc}</p>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+            {/* Popular quick-searches → strong hub / ranking pages */}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-sm">
+              <span className="text-slate-400">{isZh ? "热门：" : "Popular:"}</span>
+              {(isZh
+                ? [
+                    { name: "最热门", href: `/${locale}/rankings/most-popular` },
+                    { name: "AI 写作", href: `/${locale}/c/writing` },
+                    { name: "AI 视频", href: `/${locale}/c/video` },
+                    { name: "AI 图像", href: `/${locale}/c/image` },
+                    { name: "免费工具", href: `/${locale}/rankings/best-free` },
+                  ]
+                : [
+                    { name: "Most popular", href: `/${locale}/rankings/most-popular` },
+                    { name: "AI writing", href: `/${locale}/c/writing` },
+                    { name: "AI video", href: `/${locale}/c/video` },
+                    { name: "AI image", href: `/${locale}/c/image` },
+                    { name: "Free tools", href: `/${locale}/rankings/best-free` },
+                  ]
+              ).map((chip) => (
+                <Link
+                  key={chip.name}
+                  href={chip.href}
+                  className="rounded-full border bg-white px-3 py-1 font-medium text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
+                >
+                  {chip.name}
+                </Link>
+              ))}
             </div>
           </div>
         </section>
@@ -340,6 +327,37 @@ export default async function HomePage({ params }: PageProps) {
             <Link href={`/${locale}/rankings`} className="text-sm font-semibold text-emerald-700 hover:underline">
               {isZh ? "查看完整排行榜 →" : "See the full rankings →"}
             </Link>
+          </div>
+        </section>
+
+        {/* Browse by task — demoted from the hero so real tools lead, but kept
+            for the concierge/task-intent path. */}
+        <section className="mx-auto max-w-7xl px-4 pt-10">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500">
+            {isZh ? "按任务浏览" : "Browse by task"}
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {taskEntrances.map((task) => {
+              const Icon = task.icon;
+              const copy = isZh ? task.zh : task.en;
+              return (
+                <Link
+                  key={task.href}
+                  href={`/${locale}/${task.href}`}
+                  className="group rounded-lg border bg-white p-4 transition hover:border-emerald-300 hover:shadow-sm"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="rounded-md bg-emerald-50 p-2 text-emerald-700">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-950 group-hover:text-emerald-700">{copy.title}</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-600">{copy.desc}</p>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
