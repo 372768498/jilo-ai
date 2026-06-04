@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { captureServerEvent } from "@/lib/posthog/server";
 
 type ToolRecord = {
   id: string;
@@ -103,6 +104,13 @@ export async function GET(request: NextRequest) {
   if (targetRef && staticTargets[targetRef]) {
     const target = staticTargets[targetRef];
     await trackStaticOutboundClick(targetRef, source.slice(0, 80), locale, target.hasAffiliate);
+    await captureServerEvent(request, "tool_outbound_click", {
+      target: targetRef,
+      source: source.slice(0, 80),
+      locale,
+      has_affiliate: target.hasAffiliate,
+      static_target: true,
+    });
 
     const response = NextResponse.redirect(target.url, { status: 302 });
     response.headers.set("Cache-Control", "no-store");
@@ -121,6 +129,13 @@ export async function GET(request: NextRequest) {
   }
 
   await trackOutboundClick(tool, source.slice(0, 80), locale);
+  await captureServerEvent(request, "tool_outbound_click", {
+    tool_id: tool.id,
+    slug: tool.slug,
+    source: source.slice(0, 80),
+    locale,
+    has_affiliate: Boolean(tool.affiliate_url),
+  });
 
   const response = NextResponse.redirect(destination, { status: 302 });
   response.headers.set("Cache-Control", "no-store");

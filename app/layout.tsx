@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
+import { PostHogAnalytics } from "@/components/analytics/posthog-provider";
 
 export const metadata: Metadata = {
   title: "Jilo.ai - AI Tool Intelligence, Access Guides, Workflows and Reviews",
@@ -50,6 +51,7 @@ gtag('config', 'G-GZ8RJ2E0S4');`,
             style={{ display: "none", visibility: "hidden" }}
           />
         </noscript>
+        <PostHogAnalytics />
         {children}
       </body>
     </html>
