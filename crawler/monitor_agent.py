@@ -12,6 +12,7 @@ from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
+import monetization_kit as mk
 
 # Below this click count an affiliate application isn't worth the effort yet.
 MIN_CLICKS = 5
@@ -53,8 +54,20 @@ def check_monetization_gaps(supabase):
     Returns (opened, resolved).
     """
     tools = supabase.table('tools').select(
-        'slug, name_en, click_count, affiliate_url'
+        'slug, name_en, click_count, affiliate_url, category, official_url'
     ).eq('status', 'published').execute()
+
+    # Rough monthly PV for the application pitch (best-effort).
+    site_pv_monthly = None
+    try:
+        recent = supabase.table('analytics_site_daily').select(
+            'total_pageviews'
+        ).order('date', desc=True).limit(30).execute()
+        pvs = [r.get('total_pageviews') or 0 for r in (recent.data or [])]
+        if pvs:
+            site_pv_monthly = int(round(sum(pvs) / len(pvs) * 30))
+    except Exception:
+        pass
 
     opened = 0
     resolved = 0
@@ -63,8 +76,11 @@ def check_monetization_gaps(supabase):
         clicks = t.get('click_count') or 0
         if not is_valid_affiliate_url(t.get('affiliate_url')) and clicks >= MIN_CLICKS:
             candidates.append(t)
-    candidates.sort(key=lambda t: t.get('click_count') or 0, reverse=True)
+    # rank2: order leaks by expected revenue (ROI), not raw click volume, so the
+    # human's limited application time goes to the highest-earning gaps first.
+    candidates.sort(key=lambda t: mk.roi_score(t), reverse=True)
     active_slugs = {t['slug'] for t in candidates[:MAX_ACTIVE_MONETIZATION_FLAGS]}
+    tools_by_slug = {t['slug']: t for t in (tools.data or [])}
 
     for t in (tools.data or []):
         slug = t['slug']
@@ -78,7 +94,11 @@ def check_monetization_gaps(supabase):
 
         if clicks >= MIN_CLICKS and slug in active_slugs:
             name = t.get('name_en') or slug
-            priority = _priority(clicks)
+            # rank2: ROI-based priority + a ready-to-submit application pack so
+            # the human just reviews and applies (the only step that can't be auto).
+            roi = mk.roi_score(t)
+            priority = mk.priority_from_roi(roi)
+            pack = mk.build_application_pack(tools_by_slug.get(slug, t), site_pv_monthly)
             # rank12: a present-but-untracked link is a different, sneakier leak
             # than a missing one — surface it as its own subtype so it gets fixed
             # rather than silently counted as monetized.
@@ -87,19 +107,20 @@ def check_monetization_gaps(supabase):
             reason = (
                 f"{name}: affiliate_url 不含 tracking 参数（{raw[:60]}），点击不计佣金 — 修正联盟链接"
                 if broken else
-                f"{name}: {clicks} outbound clicks, no affiliate link — apply for affiliate program"
+                f"{name}: {clicks} 出站点击 / 预估漏钱 ${roi} — 申请联盟（材料已备好）"
             )
             if aq.enqueue(
                 supabase,
                 action_type='flag_for_review',
                 payload={'subtype': subtype, 'slug': slug, 'name': name,
-                         'click_count': clicks, 'affiliate_url': raw or None},
+                         'click_count': clicks, 'affiliate_url': raw or None,
+                         'roi': roi, 'application_pack': pack},
                 reason=reason,
                 priority=priority,
                 dedup_key=dedup_key,
             ):
                 opened += 1
-                print(f"  [FLAG {priority.upper()}] {name}: {clicks} clicks, {subtype}")
+                print(f"  [FLAG {priority.upper()}] {name}: {clicks} clicks, ${roi} ROI, {subtype}")
         elif clicks >= MIN_CLICKS:
             resolved += aq.resolve(
                 supabase,
