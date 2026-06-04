@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import SearchBar from "@/components/search-bar";
+import ArticleToolStrip from "@/components/ArticleToolStrip";
 
 type PageProps = {
   params: { locale: string };
@@ -327,6 +328,18 @@ export default async function HomePage({ params }: PageProps) {
                 );
               })}
             </div>
+          </div>
+        </section>
+
+        {/* Real, popular tools right under the hero — gives the homepage actual
+            scannable tools + an outbound Visit CTA (audit: hero showed no real
+            tools above the fold and the homepage carried zero outbound CTAs). */}
+        <section className="mx-auto max-w-7xl px-4 pt-10">
+          <ArticleToolStrip locale={locale} title={isZh ? "🔥 热门 AI 工具" : "🔥 Popular AI tools"} limit={6} />
+          <div className="mt-3">
+            <Link href={`/${locale}/rankings`} className="text-sm font-semibold text-emerald-700 hover:underline">
+              {isZh ? "查看完整排行榜 →" : "See the full rankings →"}
+            </Link>
           </div>
         </section>
 

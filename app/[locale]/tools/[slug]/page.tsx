@@ -79,8 +79,27 @@ async function getRelated(categoryCanonical: string | null, selfSlug: string, lo
 
   const [{ data: alternatives }, { data: comparisons }] = await Promise.all([alternativesQuery, comparisonsQuery]);
 
+  // Always recirculate: if the category has too few siblings (or none), fall
+  // back to popular tools so the page never dead-ends (audit: the alternatives
+  // block silently vanished on thin records, leaving readers no next step).
+  let altList: any[] = alternatives || [];
+  if (altList.length < 3) {
+    const { data: popular } = await supabase
+      .from("tools")
+      .select("slug, name_en, name_zh, tagline_en, tagline_zh, logo_url, pricing_type, rating")
+      .eq("status", "published")
+      .neq("slug", selfSlug)
+      .order("click_count", { ascending: false })
+      .limit(8);
+    const seen = new Set(altList.map((a: any) => a.slug));
+    for (const p of popular || []) {
+      if (altList.length >= 6) break;
+      if (!seen.has(p.slug)) altList.push(p);
+    }
+  }
+
   return {
-    alternatives: alternatives || [],
+    alternatives: altList,
     comparisons: (comparisons || []).filter((item: any) => (item.slug || "").includes(selfSlug)).slice(0, 6),
   };
 }
