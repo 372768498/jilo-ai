@@ -148,7 +148,9 @@
       "evidence": "GSC: 'chatgpt 充值/产品/怎么用' 查询簇约 900 impressions/月，远超任何单个工具页需求。",
       "monetizable_today": true,
       "approval_needed": false,
-      "play": "把 /access 和 ZH answer 页的主 CTA 经 /api/out 指向你自有变现出口（Skool 社群 / 自有代充·订阅服务 / 已有联盟）。这是无需外部审核、今天即可上线的最高 ROI 动作；外部 affiliate 申请在 PV 起量前都是次要项。",
+      "status": "wired",
+      "implemented": "2026-06-04: /access (ZH) hero + exit CTA 经 /api/out?target=chatgpt-access 指向佣金联盟 https://nf.video/65JGC，已计入 outbound 追踪 + tool_outbound_click 转化事件。",
+      "next": "扩展到 ZH answer 页（/answers/* 命中 chatgpt 接入意图的）；起量后看 outbound_click(target=chatgpt-access) 转化数据校准。",
       "owner": "human"
     }
   ]

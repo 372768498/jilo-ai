@@ -17,6 +17,10 @@ const staticTargets: Record<string, { url: string; hasAffiliate: boolean }> = {
     url: "https://www.skool.com/signup?ref=37b1672271fd4149b32cb4947874e1ba",
     hasAffiliate: true,
   },
+  // ZH ChatGPT-access demand (the site's #1 search intent) -> commissioned
+  // access affiliate. Routed through /api/out so every click is logged + fires
+  // the tool_outbound_click conversion event.
+  "chatgpt-access": { url: "https://nf.video/65JGC", hasAffiliate: true },
 };
 
 function isSafeHttpUrl(value: string | null | undefined) {

@@ -58,6 +58,18 @@ export default function AccessPage({ params }: PageProps) {
                   ? "这里不做灰产账号教程。Jilo.ai 会客观评测主流访问和订阅方案，说明适合谁、能解决什么问题、风险在哪里，以及什么时候应该选择官方或替代方案。"
                   : "This is not a gray-market account tutorial. Jilo.ai reviews mainstream access and subscription options, who they fit, what they solve, and where the risks are."}
               </p>
+              {isZh && (
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <a
+                    href={`/api/out?target=chatgpt-access&source=access-hero&locale=${encodeURIComponent(locale)}`}
+                    rel="sponsored nofollow"
+                    className="inline-flex items-center gap-2 rounded-md bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+                  >
+                    查看推荐的 AI 访问 / 订阅方案 <ArrowRight className="h-4 w-4" />
+                  </a>
+                  <span className="text-xs text-slate-500">主流合租/订阅渠道，含官方与替代方案对比 · 注意阅读风险披露</span>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -140,6 +152,15 @@ export default function AccessPage({ params }: PageProps) {
           {/* Conversion exits for high-intent access traffic (was: only /submit) */}
           <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
             <span className="font-semibold text-slate-700">{isZh ? "想直接用 AI：" : "Want to use AI now:"}</span>
+            {isZh && (
+              <a
+                href={`/api/out?target=chatgpt-access&source=access-exit&locale=${encodeURIComponent(locale)}`}
+                rel="sponsored nofollow"
+                className="inline-flex items-center gap-1 rounded-full bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800"
+              >
+                推荐访问 / 订阅方案 <ArrowRight className="h-3.5 w-3.5" />
+              </a>
+            )}
             <Link href={`/${locale}/c/chat`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
               {isZh ? "AI 聊天助手" : "AI chat assistants"} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
