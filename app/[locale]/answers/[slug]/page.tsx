@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import SeoJsonLd from "@/components/SeoJsonLd";
+import ArticleToolStrip from "@/components/ArticleToolStrip";
 
 type PageProps = {
   params: { locale: string; slug: string };
@@ -482,7 +483,7 @@ export default function AnswerPage({ params }: PageProps) {
                   key={source.href}
                   href={source.href}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="nofollow noopener noreferrer"
                   className="inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-950"
                 >
                   {source.label}
@@ -491,6 +492,10 @@ export default function AnswerPage({ params }: PageProps) {
               ))}
             </div>
           </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-4 pb-12">
+          <ArticleToolStrip locale={locale} title={isZh ? "相关 AI 工具" : "Related AI tools"} />
         </section>
       </main>
       <Footer locale={locale} />

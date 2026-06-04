@@ -1,10 +1,14 @@
 // app/[locale]/reviews/[slug]/page.tsx
 // Maps /reviews/ URLs → news table (SEO review articles)
 // These URLs are already indexed by Google with significant impressions.
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BestToolsFallbackPage, getFallbackMetadata } from "@/components/seo-fallback-page";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
+import ArticleToolStrip from "@/components/ArticleToolStrip";
 
 type PageProps = {
   params: { locale: string; slug: string };
@@ -126,7 +130,16 @@ export default async function ReviewPage({ params }: PageProps) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <>
+      <Navbar locale={locale} />
+      <div className="max-w-3xl mx-auto px-4 py-10">
+      <nav className="mb-4 text-sm text-muted-foreground">
+        <Link href={`/${locale}/reviews`} className="hover:text-foreground">
+          {locale === "zh" ? "评测" : "Reviews"}
+        </Link>
+        <span className="mx-2">/</span>
+        <span>{locale === "zh" ? "文章" : "Article"}</span>
+      </nav>
       <h1 className="text-3xl font-semibold mb-3">{title}</h1>
 
       <div className="text-sm text-muted-foreground mb-4">
@@ -155,10 +168,14 @@ export default async function ReviewPage({ params }: PageProps) {
         )
       ) : null}
 
+      <ArticleToolStrip locale={locale} />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-    </div>
+      </div>
+      <Footer locale={locale} />
+    </>
   );
 }

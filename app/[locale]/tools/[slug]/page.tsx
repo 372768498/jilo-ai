@@ -203,7 +203,7 @@ export default async function ToolDetailPage({ params }: PageProps) {
           <h1 className="text-4xl font-bold tracking-tight">{name}</h1>
           {tagline ? <p className="mt-3 text-xl leading-8 text-muted-foreground">{tagline}</p> : null}
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            {data.official_url ? (
+            {(data.affiliate_url || data.official_url) ? (
               <a
                 href={outboundUrl}
                 target="_blank"
