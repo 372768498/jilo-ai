@@ -1,4 +1,5 @@
-import { Github, Handshake, Radio, SearchCheck, SignalHigh, Users } from "lucide-react";
+import { ArrowRight, Github, Handshake, Radio, SearchCheck, SignalHigh, Users } from "lucide-react";
+import Link from "next/link";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -144,6 +145,21 @@ export default function RadarPage({ params }: PageProps) {
                   : "Output labels stay simple: worth trying, worth buying, watch first, and not recommended."}
               </p>
             </div>
+          </div>
+        </section>
+
+        <section className="border-t bg-slate-50">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-8 text-sm">
+            <span className="font-semibold text-slate-700">{isZh ? "现在就看：" : "See it now:"}</span>
+            <Link href={`/${locale}/rankings/newest`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "最新 AI 工具" : "Newest AI tools"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link href={`/${locale}/rankings/most-popular`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "最受欢迎工具" : "Most popular tools"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link href={`/${locale}/deals`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "今日 Deals" : "Today's deals"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </section>
       </main>

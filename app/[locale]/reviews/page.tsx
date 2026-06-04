@@ -1,15 +1,29 @@
-import { CheckCircle2, FileQuestion, ListChecks, Scale, SearchCheck, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, FileQuestion, ListChecks, Scale, SearchCheck, XCircle } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import { supabase } from "@/lib/supabase";
+
+export const dynamic = "force-dynamic";
 
 type PageProps = {
   params: { locale: string };
 };
 
-export default function ReviewsPage({ params }: PageProps) {
+export default async function ReviewsPage({ params }: PageProps) {
   const locale = params?.locale || "en";
   const isZh = locale === "zh";
+
+  // Real, recent articles instead of hardcoded placeholder links (audit: 3/5
+  // links pointed back at /reviews itself). Maps to the news table that
+  // /reviews/[slug] and /news/[slug] render.
+  const { data: recent } = await supabase
+    .from("news")
+    .select("slug, title_en, title_zh, summary_en, summary_zh, published_at")
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .limit(12);
+  const articles = (recent || []).filter((a) => a.slug && (a.title_en || a.title_zh));
 
   const blocks = isZh
     ? [
@@ -29,20 +43,14 @@ export default function ReviewsPage({ params }: PageProps) {
     ? ["页面开头有明确结论", "有表格和对比模块", "有 FAQ", "有更新时间", "有作者或编辑标准", "有可验证来源", "有结构化数据", "有简短直接的问题回答"]
     : ["Clear conclusion near the top", "Tables and comparison blocks", "FAQ section", "Updated date", "Author or editorial standard", "Verifiable sources", "Structured data", "Short direct answers"];
 
-  const firstPages = isZh
+  const featured = isZh
     ? [
         { title: "在中国大陆能不能用 Claude？", href: `/${locale}/answers/can-i-use-claude-in-china` },
         { title: "ChatGPT、Claude、Gemini：AI 新手先用哪个？", href: `/${locale}/answers/chatgpt-vs-claude-vs-gemini-for-beginners` },
-        { title: "Best ways to access ChatGPT Plus from China", href: `/${locale}/reviews` },
-        { title: "Cursor vs Windsurf for beginners", href: `/${locale}/reviews` },
-        { title: "银河录像局这类订阅渠道是否值得用？", href: `/${locale}/reviews` },
       ]
     : [
         { title: "Can I use Claude in China?", href: `/${locale}/answers/can-i-use-claude-in-china` },
         { title: "ChatGPT vs Claude vs Gemini for beginners", href: `/${locale}/answers/chatgpt-vs-claude-vs-gemini-for-beginners` },
-        { title: "Best ways to access ChatGPT Plus from China", href: `/${locale}/reviews` },
-        { title: "Cursor vs Windsurf for beginners", href: `/${locale}/reviews` },
-        { title: "Is Galaxy-style shared subscription worth it?", href: `/${locale}/reviews` },
       ];
 
   return (
@@ -94,10 +102,10 @@ export default function ReviewsPage({ params }: PageProps) {
             <div>
               <div className="mb-4 flex items-center gap-3">
                 <FileQuestion className="h-5 w-5 text-emerald-700" />
-                <h2 className="text-2xl font-bold text-slate-950">{isZh ? "优先做的问题型页面" : "Priority Question Pages"}</h2>
+                <h2 className="text-2xl font-bold text-slate-950">{isZh ? "精选解答" : "Featured answers"}</h2>
               </div>
               <div className="grid gap-3">
-                {firstPages.map((page) => (
+                {featured.map((page) => (
                   <Link
                     key={page.title}
                     href={page.href}
@@ -108,6 +116,45 @@ export default function ReviewsPage({ params }: PageProps) {
                 ))}
               </div>
             </div>
+          </div>
+        </section>
+
+        {articles.length > 0 ? (
+          <section className="mx-auto max-w-7xl px-4 py-12">
+            <h2 className="mb-5 text-2xl font-bold text-slate-950">{isZh ? "最新评测与解读" : "Latest reviews & analysis"}</h2>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {articles.map((a) => {
+                const title = isZh ? a.title_zh || a.title_en : a.title_en || a.title_zh;
+                const summary = isZh ? a.summary_zh || a.summary_en : a.summary_en || a.summary_zh;
+                return (
+                  <Link
+                    key={a.slug}
+                    href={`/${locale}/news/${a.slug}`}
+                    className="flex flex-col rounded-lg border p-5 transition hover:border-emerald-300 hover:shadow-sm"
+                  >
+                    <h3 className="font-semibold leading-6 text-slate-950 line-clamp-2">{title}</h3>
+                    {summary ? <p className="mt-2 line-clamp-3 flex-1 text-sm leading-6 text-slate-600">{summary}</p> : <div className="flex-1" />}
+                    {a.published_at ? <span className="mt-3 text-xs text-slate-400">{String(a.published_at).slice(0, 10)}</span> : null}
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Conversion exit so this page isn't a methodology dead-end */}
+        <section className="border-t bg-slate-50">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-8 text-sm">
+            <span className="font-semibold text-slate-700">{isZh ? "继续探索：" : "Keep exploring:"}</span>
+            <Link href={`/${locale}/tools`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "浏览全部工具" : "Browse all tools"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link href={`/${locale}/rankings`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "AI 工具排行榜" : "AI tool rankings"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link href={`/${locale}/deals`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "今日 Deals" : "Today's deals"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </section>
       </main>
