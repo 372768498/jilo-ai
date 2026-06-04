@@ -81,6 +81,29 @@ def _bilingual_parity(article, en_field, zh_field, min_ratio):
     return OK
 
 
+def _aeo_structure(article, field='content_en'):
+    """rank6 (invariant I3): an AEO answer page must keep the citeable structure
+    answer engines quote — short answer, a decision table, an FAQ, a freshness
+    line, and internal links. Enforced especially on rewrites so an AEO page is
+    never flattened into a plain long-form SEO article."""
+    html = (article.get(field) or '')
+    low = html.lower()
+    problems = []
+    if low.count('<table') < 1:
+        problems.append('no comparison table')
+    if low.count('<h3') < 3:
+        problems.append('fewer than 3 FAQ (<h3>) entries')
+    if 'aeo-short-answer' not in low and 'short answer' not in low:
+        problems.append('no short-answer section')
+    if 'last updated' not in low and 'updated' not in low:
+        problems.append('no "last updated"/freshness line')
+    if low.count('/en/tools/') < 2:
+        problems.append('fewer than 2 internal tool links')
+    if problems:
+        return GateResult(False, 'AEO structure: ' + '; '.join(problems))
+    return OK
+
+
 def _set_news_hash(article):
     """Compute and stash the content hash the saver will persist."""
     h = hashlib.md5(
@@ -138,7 +161,10 @@ def check_seo_article(article, supabase, skip_dup=False):
     return _no_dup_news(supabase, article)
 
 
-def check_aeo_answer(article, supabase):
+def check_aeo_answer(article, supabase, skip_dup=False):
+    """skip_dup=True for AEO rewrites: the page already exists under the same
+    title/keyword, so the dup check would wrongly reject it (mirrors
+    check_seo_article). The content hash is still computed for the saver."""
     gates = [
         lambda: _required(article, REQUIRED_BILINGUAL),
         lambda: _title_max(article, 'title_en', 80),
@@ -146,11 +172,15 @@ def check_aeo_answer(article, supabase):
         lambda: _meta_desc_range(article, 'meta_description_en', 100, 170),
         lambda: _content_min(article, 'content_en', 1200),
         lambda: _bilingual_parity(article, 'content_en', 'content_zh', 0.25),
+        lambda: _aeo_structure(article, 'content_en'),
     ]
     for g in gates:
         r = g()
         if not r.ok:
             return r
+    if skip_dup:
+        _set_news_hash(article)
+        return OK
     return _no_dup_news(supabase, article)
 
 

@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from supabase import create_client
 
+import growth_state
 import monitor_agent
 import self_iteration_agent
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
@@ -200,6 +201,17 @@ def format_report(result):
 def run():
     supabase = get_supabase()
     result = evaluate_autonomy(supabase)
+
+    # rank4: publish the verdict so next run's strategy_engine / traffic_growth
+    # gate their output on system health (invariant I2 — this write has live
+    # consumers: strategy_engine.filter_actions_for_health and
+    # traffic_growth_agent.apply_verdict_gate).
+    growth_state.set_state(supabase, growth_state.VERDICT_KEY, {
+        'verdict': result['verdict'],
+        'blockers': result['blockers'],
+        'updated': datetime.utcnow().isoformat(),
+    })
+
     if FEISHU_WEBHOOK_URL:
         color = 'green' if result['verdict'] == 'healthy' else 'yellow'
         send_feishu_card(

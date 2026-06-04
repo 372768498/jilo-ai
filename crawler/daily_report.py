@@ -1,4 +1,5 @@
 # crawler/daily_report.py
+import os
 from datetime import datetime, timedelta, timezone
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
@@ -8,9 +9,51 @@ from ops_logger import log_operation
 
 CN_TZ = timezone(timedelta(hours=8))
 
+# rank8: the +20% target is the system's north star, so it must be visible in the
+# one place a human reads daily. Reported as target/actual/gap, not a bare delta.
+TARGET_GROWTH = float(os.getenv("PV_GROWTH_TARGET", "0.20"))
+MISS_STREAK_ESCALATE = int(os.getenv("PV_MISS_STREAK_ESCALATE", "3"))
+
 
 def display_date():
     return datetime.now(CN_TZ).strftime('%Y-%m-%d')
+
+
+def pv_growth_status(pv, pv_prev, target_growth=TARGET_GROWTH):
+    """Translate yesterday's PV vs the day before into a target/actual/gap line.
+    `met` is None when there's no baseline to judge against."""
+    target_pct = target_growth * 100
+    if not pv_prev:
+        return {'met': None, 'target_pct': target_pct, 'actual_pct': None,
+                'line': f"目标 +{target_pct:.0f}% / 实际 N/A（无前日基线）"}
+    actual = (pv - pv_prev) / pv_prev
+    actual_pct = actual * 100
+    met = actual >= target_growth
+    if met:
+        line = f"目标 +{target_pct:.0f}% / 实际 +{actual_pct:.0f}% ✅ 达标"
+    else:
+        target_pv = pv_prev * (1 + target_growth)
+        gap_pct = (target_growth - actual) * 100
+        gap_pv = max(int(round(target_pv - pv)), 0)
+        line = f"目标 +{target_pct:.0f}% / 实际 {actual_pct:+.0f}% ❌ 缺口 {gap_pct:.0f}%（~{gap_pv} PV）"
+    return {'met': met, 'target_pct': target_pct, 'actual_pct': actual_pct, 'line': line}
+
+
+def count_consecutive_misses(daily_rows, target_growth=TARGET_GROWTH):
+    """Streak of most-recent consecutive days whose PV growth missed target.
+    Walks back from the latest day; stops at the first day that met target."""
+    rows = sorted([r for r in daily_rows if r.get('date')], key=lambda r: r['date'])
+    pvs = [r.get('total_pageviews') or 0 for r in rows]
+    streak = 0
+    for i in range(len(pvs) - 1, 0, -1):
+        prev, cur = pvs[i - 1], pvs[i]
+        if not prev:
+            break
+        if (cur - prev) / prev < target_growth:
+            streak += 1
+        else:
+            break
+    return streak
 
 
 def unresolved_errors(logs):
@@ -85,6 +128,10 @@ def get_today_stats():
             stats['pv'] = 0
             stats['uv'] = 0
         stats['pv_prev'] = site_prev.data[0]['total_pageviews'] if site_prev.data else 0
+        recent = supabase.table('analytics_site_daily').select(
+            'date, total_pageviews'
+        ).order('date', desc=True).limit(10).execute()
+        stats['pv_recent_days'] = recent.data or []
     except Exception as e:
         print(f"analytics_site_daily unavailable, using analytics_daily fallback: {e}")
         page_yesterday = supabase.table('analytics_daily').select(
@@ -96,6 +143,7 @@ def get_today_stats():
         stats['pv'] = sum(r.get('pageviews', 0) for r in (page_yesterday.data or []))
         stats['uv'] = sum(r.get('unique_pageviews', 0) for r in (page_yesterday.data or []))
         stats['pv_prev'] = sum(r.get('pageviews', 0) for r in (page_prev.data or []))
+        stats['pv_recent_days'] = []
 
     # Top keywords: GSC has a 2-3 day lag, so find the most recent date with data
     # Look back up to 5 days to find the latest available date
@@ -192,12 +240,10 @@ def get_today_stats():
 def format_daily_report(stats):
     today = display_date()
 
-    # PV change
-    pv_change = ""
-    if stats.get('pv_prev') and stats.get('pv'):
-        diff = ((stats['pv'] - stats['pv_prev']) / max(stats['pv_prev'], 1)) * 100
-        arrow = "↑" if diff >= 0 else "↓"
-        pv_change = f" ({arrow}{abs(diff):.0f}%)"
+    # rank8: target/actual/gap against the +20% north star, plus a miss-streak note.
+    status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
+    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
+    streak_note = f"\n  ⚠️ 已连续 {streak} 天未达标" if streak >= MISS_STREAK_ESCALATE else ""
 
     # Keywords section (GSC lags 2-3 days; show most recent available date)
     kw_lines = []
@@ -292,7 +338,8 @@ def format_daily_report(stats):
     return f"""**jilo.ai 日报 - {today}**
 
 **流量（昨日）**
-  PV: {stats.get('pv', 'N/A')}{pv_change}  UV: {stats.get('uv', 'N/A')}
+  PV: {stats.get('pv', 'N/A')}  UV: {stats.get('uv', 'N/A')}
+  {status['line']}{streak_note}
 
 **今日新增内容**
   新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']} | 重写: {stats.get('rewrites_done_today', 0)}
@@ -332,16 +379,36 @@ def send_daily_report():
     content = format_daily_report(stats)
     today = display_date()
 
+    # rank8: card color reflects whether we hit the +20% target — green met,
+    # yellow missed, blue when there's no baseline to judge.
+    pv_status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
+    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
+    color = {True: 'green', False: 'yellow', None: 'blue'}[pv_status['met']]
+
     success = send_feishu_card(
         FEISHU_WEBHOOK_URL,
         f"jilo.ai 日报 - {today}",
         content,
-        color="blue"
+        color=color,
     )
 
+    # rank8: a sustained miss is a business-result change — escalate as its own
+    # card (one of the three notification classes that I6 permits).
+    if streak >= MISS_STREAK_ESCALATE:
+        send_feishu_card(
+            FEISHU_WEBHOOK_URL,
+            f"jilo.ai 业务结果变化：连续 {streak} 天未达 +{TARGET_GROWTH * 100:.0f}% PV 目标",
+            (f"PV 增长已连续 {streak} 天低于目标。系统已自动加压（梯度预算随缺口放大、"
+             f"低收益动作降级），但仍未追上。建议人工介入最高杠杆项：联盟变现缺口与高曝光零点击页。"),
+            color='red',
+        )
+
     status = "success" if success else "error"
-    log_operation("daily_report", status, f"Report sent: {success}")
-    print(f"Daily report sent: {success}")
+    log_operation("daily_report", status, f"Report sent: {success}", {
+        'pv_target_met': pv_status['met'],
+        'miss_streak': streak,
+    })
+    print(f"Daily report sent: {success} (met={pv_status['met']} streak={streak})")
 
 
 if __name__ == "__main__":

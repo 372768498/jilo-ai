@@ -63,13 +63,17 @@ def generate_seo_article(keyword):
 
     tools_context = ""
     if related_tools:
+        # rank2: mark monetized tools so the model can give them prominent,
+        # honest placement in comparison tables (revenue follows the traffic).
         tool_lines = [
             f"- {t['name_en']} (slug: {t['slug']}, pricing: {t.get('pricing_type','freemium')})"
+            f"{' [monetized — feature prominently in comparison tables when genuinely relevant]' if (t.get('affiliate_url') or '').strip() else ''}"
             for t in related_tools
         ]
         tools_context = (
             "\n\nOnly these tools exist in our directory — link ONLY to these, never invent a tool or slug:\n"
             + '\n'.join(tool_lines)
+            + "\n(Tools marked [monetized] should be included and fairly compared where relevant — never misrepresent them, but don't bury them.)"
         )
 
     prompt = f"""Write a comprehensive, SEO-optimized article about: "{keyword}"
@@ -435,6 +439,46 @@ if __name__ == "__main__":
                 if not keyword:
                     aq.mark_failed(supabase, action, "payload missing 'keyword'")
                     failed += 1
+                    continue
+
+                # rank6 (I3): rewriting an AEO answer page must produce another AEO
+                # page — never overwrite it with a long-form SEO article, which
+                # would strip the short answer / table / FAQ that gets it cited.
+                if is_rewrite and payload.get('content_type') == 'aeo_answer':
+                    print(f"\nRewriting AEO: {keyword}  (priority={action['priority']})")
+                    try:
+                        article = generate_aeo_answer(keyword, payload)
+                        if not article:
+                            aq.mark_failed(supabase, action, "AEO rewrite returned None")
+                            failed += 1
+                            continue
+                        gate = qg.check_aeo_answer(article, supabase, skip_dup=True)
+                        if not gate.ok:
+                            if gate.terminal:
+                                aq.mark_skipped(supabase, action, gate.reason)
+                                skipped += 1
+                                print(f"  SKIP: {gate.reason}")
+                            else:
+                                aq.mark_failed(supabase, action, gate.reason)
+                                failed += 1
+                                print(f"  FAIL gate: {gate.reason}")
+                            continue
+                        slug = rewrite_article(article, payload.get('slug'), supabase)
+                        if not slug:
+                            aq.mark_skipped(supabase, action, f"AEO page gone: {payload.get('slug')}")
+                            skipped += 1
+                            continue
+                        aq.mark_done(supabase, action, {
+                            'slug': slug, 'title_en': article['title_en'],
+                            'keyword': keyword, 'outcome': 'rewritten_aeo',
+                        })
+                        saved += 1
+                        print(f"  DONE (rewritten_aeo): {article['title_en'][:60]}")
+                    except Exception as aeo_rw_err:
+                        aq.mark_failed(supabase, action, str(aeo_rw_err))
+                        failed += 1
+                        print(f"  FAIL: {aeo_rw_err}")
+                    time.sleep(2)
                     continue
 
                 mode_label = "Rewriting" if is_rewrite else "Generating"

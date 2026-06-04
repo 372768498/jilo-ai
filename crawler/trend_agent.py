@@ -12,6 +12,7 @@
 # and can catch intraday surges when run several times a day.
 import re
 import json
+from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
 from openai import OpenAI
@@ -79,6 +80,93 @@ def has_tool_shopper_intent(keyword):
     if any(term in k for term in NOISE_TERMS):
         return False
     return any(term in k for term in TOOL_INTENT_TERMS)
+
+
+# rank5 — GSC breakout queries. The highest-quality demand signal isn't a
+# second-hand HN/Reddit guess: it's a query Google has *already started showing
+# us for*. We catch the jump (recent 3 days vs prior 3) and enqueue it directly,
+# bypassing the LLM community-trend judgment.
+GSC_EMERGING_LOOKBACK_DAYS = 6
+GSC_EMERGING_MIN_IMPRESSIONS = 5
+GSC_EMERGING_POSITION_MAX = 30
+GSC_EMERGING_GROWTH = 1.0  # +100% recent vs prior, or any jump from ~zero
+
+
+def detect_emerging_queries(rows):
+    """Pure: search_console_daily rows -> breakout queries. A query qualifies if
+    its last-3-day impressions are new (prior window ~0) or grew >=100%, it has
+    real recent impressions, and it ranks within POSITION_MAX (we're close
+    enough that a dedicated page can win it)."""
+    dates = sorted({r['date'] for r in rows if r.get('date')}, reverse=True)
+    if len(dates) < 2:
+        return []
+    recent_dates = set(dates[:3])
+    prior_dates = set(dates[3:6])
+    agg = defaultdict(lambda: {'recent': 0, 'prior': 0, 'wpos': 0.0, 'impr': 0})
+    for r in rows:
+        q = (r.get('query') or '').strip()
+        if not q:
+            continue
+        impr = r.get('impressions') or 0
+        d = r.get('date')
+        if d in recent_dates:
+            agg[q]['recent'] += impr
+            agg[q]['wpos'] += (r.get('position') or 0) * impr
+            agg[q]['impr'] += impr
+        elif d in prior_dates:
+            agg[q]['prior'] += impr
+
+    emerging = []
+    for q, a in agg.items():
+        if a['recent'] < GSC_EMERGING_MIN_IMPRESSIONS:
+            continue
+        pos = a['wpos'] / a['impr'] if a['impr'] else 999
+        if pos > GSC_EMERGING_POSITION_MAX:
+            continue
+        prior = a['prior']
+        if prior == 0:
+            growth = None
+        else:
+            growth = (a['recent'] - prior) / prior
+            if growth < GSC_EMERGING_GROWTH:
+                continue
+        emerging.append({'query': q, 'impressions': a['recent'],
+                         'position': round(pos, 1),
+                         'growth': None if growth is None else round(growth, 2)})
+    emerging.sort(key=lambda x: x['impressions'], reverse=True)
+    return emerging
+
+
+def fetch_gsc_emerging_signals(supabase):
+    since = (datetime.utcnow() - timedelta(days=GSC_EMERGING_LOOKBACK_DAYS)).strftime('%Y-%m-%d')
+    rows = supabase.table('search_console_daily').select(
+        'query, impressions, position, date'
+    ).gte('date', since).execute()
+    return detect_emerging_queries(rows.data or [])
+
+
+def enqueue_gsc_emerging(supabase, emerging, limit=MAX_TOPICS):
+    """Enqueue breakout queries directly as high-priority SEO work — no LLM gate,
+    just the same tool-shopper intent guard the rest of the agent uses."""
+    opened = 0
+    for e in emerging[:limit]:
+        keyword = (e.get('query') or '').strip()
+        if not keyword or not has_tool_shopper_intent(keyword):
+            continue
+        dedup_key = f"seo:{_slugify(keyword)}"
+        if aq.enqueue(
+            supabase,
+            action_type='generate_seo_content',
+            payload={'keyword': keyword, 'source': 'GSC-rising',
+                     'impressions': e['impressions'], 'position': e['position'],
+                     'growth': e.get('growth')},
+            reason=f'GSC breakout: "{keyword}" at {e["impressions"]} impressions, pos {e["position"]}',
+            priority='high',
+            dedup_key=dedup_key,
+        ):
+            opened += 1
+            print(f"  [GSC-RISING high] {keyword}  ({e['impressions']} impr, pos {e['position']})")
+    return opened
 
 
 def fetch_rss_signals(supabase):
@@ -218,22 +306,31 @@ if __name__ == "__main__":
     print("Starting trend agent...")
     try:
         supabase = get_supabase()
+
+        # rank5: first-party breakout demand goes straight to the queue, ahead of
+        # (and independent of) the LLM community-trend path.
+        emerging = fetch_gsc_emerging_signals(supabase)
+        gsc_enqueued = enqueue_gsc_emerging(supabase, emerging)
+        print(f"  GSC-rising: {len(emerging)} emerging, {gsc_enqueued} enqueued")
+
         signals = fetch_rss_signals(supabase) + trend_sources.gather_engagement_signals()
-        print(f"  {len(signals)} total signals (RSS + HN + Reddit)")
+        print(f"  {len(signals)} total signals (RSS + HN + Reddit + PH + GitHub)")
 
         if len(signals) < MIN_SIGNALS:
-            print(f"  Too few signals (<{MIN_SIGNALS}); skipping.")
-            log_operation("trend_agent", "success", "skipped: too few signals",
-                          {"enqueued": 0, "signals": len(signals)})
+            print(f"  Too few signals (<{MIN_SIGNALS}); skipping LLM path.")
+            enqueued = gsc_enqueued
+            log_operation("trend_agent", "success", "LLM path skipped: too few signals",
+                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "signals": len(signals)})
         else:
             trends = detect_trends(signals)
             print(f"  LLM surfaced {len(trends)} candidate trend(s)")
             enqueued = enqueue_trends(supabase, trends)
             if enqueued == 0:
                 enqueued += enqueue_fallback_trends(supabase)
+            enqueued += gsc_enqueued
             print(f"\n  Enqueued {enqueued} high-priority trend action(s)")
             log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
-                          {"enqueued": enqueued, "trends": trends})
+                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends})
     except Exception as e:
         log_operation("trend_agent", "error", str(e))
         if FEISHU_WEBHOOK_URL:

@@ -98,6 +98,17 @@ def send_manual_blockers_report():
         return False
 
     data = load_manual_blockers()
+
+    # rank11 (A11b / I6): don't send an empty "nothing to do" card every day —
+    # only notify when there's an actual manual blocker. Mirrors the heartbeat's
+    # success-suppression so the three notification classes stay signal-only.
+    if not data.get('schema_flags') and not data.get('monetization_flags'):
+        log_operation('manual_blockers_report', 'success', 'no manual blockers; report suppressed', {
+            'schema_flags': 0, 'monetization_flags': 0, 'suppressed': True,
+        })
+        print('No manual blockers; report suppressed.')
+        return False
+
     content = format_message(data)
     today = display_date()
     ok = send_feishu_card(
