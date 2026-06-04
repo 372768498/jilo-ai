@@ -25,6 +25,7 @@ import {
   CATEGORY_META,
   PROMPT_TEMPLATES,
   categoryLabel,
+  coverSrc,
   templateName,
   templatesByCategory,
 } from "@/lib/prompt-templates";
@@ -144,24 +145,35 @@ export default function PromptsHubPage({ params }: PageProps) {
                     <Link
                       key={tpl.slug}
                       href={`/${locale}/prompts/${tpl.slug}`}
-                      className="group flex flex-col rounded-lg border p-5 transition hover:border-emerald-300 hover:shadow-md"
+                      className="group flex flex-col overflow-hidden rounded-lg border transition hover:border-emerald-300 hover:shadow-md"
                     >
-                      <h3 className="font-semibold text-slate-950 group-hover:text-emerald-700">
-                        {templateName(tpl, locale)}
-                      </h3>
-                      <p className="mt-2 flex-1 text-sm leading-6 text-slate-600">
-                        {isZh ? tpl.useWhen_zh : tpl.useWhen_en}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {tpl.tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
-                            {tag}
-                          </span>
-                        ))}
+                      <div className="aspect-[4/3] overflow-hidden bg-slate-100">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={coverSrc(tpl.slug)}
+                          alt={`${templateName(tpl, locale)} — GPT-Image-2 ${t("example", "示例")}`}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        />
                       </div>
-                      <div className="mt-4 inline-flex items-center text-sm font-semibold text-emerald-700">
-                        {t("Open builder", "打开生成器")}
-                        <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
+                      <div className="flex flex-1 flex-col p-5">
+                        <h3 className="font-semibold text-slate-950 group-hover:text-emerald-700">
+                          {templateName(tpl, locale)}
+                        </h3>
+                        <p className="mt-2 flex-1 text-sm leading-6 text-slate-600">
+                          {isZh ? tpl.useWhen_zh : tpl.useWhen_en}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {tpl.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="rounded bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="mt-4 inline-flex items-center text-sm font-semibold text-emerald-700">
+                          {t("Open builder", "打开生成器")}
+                          <ArrowRight className="ml-1.5 h-4 w-4 transition group-hover:translate-x-0.5" />
+                        </div>
                       </div>
                     </Link>
                   ))}

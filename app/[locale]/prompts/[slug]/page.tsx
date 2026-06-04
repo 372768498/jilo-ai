@@ -10,8 +10,10 @@ import PromptBuilder from "@/components/PromptBuilder";
 import { supabase } from "@/lib/supabase";
 import {
   PROMPT_BLOCKS,
+  PROMPT_SOURCE,
   PROMPT_TEMPLATES,
   categoryLabel,
+  coverSrc,
   getTemplate,
   relatedTemplates,
   templateName,
@@ -129,6 +131,20 @@ export default async function PromptTemplatePage({ params }: PageProps) {
                 </span>
               ))}
             </div>
+            {/* Example image (from the awesome-gpt-image-2 case set) */}
+            <figure className="mt-6">
+              <div className="overflow-hidden rounded-xl border bg-white">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverSrc(tpl.slug)}
+                  alt={`${name} — GPT-Image-2 ${t("example output", "示例输出")}`}
+                  className="max-h-[460px] w-full object-contain"
+                />
+              </div>
+              <figcaption className="mt-2 text-xs text-slate-400">
+                {t("Example output", "示例输出")} · {t("style reference from", "风格参考来自")} {PROMPT_SOURCE}
+              </figcaption>
+            </figure>
           </div>
         </section>
 

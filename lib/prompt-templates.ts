@@ -54,6 +54,14 @@ export function categoryLabel(category: string, locale: string): string {
   return locale === "zh" ? meta.zh : meta.en;
 }
 
+// Cover images live in public/prompts/covers/<slug>.<ext>, pulled from the
+// awesome-gpt-image-2 example set. Most are .jpg; these three are .png.
+const PNG_COVERS = new Set(["infographic-engine", "architecture-space", "scene-storytelling"]);
+
+export function coverSrc(slug: string): string {
+  return `/prompts/covers/${slug}.${PNG_COVERS.has(slug) ? "png" : "jpg"}`;
+}
+
 export function getTemplate(slug: string): PromptTemplate | undefined {
   return PROMPT_TEMPLATES.find((t) => t.slug === slug);
 }
