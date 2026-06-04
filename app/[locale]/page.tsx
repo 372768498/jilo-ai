@@ -177,6 +177,27 @@ export default async function HomePage({ params }: PageProps) {
     .order("updated_at", { ascending: false })
     .limit(8);
 
+  // Density blocks (benchmark: scannable category grid with counts + a fresh feed).
+  const [{ data: catRows }, { data: catCountRows }, { data: newestTools }] = await Promise.all([
+    supabase.from("categories").select("slug, name_en, name_zh, display_order").order("display_order", { ascending: true }),
+    supabase.from("tools").select("category_canonical").eq("status", "published"),
+    supabase.from("tools").select("id, slug, name_en, name_zh, logo_url, created_at").eq("status", "published").order("created_at", { ascending: false }).limit(8),
+  ]);
+  const catCounts: Record<string, number> = {};
+  for (const r of catCountRows || []) {
+    const c = (r as any).category_canonical;
+    if (c) catCounts[c] = (catCounts[c] || 0) + 1;
+  }
+  const categoryTiles = (catRows || [])
+    .map((c: any) => ({ slug: c.slug, name: isZh ? c.name_zh || c.name_en : c.name_en, count: catCounts[c.slug] || 0 }))
+    .filter((c) => c.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const totalTools = (catCountRows || []).length;
+  const newWeekCount = (newestTools || []).filter((tl: any) => {
+    if (!tl.created_at) return false;
+    return Date.now() - new Date(tl.created_at).getTime() < 7 * 24 * 3600 * 1000;
+  }).length;
+
   const { data: latestNews } = await supabase
     .from("news_simple")
     .select("id, slug, title, title_zh, summary, summary_zh, source, published_at")
@@ -322,13 +343,75 @@ export default async function HomePage({ params }: PageProps) {
             scannable tools + an outbound Visit CTA (audit: hero showed no real
             tools above the fold and the homepage carried zero outbound CTAs). */}
         <section className="mx-auto max-w-7xl px-4 pt-10">
-          <ArticleToolStrip locale={locale} title={isZh ? "🔥 热门 AI 工具" : "🔥 Popular AI tools"} limit={6} />
+          <ArticleToolStrip locale={locale} title={isZh ? "🔥 热门 AI 工具" : "🔥 Popular AI tools"} limit={12} />
           <div className="mt-3">
             <Link href={`/${locale}/rankings`} className="text-sm font-semibold text-emerald-700 hover:underline">
               {isZh ? "查看完整排行榜 →" : "See the full rankings →"}
             </Link>
           </div>
         </section>
+
+        {/* Category grid with live tool counts — the dense, scannable, concrete
+            entry point benchmarks lead with (vs abstract task cards). */}
+        {categoryTiles.length > 0 ? (
+          <section className="mx-auto max-w-7xl px-4 pt-12">
+            <div className="mb-4 flex items-end justify-between">
+              <h2 className="text-xl font-bold text-slate-950">
+                {isZh ? "按分类浏览" : "Browse by category"}
+                <span className="ml-2 text-sm font-normal text-slate-400">
+                  {isZh ? `共 ${totalTools} 个工具` : `${totalTools} tools`}
+                </span>
+              </h2>
+              <Link href={`/${locale}/categories`} className="text-sm font-medium text-emerald-700 hover:underline">
+                {isZh ? "全部分类 →" : "All categories →"}
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              {categoryTiles.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/${locale}/c/${c.slug}`}
+                  className="flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm transition hover:border-emerald-300 hover:shadow-sm"
+                >
+                  <span className="font-medium text-slate-800">{c.name}</span>
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{c.count}</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Fresh feed — a daily/weekly return hook + density signal. */}
+        {newestTools && newestTools.length > 0 ? (
+          <section className="mx-auto max-w-7xl px-4 pt-12">
+            <h2 className="mb-4 text-xl font-bold text-slate-950">
+              {isZh ? "最新收录" : "Newest tools"}
+              {newWeekCount > 0 ? (
+                <span className="ml-2 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                  {isZh ? `本周新增 ${newWeekCount}` : `+${newWeekCount} this week`}
+                </span>
+              ) : null}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {newestTools.map((tl: any) => (
+                <Link
+                  key={tl.slug}
+                  href={`/${locale}/tools/${tl.slug}`}
+                  className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1.5 text-sm transition hover:border-emerald-300"
+                >
+                  {tl.logo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={tl.logo_url} alt="" className="h-5 w-5 rounded object-contain" />
+                  ) : null}
+                  <span className="font-medium text-slate-800">{(isZh ? tl.name_zh || tl.name_en : tl.name_en || tl.name_zh) || tl.slug}</span>
+                </Link>
+              ))}
+              <Link href={`/${locale}/rankings/newest`} className="inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium text-emerald-700 hover:underline">
+                {isZh ? "查看全部 →" : "See all →"}
+              </Link>
+            </div>
+          </section>
+        ) : null}
 
         {/* Browse by task — demoted from the hero so real tools lead, but kept
             for the concierge/task-intent path. */}
