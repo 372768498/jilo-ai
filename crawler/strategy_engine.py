@@ -255,6 +255,39 @@ def check_forced_growth_queries():
     return actions
 
 
+# Generic tokens that disqualify a query from being treated as a competitor brand.
+_BRAND_STOPWORDS = {
+    'jilo', 'ai', 'best', 'free', 'top', 'new', 'online', 'app', 'apps',
+    'tool', 'tools', 'software', 'review', 'reviews', 'pricing', 'price',
+    'alternative', 'alternatives', 'vs', 'chatbot', 'generator', 'editor',
+    'how', 'what', 'which', 'is', 'the', 'for',
+}
+
+
+def brand_alternatives_keyword(query):
+    """Reframe a bare competitor-brand query (1-2 alphabetic tokens, not generic,
+    not our brand, not a category) into a directory-native 'best <brand>
+    alternatives' target — one sharper, monetizable page instead of a thin page
+    literally titled after the competitor. Returns the (possibly reframed) keyword.
+
+    Data motivation: GSC shows us ranking pos 20-33 for competitor brands
+    (phind, marketmuse, ...) with no alternatives page — exactly the demand an
+    AI-tools directory should capture."""
+    q = (query or '').lower().strip()
+    toks = q.split()
+    if not (1 <= len(toks) <= 2):
+        return query
+    if 'alternative' in q:
+        return query
+    if any(t in _BRAND_STOPWORDS for t in toks):
+        return query
+    if not all(t.isalpha() and len(t) >= 3 for t in toks):
+        return query
+    if route_to_hub(q):
+        return query
+    return f"best {q} alternatives"
+
+
 def check_keyword_opportunities():
     """
     Find queries with real search demand that rank poorly and have no dedicated
@@ -298,17 +331,22 @@ def check_keyword_opportunities():
 
     actions = []
     for query, impr, avg_pos in candidates[:OPP_MAX_PER_RUN]:
-        dedup_key = f"seo:{_slugify(query)}"
+        keyword = brand_alternatives_keyword(query)
+        dedup_key = f"seo:{_slugify(keyword)}"
         # Skip if we already made (or are making) a page for this keyword.
         existing = supabase.table('action_queue').select('id').eq(
             'dedup_key', dedup_key
         ).in_('status', ['pending', 'in_progress', 'done']).execute()
         if existing.data:
             continue
+        if keyword != query:
+            reason = f'"{query}" 是竞品品牌词（排名第 {avg_pos:.0f}，{impr} 次曝光）— 做 "{keyword}" 承接换品牌需求'
+        else:
+            reason = f'"{query}" 有 {impr} 次曝光但排名第 {avg_pos:.0f}，且无专属页 — 做深 evergreen'
         actions.append({
             'type': 'generate_seo_content',
-            'reason': f'"{query}" 有 {impr} 次曝光但排名第 {avg_pos:.0f}，且无专属页 — 做深 evergreen',
-            'keyword': query,
+            'reason': reason,
+            'keyword': keyword,
             'priority': _opp_priority(impr),
         })
 
