@@ -1,0 +1,394 @@
+[
+  {
+    "id": "540cd5b7-4015-42ef-804f-8495322a2dc4",
+    "slug": "dall-e-3",
+    "name_en": "DALL-E 3",
+    "name_zh": "DALL-E 3",
+    "tagline_en": "OpenAI's latest AI image generator with precise text understanding",
+    "tagline_zh": "OpenAI's latest AI image generator with precise text understanding",
+    "description_en": "DALL-E 3 is OpenAI's advanced image generation model that creates detailed images from text prompts. Integrated into ChatGPT for seamless creative workflows.",
+    "description_zh": "DALL-E 3 is OpenAI's advanced image generation model that creates detailed images from text prompts. Integrated into ChatGPT for seamless creative workflows.",
+    "official_url": "https://openai.com/dall-e-3",
+    "affiliate_url": null,
+    "affiliate_platform": null,
+    "category_id": null,
+    "tags_en": null,
+    "tags_zh": null,
+    "pricing_type": "freemium",
+    "pricing_details_en": null,
+    "pricing_details_zh": null,
+    "price_range": null,
+    "rating": 0,
+    "review_count": 0,
+    "click_count": 34,
+    "review_content_en": null,
+    "review_content_zh": null,
+    "logo_url": "https://www.google.com/s2/favicons?domain=openai.com&sz=128",
+    "cover_image_url": null,
+    "screenshots": null,
+    "video_url": null,
+    "source": "seed",
+    "source_url": null,
+    "status": "published",
+    "is_featured": false,
+    "is_sponsored": false,
+    "meta_title_en": null,
+    "meta_title_zh": null,
+    "meta_description_en": null,
+    "meta_description_zh": null,
+    "published_at": null,
+    "created_at": "2026-01-30T10:02:17.320661+00:00",
+    "updated_at": "2026-06-04T04:59:32.918757+00:00",
+    "long_description_en": null,
+    "long_description_zh": null,
+    "features": [],
+    "pros": [],
+    "cons": [],
+    "use_cases": [],
+    "last_updated_at": "2026-01-30T10:02:17.320661+00:00",
+    "category": "Image Generation",
+    "category_canonical": "image",
+    "china_access": null
+  },
+  {
+    "id": "63b9cbc2-1fe8-4fa8-9f08-2c55c48774ce",
+    "slug": "dalle-3",
+    "name_en": "DALL-E 3",
+    "name_zh": "DALL-E 3",
+    "tagline_en": "OpenAI's latest AI image generator with enhanced capabilities",
+    "tagline_zh": "OpenAI最新的AI图像生成器，具有增强功能",
+    "description_en": "DALL-E 3 is OpenAI's most advanced image generation model, creating highly detailed and accurate images from text prompts with improved understanding.",
+    "description_zh": "DALL-E 3是OpenAI最先进的图像生成模型，可以从文本提示创建高度详细和准确的图像，理解能力得到改进。",
+    "official_url": "https://openai.com/dall-e-3",
+    "affiliate_url": null,
+    "affiliate_platform": null,
+    "category_id": null,
+    "tags_en": null,
+    "tags_zh": null,
+    "pricing_type": "paid",
+    "pricing_details_en": null,
+    "pricing_details_zh": null,
+    "price_range": null,
+    "rating": 0,
+    "review_count": 0,
+    "click_count": 5,
+    "review_content_en": null,
+    "review_content_zh": null,
+    "logo_url": "https://www.google.com/s2/favicons?domain=openai.com&sz=128",
+    "cover_image_url": null,
+    "screenshots": null,
+    "video_url": null,
+    "source": null,
+    "source_url": null,
+    "status": "draft",
+    "is_featured": true,
+    "is_sponsored": false,
+    "meta_title_en": "DALL-E 3: Advanced Image Generation Tool",
+    "meta_title_zh": "DALL-E 3：高级图像生成工具",
+    "meta_description_en": "Discover DALL-E 3, OpenAI's latest image generation model that transforms text prompts into stunning, detailed images with ease.",
+    "meta_description_zh": "探索 DALL-E 3，OpenAI 最新的图像生成模型，轻松将文本提示转化为惊人、详细的图像。",
+    "published_at": null,
+    "created_at": "2025-10-11T08:24:26.476952+00:00",
+    "updated_at": "2026-05-28T05:31:25.804021+00:00",
+    "long_description_en": "DALL-E 3 is OpenAI's latest and most advanced image generation model, designed to transform text prompts into highly detailed and accurate images. Leveraging cutting-edge neural network architecture, DALL-E 3 exhibits a remarkable understanding of nuance and context, enabling it to generate images that are not just visually appealing but also closely aligned with the specific requests made by users. The technology behind DALL-E 3 builds upon its predecessors, utilizing a larger dataset and improved training methods to enhance its creative capabilities and output quality. This makes it an ideal tool for artists, designers, marketers, and anyone looking to create compelling visual content without the need for traditional artistic skills. Its unique value proposition lies in its ability to democratize image generation, allowing users from various backgrounds to bring their ideas to life with just a few words. Whether you’re crafting illustrations for a story, generating product visuals for marketing campaigns, or simply exploring creative concepts, DALL-E 3 provides a powerful, intuitive platform that bridges the gap between imagination and reality. With a focus on user-friendly interactions, the tool encourages exploration and creativity, making it an essential companion for those in creative industries and beyond.",
+    "long_description_zh": "DALL-E 3 是 OpenAI 最新和最先进的图像生成模型，旨在将文本提示转化为高度详细和准确的图像。利用尖端的神经网络架构，DALL-E 3 展现出对细微差别和上下文的卓越理解，使其能够生成不仅视觉上吸引人，而且与用户的具体请求紧密相关的图像。DALL-E 3 背后的技术建立在其前身的基础上，利用更大的数据集和改进的训练方法来增强其创造能力和输出质量。这使其成为艺术家、设计师、营销人员以及任何希望在无需传统艺术技能的情况下创建引人注目的视觉内容的理想工具。它独特的价值主张在于其能够使图像生成民主化，让来自不同背景的用户仅凭几句话就能将他们的想法变为现实。无论您是在为故事创作插图、为营销活动生成产品视觉，还是仅仅在探索创意概念，DALL-E 3 提供了一个强大且直观的平台，架起了想象与现实之间的桥梁。该工具专注于用户友好的互动，鼓励探索和创造力，使其成为创意行业及其他领域的必备伴侣。",
+    "features": [
+      {
+        "title_en": "Advanced Image Generation",
+        "title_zh": "高级图像生成",
+        "description_en": "Creates stunningly detailed images from text prompts.",
+        "description_zh": "从文本提示生成令人惊叹的细节图像。"
+      },
+      {
+        "title_en": "Enhanced Understanding",
+        "title_zh": "增强理解能力",
+        "description_en": "Improved contextual comprehension for accurate visuals.",
+        "description_zh": "改进的上下文理解以实现准确的视觉效果。"
+      },
+      {
+        "title_en": "User-Friendly Interface",
+        "title_zh": "用户友好的界面",
+        "description_en": "Intuitive design makes it easy for anyone to use.",
+        "description_zh": "直观的设计使任何人都能轻松使用。"
+      },
+      {
+        "title_en": "Creative Flexibility",
+        "title_zh": "创意灵活性",
+        "description_en": "Generates a wide variety of styles and concepts.",
+        "description_zh": "生成多种风格和概念。"
+      },
+      {
+        "title_en": "Rapid Iteration",
+        "title_zh": "快速迭代",
+        "description_en": "Quickly produces multiple variations based on prompts.",
+        "description_zh": "根据提示快速生成多个变体。"
+      },
+      {
+        "title_en": "High Resolution Output",
+        "title_zh": "高分辨率输出",
+        "description_en": "Delivers images in high definition for professional use.",
+        "description_zh": "以高清晰度交付图像，适用于专业用途。"
+      },
+      {
+        "title_en": "Diverse Application",
+        "title_zh": "多样化应用",
+        "description_en": "Applicable for marketing, storytelling, and art.",
+        "description_zh": "适用于市场营销、叙事和艺术。"
+      }
+    ],
+    "pros": [
+      {
+        "en": "Generates high-quality images quickly and efficiently.",
+        "zh": "快速高效地生成高质量图像。"
+      },
+      {
+        "en": "Offers vast creative possibilities for users of all levels.",
+        "zh": "为各个层次的用户提供广泛的创意可能性。"
+      },
+      {
+        "en": "Reduces the need for traditional graphic design skills.",
+        "zh": "减少对传统平面设计技能的需求。"
+      }
+    ],
+    "cons": [
+      {
+        "en": "May struggle with highly abstract or complex prompts.",
+        "zh": "可能在处理高度抽象或复杂的提示时遇到困难。"
+      },
+      {
+        "en": "Occasional inaccuracies in depicting specific details.",
+        "zh": "在描绘特定细节时偶尔出现不准确。"
+      }
+    ],
+    "use_cases": [
+      {
+        "title_en": "Marketing Campaigns",
+        "title_zh": "市场营销活动",
+        "description_en": "Create eye-catching visuals for advertisements and social media.",
+        "description_zh": "为广告和社交媒体创建引人注目的视觉效果。"
+      },
+      {
+        "title_en": "Story Illustration",
+        "title_zh": "故事插图",
+        "description_en": "Generate illustrations that complement narratives in books or articles.",
+        "description_zh": "生成补充书籍或文章叙述的插图。"
+      },
+      {
+        "title_en": "Product Design Mockups",
+        "title_zh": "产品设计模型",
+        "description_en": "Visualize product concepts and variations before development.",
+        "description_zh": "在开发之前可视化产品概念和变体。"
+      },
+      {
+        "title_en": "Artistic Exploration",
+        "title_zh": "艺术探索",
+        "description_en": "Assist artists in brainstorming and visualizing new creative ideas.",
+        "description_zh": "帮助艺术家进行头脑风暴和可视化新的创意想法。"
+      }
+    ],
+    "last_updated_at": "2025-10-11T08:24:26.476952+00:00",
+    "category": "Image Generation",
+    "category_canonical": "image",
+    "china_access": null
+  },
+  {
+    "id": "394fd503-fb9a-4a1e-817a-a59b6475eb0d",
+    "slug": "leonardo-ai",
+    "name_en": "Leonardo.ai",
+    "name_zh": "Leonardo.ai",
+    "tagline_en": "AI art generator for game assets",
+    "tagline_zh": "AI艺术生成器，用于游戏资产",
+    "description_en": "Leonardo.ai is an AI art generator focused on creating game assets, concept art, and illustrations.",
+    "description_zh": "Leonardo.ai是一个专注于创建游戏资产、概念艺术和插图的AI艺术生成器。",
+    "official_url": "https://leonardo.ai",
+    "affiliate_url": null,
+    "affiliate_platform": null,
+    "category_id": null,
+    "tags_en": null,
+    "tags_zh": null,
+    "pricing_type": "freemium",
+    "pricing_details_en": null,
+    "pricing_details_zh": null,
+    "price_range": null,
+    "rating": 0,
+    "review_count": 0,
+    "click_count": 4,
+    "review_content_en": null,
+    "review_content_zh": null,
+    "logo_url": "https://www.google.com/s2/favicons?domain=leonardo.ai&sz=128",
+    "cover_image_url": null,
+    "screenshots": null,
+    "video_url": null,
+    "source": null,
+    "source_url": null,
+    "status": "draft",
+    "is_featured": true,
+    "is_sponsored": false,
+    "meta_title_en": "Leonardo.ai - AI Art Generator for Game Assets",
+    "meta_title_zh": "Leonardo.ai - 游戏资产的人工智能艺术生成器",
+    "meta_description_en": "Discover Leonardo.ai, the AI art generator designed for creating stunning game assets, concept art, and illustrations effortlessly.",
+    "meta_description_zh": "发现 Leonardo.ai，这款人工智能艺术生成器旨在轻松创建令人惊艳的游戏资产、概念艺术和插图。",
+    "published_at": null,
+    "created_at": "2025-10-13T05:26:49.904387+00:00",
+    "updated_at": "2026-05-28T05:31:25.804021+00:00",
+    "long_description_en": "Leonardo.ai is a cutting-edge AI art generator specifically designed to empower game developers, artists, and illustrators in creating stunning visual content with ease. Leveraging advanced machine learning algorithms, Leonardo.ai transforms simple prompts into intricate illustrations, concept art, and game assets that captivate audiences. The tool's intuitive interface allows users to generate high-quality images quickly, making it an invaluable asset for those working in the gaming and entertainment industries. Whether you are a seasoned artist or a novice looking to bring your ideas to life, Leonardo.ai offers a unique blend of creativity and technology. Its ability to understand and interpret user inputs means that you can create tailor-made visuals that align perfectly with your project requirements. The platform not only saves time but also inspires creativity by providing users with an expansive library of customizable options. With a focus on game assets and concept art, Leonardo.ai stands out by offering specialized features that cater directly to the needs of game designers, allowing them to iterate designs rapidly and efficiently. In a world where visual storytelling is paramount, Leonardo.ai is the go-to solution for anyone looking to enhance their artistic capabilities and produce professional-grade artwork in a fraction of the time.",
+    "long_description_zh": "Leonardo.ai 是一款尖端的人工智能艺术生成器，专为游戏开发者、艺术家和插画师设计，旨在轻松创建令人惊艳的视觉内容。通过先进的机器学习算法，Leonardo.ai 将简单的提示转化为复杂的插图、概念艺术和游戏资产，吸引观众的目光。该工具的直观界面使用户能够快速生成高质量的图像，对于在游戏和娱乐行业工作的人来说，它是一个不可或缺的资产。无论您是经验丰富的艺术家，还是希望将创意变为现实的新手，Leonardo.ai 都提供了创意与技术的独特结合。它理解和解释用户输入的能力意味着您可以创建完全符合项目需求的定制视觉效果。该平台不仅节省时间，还通过提供广泛的可定制选项激发创意。专注于游戏资产和概念艺术，Leonardo.ai 通过提供专门的功能直接满足游戏设计师的需求，使他们能够快速高效地迭代设计。在视觉叙事至关重要的世界中，Leonardo.ai 是任何希望增强艺术能力并在短时间内制作专业级艺术作品的人的首选解决方案。",
+    "features": [
+      {
+        "title_en": "High-Quality Image Generation",
+        "title_zh": "高质量图像生成",
+        "description_en": "Create stunning illustrations and game assets with AI-driven visuals.",
+        "description_zh": "利用人工智能驱动的视觉效果创建令人惊叹的插图和游戏资产。"
+      },
+      {
+        "title_en": "Customizable Art Styles",
+        "title_zh": "可定制的艺术风格",
+        "description_en": "Choose from a variety of styles to match your project needs.",
+        "description_zh": "从多种风格中选择，以满足您的项目需求。"
+      },
+      {
+        "title_en": "User-Friendly Interface",
+        "title_zh": "用户友好的界面",
+        "description_en": "Easily navigate the platform and generate art with minimal effort.",
+        "description_zh": "轻松导航平台，最小化努力即可生成艺术作品。"
+      },
+      {
+        "title_en": "Rapid Iteration",
+        "title_zh": "快速迭代",
+        "description_en": "Quickly produce multiple designs, allowing for seamless adjustments.",
+        "description_zh": "快速生成多个设计，便于无缝调整。"
+      },
+      {
+        "title_en": "Collaboration Tools",
+        "title_zh": "协作工具",
+        "description_en": "Share creations and collaborate with team members effortlessly.",
+        "description_zh": "轻松分享创作，与团队成员协作。"
+      },
+      {
+        "title_en": "Prompt-Based Generation",
+        "title_zh": "基于提示的生成",
+        "description_en": "Input descriptive prompts to guide the AI in generating desired visuals.",
+        "description_zh": "输入描述性提示，引导人工智能生成所需的视觉效果。"
+      },
+      {
+        "title_en": "Regular Updates",
+        "title_zh": "定期更新",
+        "description_en": "Access new features and improvements with frequent software updates.",
+        "description_zh": "通过频繁的软件更新访问新功能和改进。"
+      }
+    ],
+    "pros": [
+      {
+        "en": "Generates high-quality images quickly and efficiently.",
+        "zh": "快速高效地生成高质量图像。"
+      },
+      {
+        "en": "Customizable styles cater to various artistic needs.",
+        "zh": "可定制的风格满足各种艺术需求。"
+      },
+      {
+        "en": "User-friendly design makes it accessible for beginners.",
+        "zh": "用户友好的设计使初学者也能轻松使用。"
+      },
+      {
+        "en": "Supports collaborative work, enhancing team productivity.",
+        "zh": "支持协作工作，提高团队生产力。"
+      }
+    ],
+    "cons": [
+      {
+        "en": "May require fine-tuning for specific artistic styles.",
+        "zh": "可能需要针对特定艺术风格进行微调。"
+      },
+      {
+        "en": "Performance can vary based on complexity of prompts.",
+        "zh": "性能可能因提示的复杂性而有所不同。"
+      },
+      {
+        "en": "Limited by the AI's current understanding of artistic nuances.",
+        "zh": "受限于人工智能对艺术细微差别的当前理解。"
+      }
+    ],
+    "use_cases": [
+      {
+        "title_en": "Game Asset Creation",
+        "title_zh": "游戏资产创建",
+        "description_en": "Quickly generate characters, environments, and items for games.",
+        "description_zh": "快速生成游戏中的角色、环境和物品。"
+      },
+      {
+        "title_en": "Concept Art Development",
+        "title_zh": "概念艺术开发",
+        "description_en": "Produce initial designs to visualize ideas during the brainstorming phase.",
+        "description_zh": "在头脑风暴阶段生成初步设计以可视化想法。"
+      },
+      {
+        "title_en": "Illustration for Marketing",
+        "title_zh": "市场营销插图",
+        "description_en": "Create eye-catching visuals for promotional materials and campaigns.",
+        "description_zh": "为宣传材料和活动创建引人注目的视觉效果。"
+      },
+      {
+        "title_en": "Art Style Exploration",
+        "title_zh": "艺术风格探索",
+        "description_en": "Experiment with different styles to refine the visual direction of projects.",
+        "description_zh": "尝试不同风格，以完善项目的视觉方向。"
+      }
+    ],
+    "last_updated_at": "2025-10-13T05:26:49.904387+00:00",
+    "category": "Image Generation",
+    "category_canonical": "image",
+    "china_access": null
+  },
+  {
+    "id": "4fe2fcc6-3ee6-44e3-802c-57f423699f73",
+    "slug": "leonardoai",
+    "name_en": "Leonardo.AI",
+    "name_zh": "Leonardo.AI",
+    "tagline_en": "AI image generation platform for game assets and creative content",
+    "tagline_zh": "AI image generation platform for game assets and creative content",
+    "description_en": "Leonardo.AI generates high-quality images, game assets, and creative content. Features fine-tuned models, real-time generation, and canvas editing.",
+    "description_zh": "Leonardo.AI generates high-quality images, game assets, and creative content. Features fine-tuned models, real-time generation, and canvas editing.",
+    "official_url": "https://leonardo.ai",
+    "affiliate_url": null,
+    "affiliate_platform": null,
+    "category_id": null,
+    "tags_en": null,
+    "tags_zh": null,
+    "pricing_type": "freemium",
+    "pricing_details_en": null,
+    "pricing_details_zh": null,
+    "price_range": null,
+    "rating": 0,
+    "review_count": 0,
+    "click_count": 33,
+    "review_content_en": null,
+    "review_content_zh": null,
+    "logo_url": "https://www.google.com/s2/favicons?domain=leonardo.ai&sz=128",
+    "cover_image_url": null,
+    "screenshots": null,
+    "video_url": null,
+    "source": "seed",
+    "source_url": null,
+    "status": "published",
+    "is_featured": false,
+    "is_sponsored": false,
+    "meta_title_en": null,
+    "meta_title_zh": null,
+    "meta_description_en": null,
+    "meta_description_zh": null,
+    "published_at": null,
+    "created_at": "2026-01-30T10:02:23.729081+00:00",
+    "updated_at": "2026-06-04T04:27:05.181804+00:00",
+    "long_description_en": null,
+    "long_description_zh": null,
+    "features": [],
+    "pros": [],
+    "cons": [],
+    "use_cases": [],
+    "last_updated_at": "2026-01-30T10:02:23.729081+00:00",
+    "category": "Image Generation",
+    "category_canonical": "image",
+    "china_access": null
+  }
+]

@@ -31,6 +31,7 @@ export default function Navbar({ locale }: NavbarProps) {
         { name: "排行榜", href: `/${locale}/rankings` },
         { name: "AI Access", href: `/${locale}/access` },
         { name: "工作流", href: `/${locale}/workflows` },
+        { name: "提示词", href: `/${locale}/prompts` },
         { name: "评测", href: `/${locale}/reviews` },
       ]
     : [
@@ -39,6 +40,7 @@ export default function Navbar({ locale }: NavbarProps) {
         { name: "Rankings", href: `/${locale}/rankings` },
         { name: "AI Access", href: `/${locale}/access` },
         { name: "Workflows", href: `/${locale}/workflows` },
+        { name: "Prompts", href: `/${locale}/prompts` },
         { name: "Reviews", href: `/${locale}/reviews` },
       ];
 
