@@ -28,17 +28,17 @@ export default function Navbar({ locale }: NavbarProps) {
     ? [
         { name: "分类", href: `/${locale}/categories` },
         { name: "工具库", href: `/${locale}/tools` },
+        { name: "排行榜", href: `/${locale}/rankings` },
         { name: "AI Access", href: `/${locale}/access` },
         { name: "工作流", href: `/${locale}/workflows` },
-        { name: "Radar", href: `/${locale}/radar` },
         { name: "评测", href: `/${locale}/reviews` },
       ]
     : [
         { name: "Categories", href: `/${locale}/categories` },
         { name: "Tools", href: `/${locale}/tools` },
+        { name: "Rankings", href: `/${locale}/rankings` },
         { name: "AI Access", href: `/${locale}/access` },
         { name: "Workflows", href: `/${locale}/workflows` },
-        { name: "Radar", href: `/${locale}/radar` },
         { name: "Reviews", href: `/${locale}/reviews` },
       ];
 
