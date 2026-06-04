@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, CreditCard, Globe2, ShieldCheck, Table2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, CreditCard, Globe2, ShieldCheck, Table2 } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
@@ -135,6 +135,20 @@ export default function AccessPage({ params }: PageProps) {
                 </Link>
               </div>
             </div>
+          </div>
+
+          {/* Conversion exits for high-intent access traffic (was: only /submit) */}
+          <div className="mt-6 flex flex-wrap items-center gap-3 text-sm">
+            <span className="font-semibold text-slate-700">{isZh ? "想直接用 AI：" : "Want to use AI now:"}</span>
+            <Link href={`/${locale}/c/chat`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "AI 聊天助手" : "AI chat assistants"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link href={`/${locale}/deals`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "订阅 Deals" : "Subscription deals"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link href={`/${locale}/rankings/most-popular`} className="inline-flex items-center gap-1 rounded-full border bg-white px-4 py-2 font-medium text-slate-700 hover:text-slate-950">
+              {isZh ? "最受欢迎工具" : "Most popular tools"} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </section>
       </main>

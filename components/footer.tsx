@@ -21,6 +21,7 @@ export default function Footer({ locale }: FooterProps) {
         {
           title: "增长",
           links: [
+            { name: "排行榜", href: `/${locale}/rankings` },
             { name: "Deals", href: `/${locale}/deals` },
             { name: "评测", href: `/${locale}/reviews` },
             { name: "AI 新闻", href: `/${locale}/news` },
@@ -30,10 +31,11 @@ export default function Footer({ locale }: FooterProps) {
         {
           title: "高意图分类",
           links: [
-            { name: "写作工具", href: `/${locale}/tools?category=Writing` },
-            { name: "图像生成", href: `/${locale}/tools?category=Image%20Generation` },
-            { name: "开发工具", href: `/${locale}/tools?category=Developer%20Tools` },
-            { name: "营销工具", href: `/${locale}/tools?category=Marketing` },
+            { name: "写作工具", href: `/${locale}/c/writing` },
+            { name: "图像生成", href: `/${locale}/c/image` },
+            { name: "视频创作", href: `/${locale}/c/video` },
+            { name: "开发工具", href: `/${locale}/c/code` },
+            { name: "营销工具", href: `/${locale}/c/marketing` },
           ],
         },
       ]
@@ -50,6 +52,7 @@ export default function Footer({ locale }: FooterProps) {
         {
           title: "Growth",
           links: [
+            { name: "Rankings", href: `/${locale}/rankings` },
             { name: "Deals", href: `/${locale}/deals` },
             { name: "Reviews", href: `/${locale}/reviews` },
             { name: "AI News", href: `/${locale}/news` },
@@ -59,10 +62,11 @@ export default function Footer({ locale }: FooterProps) {
         {
           title: "High-Intent Categories",
           links: [
-            { name: "Writing Tools", href: `/${locale}/tools?category=Writing` },
-            { name: "Image Generation", href: `/${locale}/tools?category=Image%20Generation` },
-            { name: "Developer Tools", href: `/${locale}/tools?category=Developer%20Tools` },
-            { name: "Marketing Tools", href: `/${locale}/tools?category=Marketing` },
+            { name: "Writing Tools", href: `/${locale}/c/writing` },
+            { name: "Image Generation", href: `/${locale}/c/image` },
+            { name: "Video Creation", href: `/${locale}/c/video` },
+            { name: "Developer Tools", href: `/${locale}/c/code` },
+            { name: "Marketing Tools", href: `/${locale}/c/marketing` },
           ],
         },
       ];
