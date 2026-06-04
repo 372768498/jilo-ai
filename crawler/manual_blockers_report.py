@@ -44,9 +44,12 @@ def load_manual_blockers():
                 'slug': payload.get('slug') or '',
                 'click_count': payload.get('click_count') or 0,
                 'priority': row.get('priority') or 'medium',
+                'roi': payload.get('roi') or 0,
+                'pack': payload.get('application_pack') or {},
             })
 
-    monetization_flags.sort(key=lambda x: x['click_count'], reverse=True)
+    # Highest expected revenue first — that's where the human's time pays off.
+    monetization_flags.sort(key=lambda x: x.get('roi') or 0, reverse=True)
     return {
         'schema_flags': schema_flags,
         'monetization_flags': monetization_flags,
@@ -75,13 +78,28 @@ def format_message(data):
         lines.append('')
 
     if monetization_flags:
-        lines.append('**2. 联盟链接申请/补充**')
+        lines.append('**2. 联盟链接申请/补充（按预估漏钱排序）**')
         for item in monetization_flags[:10]:
+            roi = item.get('roi') or 0
             lines.append(
-                f"- {item['name']} (`{item['slug']}`)：{item['click_count']} 次出站点击，优先级 {item['priority']}"
+                f"- {item['name']} (`{item['slug']}`)：{item['click_count']} 次出站点击 · 预估漏钱 ${roi} · {item['priority']}"
             )
         if len(monetization_flags) > 10:
             lines.append(f"- 其余 {len(monetization_flags) - 10} 个低优先级机会继续由系统排队监控。")
+
+        # The #1 gap gets a full submit-ready pack so the human can act now.
+        top = monetization_flags[0]
+        pack = top.get('pack') or {}
+        if pack:
+            lines.append('')
+            lines.append(f"**🎯 最高优先：{pack.get('tool')}（材料已备好，点提交即可）**")
+            lines.append(f"- 收益预估：{pack.get('outbound_clicks')} 点击 × ${pack.get('est_epc_usd')}/点击 ≈ **漏钱 ${pack.get('est_revenue_at_risk_usd')}**")
+            lines.append(f"- 我们的页面：{pack.get('our_page')}")
+            if pack.get('official_url'):
+                lines.append(f"- 工具官网：{pack.get('official_url')}")
+            lines.append(f"- 去哪申请：{' / '.join(pack.get('where_to_apply') or [])}")
+            lines.append(f"- 申请话术（可直接粘贴）：\n  > {pack.get('pitch')}")
+            lines.append(f"- 申请通过后：{pack.get('next_step')}")
         lines.append('')
     else:
         lines.append('**2. 联盟链接申请/补充**')
