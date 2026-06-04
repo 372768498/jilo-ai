@@ -1,6 +1,10 @@
 // app/[locale]/news/[slug]/page.tsx
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import type { Metadata } from "next";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
+import ArticleToolStrip from "@/components/ArticleToolStrip";
 
 type PageProps = {
   params: { locale: string; slug: string };
@@ -104,11 +108,18 @@ export default async function NewsDetailPage({ params }: PageProps) {
 
   if (!n) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16">
-        <h1 className="text-2xl font-semibold mb-2">
-          {locale === "zh" ? "未找到该新闻" : "News not found"}
-        </h1>
-      </div>
+      <>
+        <Navbar locale={locale} />
+        <div className="max-w-3xl mx-auto px-4 py-16">
+          <h1 className="text-2xl font-semibold mb-2">
+            {locale === "zh" ? "未找到该新闻" : "News not found"}
+          </h1>
+          <Link href={`/${locale}/news`} className="text-primary hover:underline">
+            {locale === "zh" ? "← 返回资讯" : "← Back to news"}
+          </Link>
+        </div>
+        <Footer locale={locale} />
+      </>
     );
   }
 
@@ -156,7 +167,16 @@ export default async function NewsDetailPage({ params }: PageProps) {
     : null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
+    <>
+      <Navbar locale={locale} />
+      <div className="max-w-3xl mx-auto px-4 py-10">
+      <nav className="mb-4 text-sm text-muted-foreground">
+        <Link href={`/${locale}/news`} className="hover:text-foreground">
+          {locale === "zh" ? "资讯" : "News"}
+        </Link>
+        <span className="mx-2">/</span>
+        <span>{locale === "zh" ? "文章" : "Article"}</span>
+      </nav>
       <h1 className="text-3xl font-semibold mb-3">{title}</h1>
 
       <div className="text-sm text-muted-foreground mb-4">
@@ -198,6 +218,8 @@ export default async function NewsDetailPage({ params }: PageProps) {
         )
       ) : null}
 
+      <ArticleToolStrip locale={locale} />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -208,6 +230,8 @@ export default async function NewsDetailPage({ params }: PageProps) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       ) : null}
-    </div>
+      </div>
+      <Footer locale={locale} />
+    </>
   );
 }
