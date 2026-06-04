@@ -12,6 +12,7 @@ from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
+import affiliate_registry as ar
 import monetization_kit as mk
 
 # Below this click count an affiliate application isn't worth the effort yet.
@@ -69,11 +70,19 @@ def check_monetization_gaps(supabase):
     except Exception:
         pass
 
+    # Tools the registry marks as having no affiliate program (e.g. OpenAI) can
+    # never be monetized via affiliate — flagging them forever is pure noise.
+    # Exclude them from candidates and auto-resolve any open flag below.
+    registry = ar.load_registry()
+    no_program = ar.no_program_slugs(registry)
+
     opened = 0
     resolved = 0
     candidates = []
     for t in (tools.data or []):
         clicks = t.get('click_count') or 0
+        if t['slug'] in no_program:
+            continue
         if not is_valid_affiliate_url(t.get('affiliate_url')) and clicks >= MIN_CLICKS:
             candidates.append(t)
     # rank2: order leaks by expected revenue (ROI), not raw click volume, so the
@@ -87,6 +96,12 @@ def check_monetization_gaps(supabase):
         clicks = t.get('click_count') or 0
         dedup_key = f"flag:monetization:{slug}"
         raw = (t.get('affiliate_url') or '').strip()
+
+        if slug in no_program:
+            # No affiliate program exists — close any stale flag and never reopen.
+            resolved += aq.resolve(supabase, dedup_key,
+                                   {'resolved': 'no affiliate program (registry)'})
+            continue
 
         if is_valid_affiliate_url(raw):
             resolved += aq.resolve(supabase, dedup_key, {'resolved': 'valid tracked affiliate_url'})

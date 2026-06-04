@@ -25,7 +25,9 @@ on:
     - cron: '0 3 * * *'   # UTC 03:00 - Compare articles
     - cron: '0 20 * * *'   # UTC 20:00 - Analytics collection (delayed to allow GA4 to finalize previous day's data)
     - cron: '10 20 * * *'  # UTC 20:10 - Lookback agent (snapshot aging pages)
+    - cron: '15 20 * * *'  # UTC 20:15 - Affiliate autofill (registry -> tools.affiliate_url, before monitor)
     - cron: '20 20 * * *'  # UTC 20:20 - Monitor agent (after analytics, before strategy)
+    - cron: '25 20 * * *'  # UTC 20:25 - Monetization worklist (after monitor resolves)
     - cron: '30 20 * * *'  # UTC 20:30 - Strategy engine
     - cron: '35 20 * * *'  # UTC 20:35 - Traffic growth controller
     - cron: '40 20 * * *'  # UTC 20:40 - Self-iteration agent
@@ -49,7 +51,9 @@ on:
           - compare
           - analytics
           - lookback
+          - affiliate-autofill
           - monitor
+          - worklist
           - strategy
           - growth
           - indexnow
@@ -234,6 +238,31 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python lookback_agent.py
 
+  # 鈹€鈹€鈹€ Job 5a2: Affiliate Autofill 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  # Closes the monetization last mile: reads operator-supplied affiliate ids /
+  # links from data/affiliate_programs.json, assembles + validates the tracked
+  # URL, and writes tools.affiliate_url. Runs BEFORE monitor so freshly filled
+  # links get their flags auto-resolved the same turn. No-op until a human fills
+  # the registry, so it's safe to run every day.
+  affiliate-autofill:
+    name: "Affiliate Autofill"
+    if: |
+      always() && (
+        (github.event_name == 'schedule' && github.event.schedule == '15 20 * * *') ||
+        (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'affiliate-autofill'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [analytics]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python affiliate_autofill.py
+
   # 鈹€鈹€鈹€ Job 5b: Monitor Agent 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   # Watches system state (monetization gaps, etc.) and surfaces fixable
   # problems into action_queue as flag_for_review items.
@@ -246,7 +275,7 @@ jobs:
       )
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [analytics]
+    needs: [analytics, affiliate-autofill]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -255,6 +284,35 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python monitor_agent.py
+
+  # 鈹€鈹€鈹€ Job 5b2: Monetization Worklist 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
+  # Turns the ROI signal into a one-page human action plan (docs/monetization-
+  # worklist.md + a Feishu summary): which programs to join, in what order, with
+  # concrete signup links. Runs after monitor so it reflects resolved flags.
+  monetization-worklist:
+    name: "Monetization Worklist"
+    if: |
+      always() && (
+        (github.event_name == 'schedule' && github.event.schedule == '25 20 * * *') ||
+        (github.event_name == 'workflow_dispatch' && (github.event.inputs.job == 'all' || github.event.inputs.job == 'worklist'))
+      )
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [analytics, monitor-agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python monetization_worklist.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monetization-worklist
+          path: docs/monetization-worklist.md
+          if-no-files-found: ignore
 
   # 鈹€鈹€鈹€ Job 6: Strategy Engine 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   # FIX: same always() pattern so it runs independently via job=strategy
