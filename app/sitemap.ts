@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { supabase } from '@/lib/supabase'
+import { PROMPT_TEMPLATES } from '@/lib/prompt-templates'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://www.jilo.ai'
@@ -38,6 +39,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/zh/submit`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/en/categories`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
     { url: `${baseUrl}/zh/categories`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.9 },
+    { url: `${baseUrl}/en/prompts`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.85 },
+    { url: `${baseUrl}/zh/prompts`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.85 },
     { url: `${baseUrl}/en/rankings`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${baseUrl}/zh/rankings`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     ...['most-popular', 'top-rated', 'newest', 'best-free'].flatMap((type) => [
@@ -136,5 +139,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.error('Sitemap: failed to fetch compare articles', e)
   }
 
-  return [...staticRoutes, ...categoryRoutes, ...toolRoutes, ...newsRoutes, ...compareRoutes]
+  // ── Static: Prompt template pages (curated, from data/prompt-templates.json) ──
+  const promptRoutes: MetadataRoute.Sitemap = PROMPT_TEMPLATES.flatMap((t) => [
+    { url: `${baseUrl}/en/prompts/${t.slug}`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.75 },
+    { url: `${baseUrl}/zh/prompts/${t.slug}`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.75 },
+  ])
+
+  return [...staticRoutes, ...categoryRoutes, ...toolRoutes, ...newsRoutes, ...compareRoutes, ...promptRoutes]
 }
