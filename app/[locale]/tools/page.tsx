@@ -1,38 +1,67 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Search, Star } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 
 type PageProps = {
   params: { locale: string };
-  searchParams: { category?: string };
+  searchParams: { category?: string; q?: string; sort?: string };
 };
 
 export default async function ToolsListPage({ params, searchParams }: PageProps) {
   const locale = params?.locale || "en";
   const isZh = locale === "zh";
   const category = searchParams?.category;
+  const q = (searchParams?.q || "").trim();
+  const sort = searchParams?.sort || "popular";
 
-  // 从 tools 表获取所有工具（包含中英文数据）
-  const { data: allToolsList, error: allError } = await supabase
+  // 从 tools 表获取所有已发布工具
+  const { data: allToolsList } = await supabase
     .from("tools")
     .select("*")
-    .eq("status", "published")
-    .order(isZh ? "name_zh" : "name_en", { ascending: true });
+    .eq("status", "published");
 
-  // 根据分类筛选（不区分大小写）
-  const toolsList = category && category !== 'all'
-    ? allToolsList?.filter(tool => tool.category?.toLowerCase() === category.toLowerCase())
-    : allToolsList;
+  const all = allToolsList || [];
 
-  const error = allError;
+  // 分类筛选 + 站内搜索（q 匹配名称/标语/描述）
+  let toolsList = category && category !== "all"
+    ? all.filter((tool) => tool.category?.toLowerCase() === category.toLowerCase())
+    : all.slice();
+  if (q) {
+    const ql = q.toLowerCase();
+    toolsList = toolsList.filter((tool) =>
+      [tool.name_en, tool.name_zh, tool.tagline_en, tool.tagline_zh, tool.description_en, tool.description_zh]
+        .some((f) => (f || "").toLowerCase().includes(ql))
+    );
+  }
 
-  console.log("Filtered tools count:", toolsList?.length);
-  console.log("Selected category:", category);
+  // 排序：默认按热度（出站点击），不再按字母 —— 字母序对发现最差
+  const sorters: Record<string, (a: any, b: any) => number> = {
+    popular: (a, b) => (b.click_count || 0) - (a.click_count || 0),
+    rating: (a, b) => (b.rating || 0) - (a.rating || 0),
+    newest: (a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")),
+    name: (a, b) => String((isZh ? a.name_zh : a.name_en) || a.name_en || "").localeCompare(String((isZh ? b.name_zh : b.name_en) || b.name_en || "")),
+  };
+  toolsList = toolsList.slice().sort(sorters[sort] || sorters.popular);
 
-  const toolsCount = allToolsList?.length || 0;
+  const toolsCount = all.length;
+
+  // 在保留其它参数的前提下构造 URL（用于分类/排序切换）
+  const buildUrl = (overrides: Record<string, string | undefined>) => {
+    const merged: Record<string, string | undefined> = { category, q: q || undefined, sort: sort !== "popular" ? sort : undefined, ...overrides };
+    const sp = new URLSearchParams();
+    Object.entries(merged).forEach(([k, v]) => {
+      if (v && v !== "all") sp.set(k, v);
+    });
+    const qs = sp.toString();
+    return `/${locale}/tools${qs ? `?${qs}` : ""}`;
+  };
+
+  const sortOptions = isZh
+    ? [{ id: "popular", name: "最热门" }, { id: "rating", name: "评分" }, { id: "newest", name: "最新" }, { id: "name", name: "名称" }]
+    : [{ id: "popular", name: "Popular" }, { id: "rating", name: "Rating" }, { id: "newest", name: "Newest" }, { id: "name", name: "Name" }];
 
   // 统计每个分类的工具数量
   const categoryCounts: Record<string, number> = {};
@@ -118,13 +147,47 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
         {/* Hero Section - 简洁的标题 */}
         <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 py-10 border-b">
           <div className="max-w-7xl mx-auto px-4">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-4">
               <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
                 ✨ {t.page_title}
               </h1>
               <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
                 {toolsCount}
               </Badge>
+            </div>
+
+            {/* 站内搜索（GET 表单 → 服务端筛选，保留当前分类）*/}
+            <form action={`/${locale}/tools`} method="get" className="relative max-w-xl">
+              {category ? <input type="hidden" name="category" value={category} /> : null}
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                name="q"
+                defaultValue={q}
+                placeholder={isZh ? "搜索 AI 工具…" : "Search AI tools…"}
+                className="h-12 w-full rounded-full border-2 border-white bg-white pl-12 pr-4 text-base shadow-sm focus:border-blue-300 focus:outline-none"
+              />
+            </form>
+
+            {/* 排序 */}
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-slate-500">{isZh ? "排序：" : "Sort:"}</span>
+              {sortOptions.map((opt) => (
+                <Link
+                  key={opt.id}
+                  href={buildUrl({ sort: opt.id })}
+                  className={`rounded-full px-3 py-1 transition ${
+                    sort === opt.id ? "bg-slate-950 text-white" : "bg-white text-slate-600 hover:bg-slate-100"
+                  }`}
+                >
+                  {opt.name}
+                </Link>
+              ))}
+              {q ? (
+                <span className="ml-2 text-slate-500">
+                  {isZh ? `“${q}” 的 ${toolsList.length} 个结果` : `${toolsList.length} results for “${q}”`}
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
@@ -145,7 +208,7 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
                     {categories.map((cat) => (
                       <Link
                         key={cat.id}
-                        href={`/${locale}/tools${cat.id !== 'all' ? `?category=${cat.id}` : ''}`}
+                        href={buildUrl({ category: cat.id === 'all' ? undefined : cat.id })}
                         className={`flex items-center justify-between px-2.5 py-1.5 rounded-md text-sm transition-colors ${
                           (!category && cat.id === 'all') || category === cat.id
                             ? 'bg-blue-50 text-blue-700 font-medium'
@@ -198,69 +261,90 @@ export default async function ToolsListPage({ params, searchParams }: PageProps)
             <main className="flex-1">
               {toolsList && toolsList.length > 0 ? (
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                  {toolsList.map((tool) => (
-                    <Link
+                  {toolsList.map((tool) => {
+                    const canVisit = Boolean(tool.affiliate_url || tool.official_url);
+                    return (
+                    <div
                       key={tool.id}
-                      href={`/${locale}/tools/${tool.slug}`}
-                      className="group flex items-start gap-3 p-3 bg-white rounded-lg border hover:border-blue-200 hover:shadow-md transition-all duration-200"
+                      className="group flex flex-col gap-2 p-3 bg-white rounded-lg border hover:border-blue-200 hover:shadow-md transition-all duration-200"
                     >
-                      {/* Logo */}
-                      <div className="flex-shrink-0">
-                        {tool.logo_url ? (
-                          <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white">
-                            <img 
-                              src={tool.logo_url} 
-                              alt={tool.name} 
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
-                            {tool.name?.charAt(0)}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* 内容区 */}
-                      <div className="flex-1 min-w-0">
-                        {/* 标题和标签 */}
-                        <div className="flex items-start justify-between gap-2 mb-1">
-                          <h3 className="font-semibold text-base text-slate-900 group-hover:text-blue-600 transition line-clamp-1">
-                            {getLocalizedName(tool)}
-                          </h3>
-                          {(() => {
-                            const badge = getPricingBadge(tool.pricing_type);
-                            return badge ? (
-                              <Badge variant="outline" className={`text-xs flex-shrink-0 px-2 py-0 ${badge.className}`}>
-                                {badge.label}
-                              </Badge>
-                            ) : null;
-                          })()}
-                        </div>
-
-                        {/* 描述 */}
-                        {getLocalizedDesc(tool) && (
-                          <p className="text-xs text-slate-600 line-clamp-2 mb-2 leading-relaxed">
-                            {getLocalizedDesc(tool)}
-                          </p>
-                        )}
-
-                        {/* 平台标签 */}
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {Array.isArray(tool.tags_en) && (isZh ? tool.tags_zh : tool.tags_en)?.slice(0, 2).map((tag: string, idx: number) => (
-                            <span key={idx} className="text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
-                              {tag}
-                            </span>
-                          ))}
-                          {Array.isArray(tool.tags_en) && (isZh ? tool.tags_zh : tool.tags_en)?.length > 2 && (
-                            <span className="text-xs text-slate-600">
-                              +{(isZh ? tool.tags_zh : tool.tags_en).length - 2}
-                            </span>
+                      <Link href={`/${locale}/tools/${tool.slug}`} className="flex items-start gap-3">
+                        {/* Logo */}
+                        <div className="flex-shrink-0">
+                          {tool.logo_url ? (
+                            <div className="w-12 h-12 rounded-lg overflow-hidden border bg-white">
+                              <img
+                                src={tool.logo_url}
+                                alt={tool.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+                              {tool.name?.charAt(0)}
+                            </div>
                           )}
                         </div>
+
+                        {/* 内容区 */}
+                        <div className="flex-1 min-w-0">
+                          {/* 标题和标签 */}
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <h3 className="font-semibold text-base text-slate-900 group-hover:text-blue-600 transition line-clamp-1">
+                              {getLocalizedName(tool)}
+                            </h3>
+                            {(() => {
+                              const badge = getPricingBadge(tool.pricing_type);
+                              return badge ? (
+                                <Badge variant="outline" className={`text-xs flex-shrink-0 px-2 py-0 ${badge.className}`}>
+                                  {badge.label}
+                                </Badge>
+                              ) : null;
+                            })()}
+                          </div>
+
+                          {/* 描述 */}
+                          {getLocalizedDesc(tool) && (
+                            <p className="text-xs text-slate-600 line-clamp-2 mb-2 leading-relaxed">
+                              {getLocalizedDesc(tool)}
+                            </p>
+                          )}
+
+                          {/* 平台标签 */}
+                          <div className="flex items-center gap-1 flex-wrap">
+                            {Array.isArray(tool.tags_en) && (isZh ? tool.tags_zh : tool.tags_en)?.slice(0, 2).map((tag: string, idx: number) => (
+                              <span key={idx} className="text-xs text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </Link>
+
+                      {/* 评分 + 访问（出站/联盟）*/}
+                      <div className="flex items-center justify-between border-t pt-2">
+                        {tool.rating ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-700">
+                            <Star className="h-3.5 w-3.5 text-amber-500" />
+                            {tool.rating}
+                            {tool.review_count ? <span className="text-slate-400">({tool.review_count})</span> : null}
+                          </span>
+                        ) : <span />}
+                        {canVisit ? (
+                          <a
+                            href={`/api/out?tool=${encodeURIComponent(tool.slug)}&source=tools_list&locale=${encodeURIComponent(locale)}`}
+                            target="_blank"
+                            rel="sponsored nofollow noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 hover:underline"
+                          >
+                            {isZh ? "访问" : "Visit"}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : null}
                       </div>
-                    </Link>
-                  ))}
+                    </div>
+                    );
+                  })}
                 </div>
               ) : (
                 /* 空状态 */

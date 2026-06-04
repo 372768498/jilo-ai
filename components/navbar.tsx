@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState, type FormEvent } from "react";
+import { Menu, Search, X } from "lucide-react";
 
 type NavbarProps = {
   locale: string;
@@ -10,7 +11,18 @@ type NavbarProps = {
 
 export default function Navbar({ locale }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const router = useRouter();
   const isZh = locale === "zh";
+
+  // Global search → the /tools results page (server-side search by ?q=).
+  // Fixes the audit finding that search was trapped on the homepage only.
+  const submitSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const term = query.trim();
+    router.push(`/${locale}/tools${term ? `?q=${encodeURIComponent(term)}` : ""}`);
+    setMobileMenuOpen(false);
+  };
 
   const navigation = isZh
     ? [
@@ -58,6 +70,17 @@ export default function Navbar({ locale }: NavbarProps) {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
+          <form onSubmit={submitSearch} className="relative mr-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={isZh ? "搜索工具…" : "Search tools…"}
+              aria-label={isZh ? "搜索工具" : "Search tools"}
+              className="h-9 w-44 rounded-full border bg-slate-50 pl-9 pr-3 text-sm focus:w-56 focus:border-slate-300 focus:bg-white focus:outline-none transition-all"
+            />
+          </form>
           <Link
             href="/en"
             className={`rounded-md px-3 py-1.5 text-sm font-medium ${
@@ -95,6 +118,17 @@ export default function Navbar({ locale }: NavbarProps) {
       {mobileMenuOpen && (
         <div className="border-t bg-white lg:hidden">
           <div className="mx-auto max-w-7xl space-y-1 px-4 py-4">
+            <form onSubmit={submitSearch} className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={isZh ? "搜索工具…" : "Search tools…"}
+                aria-label={isZh ? "搜索工具" : "Search tools"}
+                className="h-10 w-full rounded-full border bg-slate-50 pl-9 pr-3 text-sm focus:outline-none"
+              />
+            </form>
             {navigation.map((item) => (
               <Link
                 key={item.name}
