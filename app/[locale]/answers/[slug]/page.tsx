@@ -453,6 +453,17 @@ export default function AnswerPage({ params }: PageProps) {
                   </li>
                 ))}
               </ol>
+              {/* Conversion funnel: route this high-intent access/choice traffic to
+                  the /access hub, where mainstream access + subscription options
+                  (with risk disclosure) live. Internal link keeps the editorial
+                  page clean while still capturing demand. */}
+              <Link
+                href={`/${locale}/access`}
+                className="mt-6 inline-flex items-center gap-2 rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800"
+              >
+                {isZh ? "看主流访问 / 订阅方案对比" : "Compare access & subscription options"}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </aside>
           </div>
         </section>
