@@ -77,6 +77,7 @@ def collect_leaks(supabase, registry):
             "signup_url": prog.get("signup_url"),
             "signup_search": prog.get("signup_search"),
             "network": prog.get("network"),
+            "commission": prog.get("commission"),
             "notes": prog.get("notes"),
         }
         if slug in no_program:
@@ -93,7 +94,9 @@ def _next_step(e):
     if e["status"] == "unlisted":
         return f"加入 registry：搜索「{e['name']} affiliate program」确认是否有联盟"
     if e.get("signup_url"):
-        return f"申请：{e['signup_url']}"
+        net = f" · {e['network']}" if e.get("network") else ""
+        comm = f" · {e['commission']}" if e.get("commission") else ""
+        return f"[申请]({e['signup_url']}){net}{comm}"
     if e.get("signup_search"):
         return f"申请（搜一下直达）：「{e['signup_search']}」"
     return "确认联盟项目 / 注册"
