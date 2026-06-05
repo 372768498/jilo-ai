@@ -1,27 +1,35 @@
 {
-  "version": 1,
-  "updated": "2026-06-04",
+  "version": 2,
+  "updated": "2026-06-05",
   "_README": [
     "Affiliate program registry — the monetization last-mile.",
     "monitor_agent detects which tools leak revenue (clicks, no tracked link).",
     "This file tells the system HOW to close each leak, so the only human step",
     "left is the irreducible one: sign up for the program.",
     "",
+    "signup_url values below are REAL affiliate application entries, web-verified",
+    "2026-06-05 (most run on third-party networks — Impact/PartnerStack/Awin/",
+    "FirstPromoter/Rewardful/Tapfiliate — NOT the tool's own site). 'commission'",
+    "is the headline payout at research time; confirm on the live page.",
+    "",
     "Per-tool status:",
-    "  ready       -> signup_url known; apply, then paste affiliate_id OR affiliate_url here.",
-    "  needs_check -> program likely exists; verify signup_url + network first (signup_search helps).",
-    "  no_program  -> no affiliate program exists (e.g. OpenAI). monitor_agent stops flagging it.",
-    "  self        -> monetize via your OWN offer (no external approval); route CTA through /api/out.",
+    "  ready       -> signup_url is a live application entry; apply, then paste",
+    "                 affiliate_id (templated network) OR affiliate_url (full link).",
+    "  needs_check -> program exists but no open self-serve signup (login/invite",
+    "                 gated) or unverified; see notes.",
+    "  no_program  -> no joinable affiliate program (none, or closed). monitor",
+    "                 stops flagging it.",
+    "  self        -> monetize via your OWN offer; route CTA through /api/out.",
     "",
-    "How one human action monetizes a tool (and stays automatic):",
-    "  1. Apply to the program (use signup_url / signup_search).",
-    "  2a. Templated network -> put your affiliate_id below (username/code). System builds the link.",
-    "  2b. Opaque network (Impact/PartnerStack) -> paste your full tracked link into affiliate_url.",
-    "  3. affiliate_autofill.py writes tools.affiliate_url; monitor_agent auto-resolves the flag.",
-    "  Newly discovered tools on a registered program get monetized automatically on the next run.",
+    "How one signup monetizes a tool (and stays automatic):",
+    "  1. Apply via signup_url.",
+    "  2a. Templated network (FirstPromoter/Rewardful/Tolt/generic) -> put your",
+    "      affiliate_id; the system builds the tracked link.",
+    "  2b. Opaque network (Impact/PartnerStack/Awin/Tapfiliate/CJ/ShareASale) ->",
+    "      paste your full tracked link into affiliate_url.",
+    "  3. affiliate_autofill.py writes tools.affiliate_url; monitor auto-resolves.",
     "",
-    "NEVER invent an affiliate_id/affiliate_url. Only real values you obtained by signing up.",
-    "signup_url values left null are unverified on purpose — use signup_search to find the real page."
+    "NEVER invent an affiliate_id/affiliate_url. Only real values from signing up."
   ],
   "networks": {
     "rewardful":     { "template": "{base}?via={id}", "id_kind": "username or code", "opaque": false },
@@ -31,114 +39,210 @@
     "generic_aff":   { "template": "{base}?aff={id}", "id_kind": "aff id",           "opaque": false },
     "impact":        { "template": null, "opaque": true, "note": "Impact.com links are per-creative and opaque. Paste the full tracked link into affiliate_url." },
     "partnerstack":  { "template": null, "opaque": true, "note": "PartnerStack links are opaque. Paste the full tracked link into affiliate_url." },
+    "awin":          { "template": null, "opaque": true, "note": "Awin links are opaque (awin1.com deep links). Paste the full tracked link into affiliate_url." },
+    "tapfiliate":    { "template": null, "opaque": true, "note": "Tapfiliate links are opaque. Paste the full tracked link into affiliate_url." },
     "cj":            { "template": null, "opaque": true, "note": "CJ Affiliate links are opaque. Paste the full tracked link into affiliate_url." },
-    "shareasale":    { "template": null, "opaque": true, "note": "ShareASale links are opaque. Paste the full tracked link into affiliate_url." }
+    "shareasale":    { "template": null, "opaque": true, "note": "ShareASale links are opaque. Paste the full tracked link into affiliate_url." },
+    "own":           { "template": null, "opaque": true, "note": "In-house program. Paste the full tracked link you get after signing up into affiliate_url." }
   },
   "programs": {
     "elevenlabs": {
-      "name": "ElevenLabs", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "ElevenLabs affiliate program signup",
+      "name": "ElevenLabs", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://elevenlabs.io/affiliates/app/sign-up",
+      "signup_search": "ElevenLabs affiliate program PartnerStack",
+      "commission": "22% recurring for 12 months (11% on Business), 90-day cookie",
       "affiliate_id": null, "affiliate_url": null,
-      "notes": "Audio, highest single leak. Verify program + network before applying."
+      "notes": "Verified open. Onboards into PartnerStack -> paste full tracked link."
     },
     "descript": {
-      "name": "Descript", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Descript affiliate program signup",
+      "name": "Descript", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://descriptinc.partnerstack.com/?group=affiliates",
+      "signup_search": "Descript affiliate program PartnerStack",
+      "commission": "15% recurring for 12 months, monthly PayPal payout",
       "affiliate_id": null, "affiliate_url": null,
-      "notes": "Video category, EPC ~1.2."
-    },
-    "canva": {
-      "name": "Canva", "status": "needs_check", "network": "impact",
-      "signup_url": null, "signup_search": "Canva affiliate program",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Canva runs a well-known affiliate program (Impact). Opaque link -> paste full URL into affiliate_url."
-    },
-    "notion-ai": {
-      "name": "Notion", "status": "needs_check", "network": "partnerstack",
-      "signup_url": null, "signup_search": "Notion affiliate program PartnerStack",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Notion affiliate runs via PartnerStack. Opaque link -> paste full URL into affiliate_url."
-    },
-    "manychat": {
-      "name": "ManyChat", "status": "needs_check", "network": "partnerstack",
-      "signup_url": null, "signup_search": "ManyChat affiliate partner program",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Marketing, high EPC. Partner program likely via PartnerStack."
+      "notes": "Verified open. Alt apply: https://dash.partnerstack.com/application?company=descriptinc&group=affiliates"
     },
     "writesonic": {
-      "name": "Writesonic", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Writesonic affiliate program signup",
+      "name": "Writesonic", "status": "ready", "network": "firstpromoter",
+      "signup_url": "https://affiliates.writesonic.com/signup/36620",
+      "signup_search": "Writesonic partner program FirstPromoter",
+      "commission": "20% recurring up to 12 months, 60-day cookie",
       "affiliate_id": null, "affiliate_url": null,
-      "notes": "Writing, EPC ~1.0. Many writing SaaS use FirstPromoter (?fpr=) or Tolt (?via=) — confirm."
+      "notes": "Verified open. FirstPromoter -> can use templated link ?fpr={affiliate_id}, or paste full link."
     },
-    "leonardoai": {
-      "name": "Leonardo.AI", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Leonardo AI affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Image generation."
+    "manychat": {
+      "name": "ManyChat", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://dash.partnerstack.com/application?company=manychat&gref=page",
+      "signup_search": "ManyChat affiliate program PartnerStack",
+      "commission": "Tiered 30% / 40% / 50% recurring for 12 months",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open. Vanity: https://manychat.partnerstack.com/ . Referral must upgrade to Pro within 90 days."
     },
-    "pixlr-ai": {
-      "name": "Pixlr AI", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Pixlr affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Image editing."
+    "surfer-seo": {
+      "name": "Surfer SEO", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://dash.partnerstack.com/application?company=surferseo&group=surferaffiliates&gref=page",
+      "signup_search": "Surfer SEO affiliate program PartnerStack",
+      "commission": "Tiered first-month CPA 75%-125% (or 15%-25% first-year), 90-day cookie, NET-45",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open. Public page: https://surferseo.partnerstack.com/"
+    },
+    "canva": {
+      "name": "Canva", "status": "ready", "network": "impact",
+      "signup_url": "https://app.impact.com/campaign-promo-signup/Canva.brand?execution=e1s1",
+      "signup_search": "Canva affiliate program Impact",
+      "commission": "~$150 CPS per Pro subscription, 30-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (Impact). Individual creators may be routed via Canvassador (periodically closed)."
     },
     "photoroom": {
-      "name": "Photoroom", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Photoroom affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Image / e-commerce."
+      "name": "Photoroom", "status": "ready", "network": "awin",
+      "signup_url": "https://ui.awin.com/merchant-profile/121800",
+      "signup_search": "Photoroom affiliate program Awin",
+      "commission": "20% on Max/Ultra/yearly Pro, 30-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (Awin merchant 121800, approval required). Alt: Dub Partners https://partners.dub.co/photoroom/register"
     },
-    "nightcafe": {
-      "name": "NightCafe", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "NightCafe Creator affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Image generation."
+    "invideo": {
+      "name": "InVideo", "status": "ready", "network": "impact",
+      "signup_url": "https://app.impact.com/campaign-promo-signup/InVideo.brand?execution=e1s1",
+      "signup_search": "InVideo affiliate program Impact",
+      "commission": "50% monthly / 25% annual (first billing only), 120-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (Impact)."
     },
-    "ideogram": {
-      "name": "Ideogram", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Ideogram AI affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Image generation / typography."
+    "pixlr-ai": {
+      "name": "Pixlr AI", "status": "ready", "network": "awin",
+      "signup_url": "https://ui.awin.com/merchant-profile/65758",
+      "signup_search": "Pixlr affiliate program Awin",
+      "commission": "Up to 25% on new Premium/Plus subscriptions",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (Awin merchant 65758, approval required). Official: https://pixlr.com/affiliate/"
     },
-    "runway": {
-      "name": "Runway", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Runway ML affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Video generation, high EPC."
+    "quillbot": {
+      "name": "QuillBot", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://quillbot.partnerstack.com/",
+      "signup_search": "QuillBot affiliate program PartnerStack",
+      "commission": "Up to 20% (up to $20/subscriber), 30-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (PartnerStack). Official: quillbot.com/affiliates"
+    },
+    "copy-ai": {
+      "name": "Copy.ai", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://copyai.partnerstack.com/",
+      "signup_search": "Copy.ai affiliate program PartnerStack",
+      "commission": "45%, 60-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "PartnerStack (medium confidence on exact subdomain — confirm branding on the page). copy.ai/affiliates itself 404s."
     },
     "kapwing": {
-      "name": "Kapwing", "status": "needs_check", "network": null,
-      "signup_url": null, "signup_search": "Kapwing affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Video editing."
+      "name": "Kapwing", "status": "ready", "network": "tapfiliate",
+      "signup_url": "https://kapwing.tapfiliate.com/",
+      "signup_search": "Kapwing affiliate program Tapfiliate",
+      "commission": "Recurring tiered 25%-35%, uncapped, 30-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (Tapfiliate). Official: kapwing.com/affiliates"
+    },
+    "steve-ai": {
+      "name": "Steve.ai", "status": "ready", "network": "own",
+      "signup_url": "https://www.steve.ai/affiliate",
+      "signup_search": "Steve.ai affiliate program",
+      "commission": "Up to 40% recurring, 30-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open. In-house program — application form embedded on the page."
+    },
+    "gamma": {
+      "name": "Gamma", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://gammaapp.partnerstack.com/?group=affiliates",
+      "signup_search": "Gamma app affiliate program PartnerStack",
+      "commission": "30% of all referred payments, uncapped",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (PartnerStack affiliate group). Separate reseller 'Partner Program' exists too."
+    },
+    "heygen": {
+      "name": "HeyGen", "status": "ready", "network": "rewardful",
+      "signup_url": "https://heygen.getrewardful.com/signup?campaign=influencer-program-b",
+      "signup_search": "HeyGen affiliate program Rewardful",
+      "commission": "25% recurring, 30-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Program confirmed via official help center; signup URL from search (Rewardful pages 403 to bots, so confirm on click). Contact: affiliates@heygen.com"
+    },
+    "nightcafe": {
+      "name": "NightCafe", "status": "ready", "network": "own",
+      "signup_url": "https://nightcafe.studio/pages/partner-program",
+      "signup_search": "NightCafe Creator partner program",
+      "commission": "Up to 10% commission + 5% follower discount; requires 10k+ followers",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified. No self-serve form — apply by email via their feedback/contact channel. Separate referral program at creator.nightcafe.studio/referrals."
+    },
+    "ideogram": {
+      "name": "Ideogram", "status": "ready", "network": "own",
+      "signup_url": "https://forms.gle/SooHxrdnbywgRsXz8",
+      "signup_search": "Ideogram Creators Club affiliate",
+      "commission": "Creators Club rewards; rate not publicly disclosed",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Curated 'Creators Club' (invite/selective), Google-Form application. Info: ideogram.ai/features/creators-club"
+    },
+    "runway": {
+      "name": "Runway", "status": "needs_check", "network": "impact",
+      "signup_url": null,
+      "signup_search": "Runway ML affiliate program Impact",
+      "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Affiliate portal affiliates.runwayml.com is login-only — no public self-serve signup (invite/application gated). The 'Creative Partners Program' is a separate non-commission perks program."
     },
     "framer": {
       "name": "Framer", "status": "needs_check", "network": "partnerstack",
       "signup_url": null, "signup_search": "Framer affiliate partner program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Design / web builder."
+      "commission": null, "affiliate_id": null, "affiliate_url": null,
+      "notes": "Not yet verified this round. Likely PartnerStack — confirm."
     },
     "replicate": {
       "name": "Replicate", "status": "needs_check", "network": null,
       "signup_url": null, "signup_search": "Replicate affiliate program",
-      "affiliate_id": null, "affiliate_url": null, "notes": "Developer / model hosting."
+      "commission": null, "affiliate_id": null, "affiliate_url": null,
+      "notes": "Not yet verified this round (developer/model hosting — may have no consumer affiliate)."
+    },
+    "leonardoai": {
+      "name": "Leonardo.AI", "status": "no_program", "network": "impact",
+      "signup_url": null, "signup_search": null,
+      "commission": null, "affiliate_id": null, "affiliate_url": null,
+      "notes": "Affiliate program CLOSED 2026-04-07 (was Impact, 60% first month / 30-day cookie). Not joinable now — suppress; revisit if it reopens."
+    },
+    "notion-ai": {
+      "name": "Notion", "status": "no_program", "network": "partnerstack",
+      "signup_url": null, "signup_search": null,
+      "commission": null, "affiliate_id": null, "affiliate_url": null,
+      "notes": "PartnerStack program is currently CLOSED to new affiliates (applications auto-declined). Suppress; revisit if it reopens (~$50/activation + 20% year-one)."
+    },
+    "cursor": {
+      "name": "Cursor", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null,
+      "commission": null, "affiliate_id": null, "affiliate_url": null,
+      "notes": "No paid affiliate program — only a community Ambassador program (no commission). Cursor does not authorize resellers. Suppress."
     },
     "dall-e-3": {
       "name": "DALL-E 3", "status": "no_program", "network": "none",
-      "signup_url": null, "signup_search": null,
+      "signup_url": null, "signup_search": null, "commission": null,
       "affiliate_id": null, "affiliate_url": null,
-      "notes": "OpenAI has no affiliate program. Suppress monetization flag; revenue here must come from comparison/alternative pages routing to monetizable tools."
+      "notes": "OpenAI has no affiliate program. Suppress; revenue here must come from comparison/alternative pages routing to monetizable tools."
     },
     "chatgpt": {
       "name": "ChatGPT", "status": "no_program", "network": "none",
-      "signup_url": null, "signup_search": null,
+      "signup_url": null, "signup_search": null, "commission": null,
       "affiliate_id": null, "affiliate_url": null,
-      "notes": "OpenAI — no affiliate program. Suppress flag. See strategic opportunity zh-chatgpt-access for the real money here."
+      "notes": "OpenAI — no affiliate program. Suppress. See strategic opportunity zh-chatgpt-access for the real money here."
     },
     "perplexity-ai": {
       "name": "Perplexity AI", "status": "no_program", "network": "none",
-      "signup_url": null, "signup_search": null,
+      "signup_url": null, "signup_search": null, "commission": null,
       "affiliate_id": null, "affiliate_url": null,
-      "notes": "No public affiliate program as of 2026-01. Suppress flag; revisit if one launches."
+      "notes": "No public affiliate program as of 2026-06. Suppress; revisit if one launches."
     },
     "craiyon": {
       "name": "Craiyon", "status": "no_program", "network": "none",
-      "signup_url": null, "signup_search": null,
+      "signup_url": null, "signup_search": null, "commission": null,
       "affiliate_id": null, "affiliate_url": null,
-      "notes": "Free tool, ad-supported, no affiliate program. Suppress flag."
+      "notes": "Free tool, ad-supported, no affiliate program. Suppress."
     }
   },
   "strategic_opportunities": [
