@@ -5,6 +5,7 @@ from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_card
 from ops_logger import log_operation
+import affiliate_registry as ar
 
 
 CN_TZ = timezone(timedelta(hours=8))
@@ -39,13 +40,19 @@ def load_manual_blockers():
                 'priority': row.get('priority') or 'high',
             })
         elif subtype == 'monetization_gap':
+            slug = payload.get('slug') or ''
+            prog = ar.program_for(slug) or {}
             monetization_flags.append({
-                'name': payload.get('name') or payload.get('slug') or 'unknown tool',
-                'slug': payload.get('slug') or '',
+                'name': payload.get('name') or slug or 'unknown tool',
+                'slug': slug,
                 'click_count': payload.get('click_count') or 0,
                 'priority': row.get('priority') or 'medium',
                 'roi': payload.get('roi') or 0,
                 'pack': payload.get('application_pack') or {},
+                # Verified application entry from the registry (if researched),
+                'signup_url': prog.get('signup_url'),
+                'network': prog.get('network'),
+                'commission': prog.get('commission'),
             })
 
     # Highest expected revenue first — that's where the human's time pays off.
@@ -81,9 +88,13 @@ def format_message(data):
         lines.append('**2. 联盟链接申请/补充（按预估漏钱排序）**')
         for item in monetization_flags[:10]:
             roi = item.get('roi') or 0
-            lines.append(
+            line = (
                 f"- {item['name']} (`{item['slug']}`)：{item['click_count']} 次出站点击 · 预估漏钱 ${roi} · {item['priority']}"
             )
+            if item.get('signup_url'):
+                net = f" · {item['network']}" if item.get('network') else ""
+                line += f"\n  申请入口：{item['signup_url']}{net}"
+            lines.append(line)
         if len(monetization_flags) > 10:
             lines.append(f"- 其余 {len(monetization_flags) - 10} 个低优先级机会继续由系统排队监控。")
 
