@@ -202,6 +202,142 @@
       "commission": null, "affiliate_id": null, "affiliate_url": null,
       "notes": "Not yet verified this round (developer/model hosting — may have no consumer affiliate)."
     },
+    "reclaim-ai": {
+      "name": "Reclaim AI", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://reclaim.partnerstack.com/?group=marketplace",
+      "signup_search": "Reclaim.ai affiliate program PartnerStack",
+      "commission": "40% recurring + $1/signup (work email), 90-day cookie, up to 12 months",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open (PartnerStack). Landing: reclaim.ai/affiliate-program"
+    },
+    "speechify": {
+      "name": "Speechify", "status": "ready", "network": "impact",
+      "signup_url": "https://speechify.com/affiliates/",
+      "signup_search": "Speechify affiliate program Impact",
+      "commission": "30% per sale, 30-day cookie (e.g. $42-$154 per plan)",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open. On-page application form; backed by Impact."
+    },
+    "anyword": {
+      "name": "Anyword", "status": "ready", "network": "firstpromoter",
+      "signup_url": "https://anyword.firstpromoter.com/",
+      "signup_search": "Anyword affiliate program FirstPromoter",
+      "commission": "40% recurring (or CPA 100% first month up to $249), 90-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open. FirstPromoter -> can use templated link ?fpr={affiliate_id}, or paste full link."
+    },
+    "synthesia": {
+      "name": "Synthesia", "status": "ready", "network": "rewardful",
+      "signup_url": "https://share.hsforms.com/1y8Uy9y0RRvWwomvWwK01Tg4x8k3",
+      "signup_search": "Synthesia affiliate program apply",
+      "commission": "25% on Starter & Creator plan payments, 60-day cookie",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified. Apply via the HubSpot intake form; program is managed on Rewardful (dashboard after approval). Official: synthesia.io/partners/affiliates"
+    },
+    "remove-bg": {
+      "name": "Remove.bg", "status": "ready", "network": "own",
+      "signup_url": "https://www.remove.bg/affiliate/info",
+      "signup_search": "remove.bg affiliate program",
+      "commission": "15% of gross per sale (cap $100/txn), recurring on subs, 30-day cookie, min payout $25",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open. Self-hosted program by Kaleido. Needs >=1 paying referral/year to stay active."
+    },
+    "looka": {
+      "name": "Looka", "status": "ready", "network": "partnerstack",
+      "signup_url": "https://dash.partnerstack.com/application?company=looka",
+      "signup_search": "Looka affiliate program PartnerStack",
+      "commission": "25%-35% tiered/lifetime, 90-day cookie, no minimum payout",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "PartnerStack (confirmed via PartnerStack case study). Landing: looka.com/affiliate-program"
+    },
+    "grammarly": {
+      "name": "Grammarly", "status": "ready", "network": "impact",
+      "signup_url": "https://app.impact.com/advertiser-advertiser-info/Grammarly.brand",
+      "signup_search": "Grammarly affiliate program Impact",
+      "commission": "$0.20 per free signup + $20 per Premium upgrade, 90-day cookie, $25 activation bonus",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified. CURRENT program is on Impact (not legacy ShareASale/CJ). Official: grammarly.com/affiliates"
+    },
+    "fliki": {
+      "name": "Fliki", "status": "ready", "network": "tolt",
+      "signup_url": "https://affiliates.fliki.ai/signup",
+      "signup_search": "Fliki affiliate program",
+      "commission": "30% lifetime recurring, 30-day cookie, min payout $50",
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Verified open. Tolt-hosted (?via={id}) -> can template or paste full link."
+    },
+    "play-ht": {
+      "name": "Play.ht", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Company SHUT DOWN 2025-12-31 (team acquired by Meta); affiliate program inactive, API dark. Suppress — do not monetize."
+    },
+    "artbreeder": {
+      "name": "Artbreeder", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "No affiliate/referral/partner program (checked site nav, footer, pricing). Suppress."
+    },
+    "masonry-ai": {
+      "name": "Masonry AI", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "No discoverable public affiliate program (small/new startup). Suppress; contact them directly if pursuing."
+    },
+    "stable-diffusion": {
+      "name": "Stable Diffusion", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Stability AI has only an enterprise tech-partner network (no commission/public signup). No consumer affiliate. Suppress."
+    },
+    "lumen5": {
+      "name": "Lumen5", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Official KB states 'Lumen5 does not have an affiliate or referral program at this time'. Suppress."
+    },
+    "midjourney": {
+      "name": "Midjourney", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "No affiliate program exists; any 'Midjourney affiliate' offers are third-party wrappers. Suppress."
+    },
+    "tabnine": {
+      "name": "Tabnine", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Only a reseller/technology partner program (no commission affiliate). Suppress."
+    },
+    "hugging-face": {
+      "name": "Hugging Face", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "No consumer/commission affiliate program (only cloud/tech partnerships). Suppress."
+    },
+    "qoder": {
+      "name": "Qoder", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Only a credits-only (non-cash) referral + reseller partner program; referral expired 2026-01-30. No cash affiliate. Suppress."
+    },
+    "nano-banana-pro": {
+      "name": "Nano Banana Pro Studio", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "New/obscure paid image wrapper; no affiliate or referral program found. Suppress."
+    },
+    "runner-h": {
+      "name": "Runner H", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "H Company product; no affiliate/partner-commission program found. Suppress."
+    },
+    "lyria-3": {
+      "name": "Lyria 3", "status": "no_program", "network": "none",
+      "signup_url": null, "signup_search": null, "commission": null,
+      "affiliate_id": null, "affiliate_url": null,
+      "notes": "Google DeepMind music model bundled in Gemini — not a standalone sellable product, no affiliate program. Suppress."
+    },
     "leonardoai": {
       "name": "Leonardo.AI", "status": "no_program", "network": "impact",
       "signup_url": null, "signup_search": null,
