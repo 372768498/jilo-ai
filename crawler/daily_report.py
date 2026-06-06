@@ -5,6 +5,7 @@ from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_card
 from ops_logger import log_operation
+import affiliate_registry as ar
 
 
 CN_TZ = timezone(timedelta(hours=8))
@@ -160,7 +161,7 @@ def get_today_stats():
             stats['keywords_date'] = check_date
             try:
                 opportunities = supabase.table('search_console_daily').select(
-                    'query, page_path, position, clicks, impressions'
+                    'query, page, position, clicks, impressions'
                 ).eq('date', check_date).lte('position', 30).order('impressions', desc=True).limit(20).execute()
                 stats['pages_to_update'] = [
                     row for row in (opportunities.data or [])
@@ -170,13 +171,30 @@ def get_today_stats():
                 print(f"Unable to load page update opportunities: {e}")
             break
 
+    # Revenue leaks the user can ACT on: published, clicked, no affiliate link,
+    # and (critically) NOT a no_program tool. Without the registry filter the
+    # report kept naming closed/nonexistent programs (Leonardo.AI closed,
+    # Craiyon/DALL-E none) as the "biggest leak" — dead-end busywork. Enrich each
+    # with the verified signup_url/commission so the task is directly actionable.
     clicked_tools = supabase.table('tools').select(
         'slug, name_en, click_count, affiliate_url'
-    ).eq('status', 'published').order('click_count', desc=True).limit(10).execute()
-    stats['clicked_tools_without_affiliate'] = [
-        t for t in (clicked_tools.data or [])
-        if (t.get('click_count') or 0) > 0 and not t.get('affiliate_url')
-    ][:5]
+    ).eq('status', 'published').order('click_count', desc=True).limit(25).execute()
+    registry = ar.load_registry()
+    no_program = ar.no_program_slugs(registry)
+    leaks = []
+    for t in (clicked_tools.data or []):
+        if (t.get('click_count') or 0) <= 0 or t.get('affiliate_url'):
+            continue
+        if t['slug'] in no_program:
+            continue
+        prog = ar.program_for(t['slug'], registry) or {}
+        t['signup_url'] = prog.get('signup_url')
+        t['commission'] = prog.get('commission')
+        t['network'] = prog.get('network')
+        leaks.append(t)
+        if len(leaks) >= 5:
+            break
+    stats['clicked_tools_without_affiliate'] = leaks
 
     # Strategy actions today
     strategy = supabase.table('strategy_reports').select('actions_taken').eq(
@@ -261,30 +279,39 @@ def format_daily_report(stats):
     page_lines = []
     for page in stats.get('pages_to_update', [])[:5]:
         page_lines.append(
-            f"  - {page.get('page_path', '?')} | \"{page.get('query', '')}\" pos:{page.get('position', 0):.0f} imp:{page.get('impressions', 0)}"
+            f"  - {page.get('page', '?')} | \"{page.get('query', '')}\" pos:{page.get('position', 0):.0f} imp:{page.get('impressions', 0)}"
         )
     pages_text = '\n'.join(page_lines) if page_lines else '  无'
 
     tool_lines = []
     for tool in stats.get('clicked_tools_without_affiliate', [])[:5]:
-        tool_lines.append(f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} 次点击")
+        line = f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} 次点击"
+        if tool.get('signup_url'):
+            net = f" · {tool['network']}" if tool.get('network') else ""
+            line += f" → 申请 {tool['signup_url']}{net}"
+        tool_lines.append(line)
     tools_text = '\n'.join(tool_lines) if tool_lines else '  无'
 
     # ==== Owned tasks: every item explicitly assigned to 你 or an Agent ====
     candidates = []  # list of (owner, text), prioritized
 
-    # Joel — highest revenue lever first
+    # Joel — highest revenue lever first, with the verified application entry so
+    # it's one click from done (no_program tools already filtered upstream).
     if stats.get('clicked_tools_without_affiliate'):
         top = stats['clicked_tools_without_affiliate'][0]
         name = top.get('name_en') or top.get('slug')
-        candidates.append(('你', f"申请 {name} 联盟链接（{top.get('click_count', 0)} 次出站点击，最大漏钱口）"))
+        entry = ''
+        if top.get('signup_url'):
+            comm = f" · {top['commission']}" if top.get('commission') else ""
+            entry = f" → 申请入口 {top['signup_url']}{comm}"
+        candidates.append(('你', f"申请 {name} 联盟链接（{top.get('click_count', 0)} 次出站点击，最大漏钱口）{entry}"))
 
     # Joel — high-intent page needing manual content fix
     if stats.get('pages_to_update'):
         p = stats['pages_to_update'][0]
         candidates.append((
             '你',
-            f"改 {p.get('page_path', '?')} 让 \"{p.get('query', '')}\" 真正吃下点击（曝光 {p.get('impressions', 0)} 但 0 点击）",
+            f"改 {p.get('page', '?')} 让 \"{p.get('query', '')}\" 真正吃下点击（曝光 {p.get('impressions', 0)} 但 0 点击）",
         ))
 
     # Agent — trend
