@@ -69,6 +69,7 @@ env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
   OPENAI_MODEL: ${{ secrets.OPENAI_MODEL || 'gpt-4o-mini' }}
+  OPENAI_TIMEOUT_SECONDS: ${{ secrets.OPENAI_TIMEOUT_SECONDS || '420' }}
   FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
   INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
   NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://www.jilo.ai' }}
@@ -155,7 +156,7 @@ jobs:
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python seo_article_generator.py
         env:
-          SEO_ACTIONS_PER_RUN: "3"
+          SEO_ACTIONS_PER_RUN: "1"
 
   # 鈹€鈹€鈹€ Job 4: Compare Article Generator 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   compare-articles:
