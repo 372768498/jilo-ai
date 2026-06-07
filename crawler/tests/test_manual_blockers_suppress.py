@@ -42,10 +42,10 @@ class TestManualBlockersSuppression(unittest.TestCase):
             'system_flags': [{
                 'priority': 'high',
                 'job_name': 'seo_articles',
-                'subtype': 'system_action_failed',
-                'summary': 'SEO action failed permanently',
-                'repair_hint': 'Inspect the action payload.',
-                'message': 'title too long',
+                'subtype': 'system_env_invalid',
+                'summary': 'OPENAI_API_KEY is invalid',
+                'repair_hint': 'Replace OPENAI_API_KEY.',
+                'message': 'invalid_api_key',
             }],
             'monetization_flags': [],
         }
@@ -54,6 +54,12 @@ class TestManualBlockersSuppression(unittest.TestCase):
         content = mock_send.call_args.args[2]
         self.assertIn('系统失败责任链', content)
         self.assertIn('seo_articles', content)
+
+    def test_only_true_manual_system_subtypes_are_reported(self):
+        self.assertIn('system_env_invalid', mbr.MANUAL_SYSTEM_SUBTYPES)
+        self.assertIn('system_external_access', mbr.MANUAL_SYSTEM_SUBTYPES)
+        self.assertNotIn('system_action_failed', mbr.MANUAL_SYSTEM_SUBTYPES)
+        self.assertNotIn('system_partial_failure', mbr.MANUAL_SYSTEM_SUBTYPES)
 
 
 if __name__ == '__main__':

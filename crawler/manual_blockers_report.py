@@ -10,6 +10,13 @@ import affiliate_registry as ar
 
 CN_TZ = timezone(timedelta(hours=8))
 
+MANUAL_SYSTEM_SUBTYPES = {
+    'system_env_missing',
+    'system_env_invalid',
+    'system_schema_missing',
+    'system_external_access',
+}
+
 
 def display_date():
     return datetime.now(CN_TZ).strftime('%Y-%m-%d')
@@ -275,7 +282,7 @@ def load_manual_blockers():
                 'network': prog.get('network'),
                 'commission': prog.get('commission'),
             })
-        elif (subtype or '').startswith('system_'):
+        elif (subtype or '').startswith('system_') and subtype in MANUAL_SYSTEM_SUBTYPES:
             system_flags.append({
                 'subtype': subtype or 'system_error',
                 'job_name': payload.get('job_name') or payload.get('queue_action_type') or 'unknown job',
