@@ -18,6 +18,15 @@ UA = "jilo-trend/1.0 (+https://jilo.ai)"
 TIMEOUT = 20
 
 COMPETITOR_RECENT_DAYS = 3  # a competitor page is "new" if lastmod is this fresh
+LAST_FAILURES = []
+
+
+def _record_failure(source, error):
+    LAST_FAILURES.append({"source": source, "error": str(error)[:500]})
+
+
+def get_last_failures():
+    return list(LAST_FAILURES)
 
 
 def _parse_count(text):
@@ -70,6 +79,7 @@ def fetch_hn(hours=24, min_points=50, query="AI", max_items=20):
                 "url": h.get("url") or f"https://news.ycombinator.com/item?id={h.get('objectID')}",
             })
     except Exception as e:
+        _record_failure("Hacker News", e)
         print(f"  HN fetch failed: {e}")
     return items
 
@@ -101,6 +111,7 @@ def fetch_reddit(subreddits=None, min_score=80, limit=15):
                 })
             time.sleep(1)  # be polite to the unauthenticated endpoint (10 req/min)
         except Exception as e:
+            _record_failure(f"reddit:r/{sub}", e)
             print(f"  Reddit r/{sub} fetch failed: {e}")
     return items
 
@@ -131,6 +142,7 @@ def fetch_product_hunt(max_items=30):
                 "url": link,
             })
     except Exception as e:
+        _record_failure("Product Hunt", e)
         print(f"  Product Hunt fetch failed: {e}")
     return items
 
@@ -167,6 +179,7 @@ def fetch_github_trending(max_items=20):
                 "url": f"https://github.com{title_el.get('href', '')}",
             })
     except Exception as e:
+        _record_failure("GitHub Trending", e)
         print(f"  GitHub Trending fetch failed: {e}")
     return items
 
@@ -231,12 +244,14 @@ def fetch_competitor_new_pages(sitemaps=None):
                     "competitor_page": True,
                 })
         except Exception as e:
+            _record_failure(f"Competitor sitemap {sm}", e)
             print(f"  Competitor sitemap {sm} fetch failed: {e}")
     return items
 
 
 def gather_engagement_signals():
     """All free engagement sources combined, sorted by engagement desc."""
+    LAST_FAILURES.clear()
     items = (fetch_hn() + fetch_reddit() + fetch_product_hunt()
              + fetch_github_trending() + fetch_competitor_new_pages())
     items.sort(key=lambda x: x.get("engagement", 0), reverse=True)

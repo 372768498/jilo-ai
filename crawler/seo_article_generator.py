@@ -18,12 +18,31 @@ import action_queue as aq
 import quality_gates as qg
 
 ACTIONS_PER_RUN = int(os.getenv("SEO_ACTIONS_PER_RUN", "5"))
+LAST_GENERATION_ERROR = None
 
 
 def _get_openai_client():
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY not configured")
     return OpenAI(api_key=OPENAI_API_KEY)
+
+
+def _record_generation_error(error):
+    global LAST_GENERATION_ERROR
+    LAST_GENERATION_ERROR = str(error)
+
+
+def _generation_failure_reason(default):
+    return LAST_GENERATION_ERROR or default
+
+
+def _is_fatal_generation_env_error(reason):
+    reason = reason or ''
+    return (
+        'OPENAI_API_KEY not configured' in reason
+        or 'Incorrect API key provided' in reason
+        or 'invalid_api_key' in reason
+    )
 
 
 def get_related_tools(keyword):
@@ -59,6 +78,8 @@ def generate_seo_article(keyword):
     Generate a long-form SEO article for the given keyword.
     Uses gpt-4o-mini (~$0.006/article) instead of gpt-4o (~$0.06/article).
     """
+    global LAST_GENERATION_ERROR
+    LAST_GENERATION_ERROR = None
     related_tools = get_related_tools(keyword)
 
     tools_context = ""
@@ -134,6 +155,7 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
         }
 
     except Exception as e:
+        _record_generation_error(e)
         print(f"  GPT-4o-mini article generation error: {e}")
         return None
 
@@ -143,6 +165,8 @@ def generate_aeo_answer(keyword, context=None):
     Generate an answer-engine-optimized page: direct answer first, citation
     snippets, comparison table, FAQ, and internal links.
     """
+    global LAST_GENERATION_ERROR
+    LAST_GENERATION_ERROR = None
     context = context or {}
     related_tools = get_related_tools(keyword)
     tool_lines = [
@@ -213,8 +237,145 @@ Return a single JSON object with EXACTLY these keys:
             'target_keyword': keyword,
         }
     except Exception as e:
+        _record_generation_error(e)
         print(f"  GPT-4o-mini AEO generation error: {e}")
         return None
+
+
+def _plain_text(value):
+    text = re.sub(r'<[^>]+>', ' ', value or '')
+    text = re.sub(r'[#*_`\[\]()>-]+', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def _fit_text(text, lo, hi, fallback):
+    base = _plain_text(text) or _plain_text(fallback)
+    if not base:
+        base = "A practical guide to choosing the right AI tools for the task."
+    if len(base) > hi:
+        trimmed = base[:hi].rsplit(' ', 1)[0].strip()
+        base = trimmed or base[:hi].strip()
+    while len(base) < lo:
+        addon = " Compare options, use cases, tradeoffs, and next steps before choosing."
+        room = hi - len(base)
+        if room <= 1:
+            break
+        base = (base + addon[:room]).strip()
+    return base[:hi].strip()
+
+
+def _fit_title(title, max_len, keyword):
+    title = _plain_text(title)
+    keyword = _plain_text(keyword)
+    if not title:
+        title = keyword or "AI Tools Guide"
+    if len(title) <= max_len:
+        return title
+    candidates = [
+        keyword,
+        f"{keyword}: Guide",
+        title.split(':', 1)[0],
+        title,
+    ]
+    for candidate in candidates:
+        candidate = _plain_text(candidate)
+        if candidate and len(candidate) <= max_len:
+            return candidate
+    trimmed = title[:max_len].rsplit(' ', 1)[0].strip()
+    return trimmed or title[:max_len].strip()
+
+
+def _remove_unrequested_stale_years(title, keyword):
+    keyword = keyword or ''
+    for year in re.findall(r'\b20(?:2[0-5])\b', title or ''):
+        if year not in keyword:
+            title = re.sub(rf'\b{year}\b', '', title)
+    return re.sub(r'\s+', ' ', title or '').strip(' -:|')
+
+
+def repair_article_for_gate(article, reason, article_type='seo'):
+    """Best-effort deterministic repair for common model contract violations."""
+    repaired = dict(article or {})
+    keyword = repaired.get('target_keyword') or ''
+    title_max = 80 if article_type == 'aeo' else 70
+
+    if reason.startswith('missing/empty fields:'):
+        fields = [f.strip() for f in reason.split(':', 1)[1].split(',') if f.strip()]
+        for field in fields:
+            if repaired.get(field):
+                continue
+            if field == 'title_en':
+                repaired[field] = _fit_title(keyword, title_max, keyword)
+            elif field == 'meta_description_en':
+                repaired[field] = _fit_text('', 100, 170, repaired.get('content_en') or keyword)
+            elif field == 'content_en':
+                return article, False
+            elif field == 'title_zh':
+                repaired[field] = repaired.get('title_en') or _fit_title(keyword, title_max, keyword)
+            elif field == 'meta_description_zh':
+                repaired[field] = _fit_text(
+                    repaired.get('meta_description_en'),
+                    40,
+                    170,
+                    repaired.get('content_zh') or repaired.get('content_en') or keyword,
+                )
+            elif field == 'content_zh':
+                # Fallback keeps the item from dying when only translation is missing.
+                # A later translation pass can improve it; the growth system should not
+                # discard a valid English page solely because the bilingual field is empty.
+                repaired[field] = repaired.get('content_en') or ''
+
+    m = re.search(r'title_en \d+ chars > (\d+) max', reason)
+    if m:
+        repaired['title_en'] = _fit_title(repaired.get('title_en'), int(m.group(1)), keyword)
+
+    m = re.search(r'meta_description_en \d+ chars out of \[(\d+),(\d+)\]', reason)
+    if m:
+        repaired['meta_description_en'] = _fit_text(
+            repaired.get('meta_description_en'),
+            int(m.group(1)),
+            int(m.group(2)),
+            repaired.get('content_en') or keyword,
+        )
+
+    m = re.search(r'title_en contains stale year \d+ not present in target keyword', reason)
+    if m:
+        repaired['title_en'] = _remove_unrequested_stale_years(repaired.get('title_en'), keyword)
+
+    if reason.startswith('meta_description_zh ') or 'meta_description_zh' in reason:
+        repaired['meta_description_zh'] = _fit_text(
+            repaired.get('meta_description_zh') or repaired.get('meta_description_en'),
+            40,
+            170,
+            repaired.get('content_zh') or repaired.get('content_en') or keyword,
+        )
+
+    changed = repaired != (article or {})
+    return repaired, changed
+
+
+def check_with_repair(article, supabase, check_fn, article_type='seo', skip_dup=False):
+    gate = check_fn(article, supabase, skip_dup=skip_dup)
+    if gate.ok or gate.terminal:
+        return article, gate, False
+    repaired, changed = repair_article_for_gate(article, gate.reason, article_type=article_type)
+    if not changed:
+        return article, gate, False
+    repaired_gate = check_fn(repaired, supabase, skip_dup=skip_dup)
+    if repaired_gate.ok:
+        print(f"  REPAIRED gate: {gate.reason}")
+        return repaired, repaired_gate, True
+    return repaired, repaired_gate, True
+
+
+def generate_with_retry(generate_fn, failure_label):
+    article = generate_fn()
+    if article:
+        return article, False
+    if _is_fatal_generation_env_error(LAST_GENERATION_ERROR):
+        return None, False
+    print(f"  {failure_label}; retrying once")
+    return generate_fn(), True
 
 
 def save_article(article, supabase):
@@ -376,7 +537,16 @@ if __name__ == "__main__":
             saved = 0
             failed = 0
             skipped = 0
+            failure_reasons = []
+            fatal_generation_error = None
             for action in actions:
+                if fatal_generation_error:
+                    aq.release_pending(
+                        supabase,
+                        action,
+                        f"blocked by fatal generation error: {fatal_generation_error[:500]}",
+                    )
+                    continue
                 payload = action.get('payload') or {}
                 keyword = payload.get('keyword')
                 mode = payload.get('mode')
@@ -403,12 +573,21 @@ if __name__ == "__main__":
                 if mode == 'aeo':
                     print(f"\nAEO answer: {keyword}  (priority={action['priority']})")
                     try:
-                        article = generate_aeo_answer(keyword, payload)
+                        article, retried = generate_with_retry(
+                            lambda: generate_aeo_answer(keyword, payload),
+                            "AEO generation returned None",
+                        )
                         if not article:
-                            aq.mark_failed(supabase, action, "AEO generation returned None")
+                            reason = _generation_failure_reason("AEO generation returned None")
+                            aq.mark_failed(supabase, action, reason)
+                            failure_reasons.append(reason)
+                            if _is_fatal_generation_env_error(reason):
+                                fatal_generation_error = reason
                             failed += 1
                             continue
-                        gate = qg.check_aeo_answer(article, supabase)
+                        article, gate, repaired = check_with_repair(
+                            article, supabase, qg.check_aeo_answer, article_type='aeo'
+                        )
                         if not gate.ok:
                             if gate.terminal:
                                 aq.mark_skipped(supabase, action, gate.reason)
@@ -425,11 +604,15 @@ if __name__ == "__main__":
                             'title_en': article['title_en'],
                             'keyword': keyword,
                             'outcome': 'aeo_answer',
+                            'repaired': repaired,
+                            'retried': retried,
                         })
                         saved += 1
                         print(f"  DONE (aeo_answer): {article['title_en'][:60]}")
                     except Exception as aeo_err:
-                        aq.mark_failed(supabase, action, str(aeo_err))
+                        reason = str(aeo_err)
+                        aq.mark_failed(supabase, action, reason)
+                        failure_reasons.append(reason)
                         failed += 1
                         print(f"  FAIL: {aeo_err}")
                     time.sleep(2)
@@ -447,12 +630,21 @@ if __name__ == "__main__":
                 if is_rewrite and payload.get('content_type') == 'aeo_answer':
                     print(f"\nRewriting AEO: {keyword}  (priority={action['priority']})")
                     try:
-                        article = generate_aeo_answer(keyword, payload)
+                        article, retried = generate_with_retry(
+                            lambda: generate_aeo_answer(keyword, payload),
+                            "AEO rewrite returned None",
+                        )
                         if not article:
-                            aq.mark_failed(supabase, action, "AEO rewrite returned None")
+                            reason = _generation_failure_reason("AEO rewrite returned None")
+                            aq.mark_failed(supabase, action, reason)
+                            failure_reasons.append(reason)
+                            if _is_fatal_generation_env_error(reason):
+                                fatal_generation_error = reason
                             failed += 1
                             continue
-                        gate = qg.check_aeo_answer(article, supabase, skip_dup=True)
+                        article, gate, repaired = check_with_repair(
+                            article, supabase, qg.check_aeo_answer, article_type='aeo', skip_dup=True
+                        )
                         if not gate.ok:
                             if gate.terminal:
                                 aq.mark_skipped(supabase, action, gate.reason)
@@ -471,11 +663,14 @@ if __name__ == "__main__":
                         aq.mark_done(supabase, action, {
                             'slug': slug, 'title_en': article['title_en'],
                             'keyword': keyword, 'outcome': 'rewritten_aeo',
+                            'repaired': repaired, 'retried': retried,
                         })
                         saved += 1
                         print(f"  DONE (rewritten_aeo): {article['title_en'][:60]}")
                     except Exception as aeo_rw_err:
-                        aq.mark_failed(supabase, action, str(aeo_rw_err))
+                        reason = str(aeo_rw_err)
+                        aq.mark_failed(supabase, action, reason)
+                        failure_reasons.append(reason)
                         failed += 1
                         print(f"  FAIL: {aeo_rw_err}")
                     time.sleep(2)
@@ -484,14 +679,23 @@ if __name__ == "__main__":
                 mode_label = "Rewriting" if is_rewrite else "Generating"
                 print(f"\n{mode_label}: {keyword}  (priority={action['priority']}, attempt={action['attempts']}/{action.get('max_attempts', 3)})")
                 try:
-                    article = generate_seo_article(keyword)
+                    article, retried = generate_with_retry(
+                        lambda: generate_seo_article(keyword),
+                        "generation returned None (API error or parse failure)",
+                    )
                     if not article:
-                        aq.mark_failed(supabase, action, "generation returned None (API error or parse failure)")
+                        reason = _generation_failure_reason("generation returned None (API error or parse failure)")
+                        aq.mark_failed(supabase, action, reason)
+                        failure_reasons.append(reason)
+                        if _is_fatal_generation_env_error(reason):
+                            fatal_generation_error = reason
                         failed += 1
                         continue
 
                     # Rewrites skip the duplicate gate (the page already exists).
-                    gate = qg.check_seo_article(article, supabase, skip_dup=is_rewrite)
+                    article, gate, repaired = check_with_repair(
+                        article, supabase, qg.check_seo_article, article_type='seo', skip_dup=is_rewrite
+                    )
                     if not gate.ok:
                         if gate.terminal:
                             aq.mark_skipped(supabase, action, gate.reason)
@@ -520,20 +724,32 @@ if __name__ == "__main__":
                         'title_en': article['title_en'],
                         'keyword': keyword,
                         'outcome': outcome,
+                        'repaired': repaired,
+                        'retried': retried,
                     })
                     saved += 1
                     print(f"  DONE ({outcome}): {article['title_en'][:60]}")
                 except Exception as gen_err:
-                    aq.mark_failed(supabase, action, str(gen_err))
+                    reason = str(gen_err)
+                    aq.mark_failed(supabase, action, reason)
+                    failure_reasons.append(reason)
                     failed += 1
                     print(f"  FAIL: {gen_err}")
                 time.sleep(2)
 
-            log_operation("seo_articles", "success",
-                          f"saved={saved} failed={failed} skipped={skipped}", {
-                              "saved": saved, "failed": failed, "skipped": skipped,
-                              "actions": [{"id": a['id'], "keyword": (a.get('payload') or {}).get('keyword')} for a in actions],
-                          })
+            details = {
+                "saved": saved,
+                "failed": failed,
+                "skipped": skipped,
+                "failure_reasons": failure_reasons[:5],
+                "actions": [{"id": a['id'], "keyword": (a.get('payload') or {}).get('keyword')} for a in actions],
+            }
+            if fatal_generation_error:
+                details["fatal_generation_error"] = fatal_generation_error
+                log_operation("seo_articles", "error", fatal_generation_error, details)
+            else:
+                log_operation("seo_articles", "success",
+                              f"saved={saved} failed={failed} skipped={skipped}", details)
 
     except Exception as e:
         log_operation("seo_articles", "error", str(e))

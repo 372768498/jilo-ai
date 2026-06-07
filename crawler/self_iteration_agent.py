@@ -10,6 +10,7 @@ import re
 from supabase import create_client
 
 import action_queue as aq
+import failure_chain
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_alert
 from ops_logger import log_operation
@@ -21,6 +22,16 @@ BACKLOG_LIMITS = {
     'generate_comparison': 10,
     'flag_for_review': 80,
 }
+
+REPAIRABLE_SEO_FAILURE_TERMS = (
+    'title_en ',
+    'meta_description_en ',
+    'meta_description_zh ',
+    'missing/empty fields:',
+    'generation returned None',
+    'AEO generation returned None',
+    'AEO rewrite returned None',
+)
 
 REQUIRED_TABLES = [
     ('analytics_site_daily', 'scripts/create-ops-tables.sql'),
@@ -152,6 +163,32 @@ def open_system_error_flags(supabase):
     return opened
 
 
+def open_partial_failure_flags(supabase):
+    since = (datetime.utcnow() - timedelta(hours=ERROR_LOOKBACK_HOURS)).isoformat()
+    rows = supabase.table('ops_logs').select(
+        'job_name, message, details, created_at'
+    ).eq('status', 'success').gte('created_at', since).order(
+        'created_at', desc=True
+    ).limit(1000).execute()
+
+    opened = 0
+    for row in (rows.data or []):
+        details = row.get('details') or {}
+        failed = details.get('failed') if isinstance(details, dict) else None
+        if not isinstance(failed, (int, float)) or failed <= 0:
+            continue
+        if failure_chain.enqueue_partial_failure(
+            supabase,
+            row.get('job_name') or 'unknown_job',
+            row.get('message') or '',
+            details,
+        ):
+            opened += 1
+    if opened:
+        print(f"  Opened {opened} partial failure review flag(s)")
+    return opened
+
+
 def resolve_recovered_system_flags(supabase):
     """Close system error flags once the same job has a later success log."""
     since = (datetime.utcnow() - timedelta(hours=ERROR_LOOKBACK_HOURS)).isoformat()
@@ -244,6 +281,68 @@ def open_backlog_flags(supabase):
     return opened
 
 
+def open_failed_action_flags(supabase):
+    """Ensure terminal failed queue actions are not dead-end rows."""
+    rows = supabase.table('action_queue').select(
+        'id, action_type, priority, payload, dedup_key, error_reason, completed_at, updated_at'
+    ).eq('status', 'failed').order('updated_at', desc=True).limit(200).execute()
+
+    opened = 0
+    for row in (rows.data or []):
+        if failure_chain.enqueue_action_failure(
+            supabase,
+            row,
+            row.get('error_reason') or 'action failed without error_reason',
+        ):
+            opened += 1
+    if opened:
+        print(f"  Opened {opened} failed action review flag(s)")
+    return opened
+
+
+def requeue_repairable_seo_failures(supabase):
+    """Re-open SEO actions that the generator can now repair deterministically."""
+    rows = supabase.table('action_queue').select(
+        'id, action_type, priority, payload, dedup_key, error_reason, created_at, completed_at'
+    ).eq('action_type', 'generate_seo_content').eq(
+        'status', 'failed'
+    ).order('updated_at', desc=True).limit(100).execute()
+
+    requeued = 0
+    for row in (rows.data or []):
+        reason = row.get('error_reason') or ''
+        if not any(term in reason for term in REPAIRABLE_SEO_FAILURE_TERMS):
+            continue
+        dedup_key = row.get('dedup_key')
+        if not dedup_key:
+            continue
+
+        newer = supabase.table('action_queue').select('id, status, created_at').eq(
+            'dedup_key', dedup_key
+        ).gt('created_at', row.get('created_at') or '').limit(1).execute()
+        if newer.data:
+            continue
+
+        payload = dict(row.get('payload') or {})
+        payload['source_repair'] = {
+            'failed_action_id': row.get('id'),
+            'failed_reason': reason,
+            'repair': 'seo_article_generator deterministic gate repair',
+            'queued_at': _now(),
+        }
+        if aq.enqueue(
+            supabase,
+            action_type='generate_seo_content',
+            payload=payload,
+            reason=f"Retry after SEO repair support: {reason}",
+            priority=row.get('priority') or 'medium',
+            dedup_key=dedup_key,
+        ):
+            requeued += 1
+            print(f"  Requeued repairable SEO action: {dedup_key}")
+    return requeued
+
+
 def open_schema_health_flags(supabase):
     opened = 0
     for table_name, migration_script in REQUIRED_TABLES:
@@ -320,9 +419,12 @@ def run():
     steps = [
         ('stale_recovered', recover_stale_actions),
         ('system_flags_opened', open_system_error_flags),
+        ('partial_failure_flags_opened', open_partial_failure_flags),
         ('system_flags_resolved', resolve_recovered_system_flags),
         ('schema_flags_opened_or_resolved', open_schema_health_flags),
         ('backlog_flags_opened_or_resolved', open_backlog_flags),
+        ('repairable_seo_requeued', requeue_repairable_seo_failures),
+        ('failed_action_flags_opened', open_failed_action_flags),
     ]
     for name, fn in steps:
         try:

@@ -1,5 +1,4 @@
 # crawler/rss_news_crawler.py
-import feedparser
 import time
 import hashlib
 import re
@@ -100,8 +99,11 @@ SUMMARY_ZH: [Chinese translation of the new summary]"""
 
 def crawl_rss_news():
     """Crawl and rewrite news from all RSS sources."""
+    import feedparser
+
     print("Crawling RSS news sources...")
     news_list = []
+    failed = 0
 
     for source, url in RSS_SOURCES.items():
         try:
@@ -137,24 +139,27 @@ def crawl_rss_news():
                     print(f"  Done: {title_en[:50]}")
                     time.sleep(1)
                 except Exception as e:
+                    failed += 1
                     print(f"  Error processing entry: {e}")
                     continue
         except Exception as e:
+            failed += 1
             print(f"Error fetching {source}: {e}")
             continue
 
-    return news_list
+    return news_list, failed
 
 
 def save_news_to_db(news_list):
     """Save news to database, skip duplicates."""
     if not news_list:
         print("No news to save")
-        return 0, 0
+        return 0, 0, 0
 
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     saved = 0
     skipped = 0
+    failed = 0
 
     for news in news_list:
         try:
@@ -169,20 +174,22 @@ def save_news_to_db(news_list):
                 saved += 1
             time.sleep(0.5)
         except Exception as e:
+            failed += 1
             print(f"  Error saving: {e}")
             continue
 
-    print(f"\nSaved: {saved}, Skipped: {skipped}, Total: {len(news_list)}")
-    return saved, skipped
+    print(f"\nSaved: {saved}, Skipped: {skipped}, Failed: {failed}, Total: {len(news_list)}")
+    return saved, skipped, failed
 
 
 if __name__ == "__main__":
     print("Starting RSS news crawler...")
     try:
-        news = crawl_rss_news()
-        saved, skipped = save_news_to_db(news)
-        log_operation("news_crawler", "success", f"Saved {saved}, skipped {skipped}", {
-            "saved": saved, "skipped": skipped, "total": len(news)
+        news, crawl_failed = crawl_rss_news()
+        saved, skipped, save_failed = save_news_to_db(news)
+        failed = crawl_failed + save_failed
+        log_operation("news_crawler", "success", f"Saved {saved}, skipped {skipped}, failed {failed}", {
+            "saved": saved, "skipped": skipped, "failed": failed, "total": len(news)
         })
     except Exception as e:
         log_operation("news_crawler", "error", str(e))

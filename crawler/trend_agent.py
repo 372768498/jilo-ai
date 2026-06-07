@@ -337,13 +337,16 @@ if __name__ == "__main__":
         print(f"  GSC-rising: {len(emerging)} emerging, {gsc_enqueued} enqueued")
 
         signals = fetch_rss_signals(supabase) + trend_sources.gather_engagement_signals()
+        source_failures = trend_sources.get_last_failures()
         print(f"  {len(signals)} total signals (RSS + HN + Reddit + PH + GitHub)")
 
         if len(signals) < MIN_SIGNALS:
             print(f"  Too few signals (<{MIN_SIGNALS}); skipping LLM path.")
             enqueued = gsc_enqueued
             log_operation("trend_agent", "success", "LLM path skipped: too few signals",
-                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "signals": len(signals)})
+                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued,
+                           "signals": len(signals), "failed": len(source_failures),
+                           "source_failures": source_failures})
         else:
             trends = detect_trends(signals)
             print(f"  LLM surfaced {len(trends)} candidate trend(s)")
@@ -353,7 +356,8 @@ if __name__ == "__main__":
             enqueued += gsc_enqueued
             print(f"\n  Enqueued {enqueued} high-priority trend action(s)")
             log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
-                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends})
+                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends,
+                           "failed": len(source_failures), "source_failures": source_failures})
     except Exception as e:
         log_operation("trend_agent", "error", str(e))
         if FEISHU_WEBHOOK_URL:

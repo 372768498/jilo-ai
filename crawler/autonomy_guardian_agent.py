@@ -235,5 +235,95 @@ def run():
     return result
 
 
+def _format_counter(counter):
+    if not counter:
+        return '- 无'
+    lines = []
+    for key, count in sorted(counter.items(), key=lambda x: str(x[0])):
+        lines.append(f'- {key}: {count}')
+    return '\n'.join(lines)
+
+
+def format_report(result):
+    verdict_map = {
+        'healthy': '健康：系统可以自驱动运行',
+        'degraded_manual_blocker': '降级但可运行：有人工权限事项，其它增长闭环继续跑',
+        'degraded_needs_attention': '降级：存在会影响闭环的问题',
+    }
+    lines = [
+        f"**结论：** {verdict_map.get(result['verdict'], result['verdict'])}",
+        f"**阻塞类型：** {', '.join(result['blockers']) if result['blockers'] else '无'}",
+        '',
+        '**自动处理结果**',
+        f"- self-iteration: {result['self_results']}",
+        f"- monitor: opened={result['monitor']['opened']} resolved={result['monitor']['resolved']}",
+        '',
+        '**队列状态**',
+        _format_counter(result['queue']['counts']),
+        '',
+        '**人工事项**',
+    ]
+
+    if result['missing_tables']:
+        lines.append('- 数据库 migration:')
+        for item in result['missing_tables']:
+            lines.append(f"  - 缺表 `{item['table_name']}`，执行 `{item['migration_script']}`")
+    else:
+        lines.append('- 数据库 migration: 无')
+
+    monetization = result['queue']['top_monetization']
+    if monetization:
+        lines.append('- 联盟链接优先处理:')
+        for item in monetization[:5]:
+            lines.append(
+                f"  - {item['name']} (`{item['slug']}`): {item['click_count']} 次出站点击，优先级 {item['priority']}"
+            )
+    else:
+        lines.append('- 联盟链接: 无待处理')
+
+    if result['failed_jobs']:
+        lines.append('')
+        lines.append('**仍未恢复的失败 job**')
+        for job in result['failed_jobs'][:8]:
+            lines.append(f"- {job.get('job_name')}: {job.get('message')}")
+
+    lines.append('')
+    lines.append('系统会继续自动消费 SEO/AEO/Compare 队列；人工项只通过飞书提醒，不再要求你在对话里补。')
+    return '\n'.join(lines)
+
+
+def run():
+    supabase = get_supabase()
+    result = evaluate_autonomy(supabase)
+
+    growth_state.set_state(supabase, growth_state.VERDICT_KEY, {
+        'verdict': result['verdict'],
+        'blockers': result['blockers'],
+        'updated': datetime.utcnow().isoformat(),
+    })
+
+    if FEISHU_WEBHOOK_URL:
+        color = 'green' if result['verdict'] == 'healthy' else 'yellow'
+        send_feishu_card(
+            FEISHU_WEBHOOK_URL,
+            f"jilo.ai 自驱动总控检查 - {display_date()}",
+            format_report(result),
+            color=color,
+        )
+    log_operation('autonomy_guardian_agent', 'success', result['verdict'], {
+        'blockers': result['blockers'],
+        'self_results': result['self_results'],
+        'monitor': result['monitor'],
+        'queue_counts': {str(k): v for k, v in result['queue']['counts'].items()},
+        'missing_tables': result['missing_tables'],
+        'failed_jobs': [
+            {'job_name': j.get('job_name'), 'message': j.get('message')}
+            for j in result['failed_jobs']
+        ],
+    })
+    print(result)
+    return result
+
+
 if __name__ == '__main__':
     run()
