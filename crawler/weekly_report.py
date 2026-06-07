@@ -2,10 +2,10 @@
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_card
 from ops_logger import log_operation
+from llm_client import get_openai_client
 
 
 CN_TZ = timezone(timedelta(hours=8))
@@ -16,9 +16,7 @@ def display_date():
 
 
 def _get_openai_client():
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return get_openai_client()
 
 
 def collect_weekly_data():
@@ -204,7 +202,7 @@ def generate_ai_strategy(weekly_data):
 
     try:
         response = _get_openai_client().chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "你是一个 AI 工具发现平台的资深 SEO 与内容策略师，用简体中文输出数据驱动、可执行的建议。"},
                 {"role": "user", "content": prompt}

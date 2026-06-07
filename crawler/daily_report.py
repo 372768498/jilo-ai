@@ -438,5 +438,189 @@ def send_daily_report():
     print(f"Daily report sent: {success} (met={pv_status['met']} streak={streak})")
 
 
+def pv_growth_status(pv, pv_prev, target_growth=TARGET_GROWTH):
+    target_pct = target_growth * 100
+    if not pv_prev:
+        return {
+            'met': None,
+            'target_pct': target_pct,
+            'actual_pct': None,
+            'line': f"目标 +{target_pct:.0f}% / 实际 N/A（无前日基线）",
+        }
+    actual = (pv - pv_prev) / pv_prev
+    actual_pct = actual * 100
+    met = actual >= target_growth
+    if met:
+        line = f"目标 +{target_pct:.0f}% / 实际 +{actual_pct:.0f}%，达标"
+    else:
+        target_pv = pv_prev * (1 + target_growth)
+        gap_pct = (target_growth - actual) * 100
+        gap_pv = max(int(round(target_pv - pv)), 0)
+        line = f"目标 +{target_pct:.0f}% / 实际 {actual_pct:+.0f}%，缺口 {gap_pct:.0f}%（约 {gap_pv} PV）"
+    return {'met': met, 'target_pct': target_pct, 'actual_pct': actual_pct, 'line': line}
+
+
+def format_daily_report(stats):
+    today = display_date()
+    status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
+    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
+    streak_note = f"\n  注意：已连续 {streak} 天未达标" if streak >= MISS_STREAK_ESCALATE else ""
+
+    kw_lines = [
+        f"  - \"{kw['query']}\" pos:{kw['position']:.0f} clicks:{kw['clicks']}"
+        for kw in stats.get('top_keywords', [])[:5]
+    ]
+    kw_date_label = f"（数据日期: {stats.get('keywords_date', '?')}）" if stats.get('keywords_date') else ""
+    kw_text = '\n'.join(kw_lines) if kw_lines else '  暂无数据（GSC 通常延迟 2-3 天）'
+
+    action_lines = [
+        f"  - [{a.get('priority', '?').upper()}] {a.get('reason', '')[:60]}"
+        for a in stats.get('strategy_actions', [])[:5]
+    ]
+    action_text = '\n'.join(action_lines) if action_lines else '  今日无策略动作'
+
+    page_lines = [
+        f"  - {page.get('page', '?')} | \"{page.get('query', '')}\" pos:{page.get('position', 0):.0f} imp:{page.get('impressions', 0)}"
+        for page in stats.get('pages_to_update', [])[:5]
+    ]
+    pages_text = '\n'.join(page_lines) if page_lines else '  无'
+
+    tool_lines = []
+    for tool in stats.get('clicked_tools_without_affiliate', [])[:5]:
+        line = f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} 次点击"
+        if tool.get('signup_url'):
+            net = f" · {tool['network']}" if tool.get('network') else ""
+            line += f" -> 申请 {tool['signup_url']}{net}"
+        tool_lines.append(line)
+    tools_text = '\n'.join(tool_lines) if tool_lines else '  无'
+
+    candidates = []
+    if stats.get('clicked_tools_without_affiliate'):
+        top = stats['clicked_tools_without_affiliate'][0]
+        name = top.get('name_en') or top.get('slug')
+        entry = ''
+        if top.get('signup_url'):
+            comm = f" · {top['commission']}" if top.get('commission') else ""
+            entry = f" -> 申请入口 {top['signup_url']}{comm}"
+        candidates.append(('你', f"申请 {name} 联盟链接（{top.get('click_count', 0)} 次出站点击，最大漏钱口）{entry}"))
+
+    if stats.get('pages_to_update'):
+        p = stats['pages_to_update'][0]
+        candidates.append((
+            '你',
+            f"改 {p.get('page', '?')}，让 \"{p.get('query', '')}\" 真正吃下点击（曝光 {p.get('impressions', 0)}、0 点击）",
+        ))
+
+    if stats.get('trend_enqueued_today'):
+        candidates.append(('Agent · trend', f"今日已捕获 {len(stats['trend_enqueued_today'])} 个高优先级热点，SEO 生成器会自动消费"))
+    else:
+        candidates.append(('Agent · trend', "下次 00:45 / 08:45 / 16:45 UTC 扫 HN+Reddit 找新热点"))
+
+    if stats.get('rewrites_pending', 0) > 0:
+        candidates.append(('Agent · strategy', f"队列里 {stats['rewrites_pending']} 条排名差页面待自动重写"))
+    elif stats.get('rewrites_done_today', 0) > 0:
+        candidates.append(('Agent · strategy', f"今日已自动重写 {stats['rewrites_done_today']} 个排名差页面"))
+
+    if stats.get('monetization_resolved_today', 0) > 0:
+        candidates.append(('Agent · monitor', f"今日自动销账 {stats['monetization_resolved_today']} 个漏钱 flag"))
+
+    if not any(owner == '你' for owner, _ in candidates):
+        candidates.insert(0, ('你', "去 /admin/queue 挑一个漏钱工具申请联盟链接"))
+
+    standing = [
+        ('Agent · strategy', "今晚 20:30 UTC 复盘 GSC + lookback，自动决定新增/重写"),
+        ('Agent · lookback', "页面到 1/3/7 天龄自动拍快照，喂回策略层"),
+        ('Agent · monitor', f"持续监控 {stats.get('monetization_open', 0)} 个漏钱工具，你接一个它销一个"),
+    ]
+    for item in standing:
+        if len(candidates) >= 3:
+            break
+        if item not in candidates:
+            candidates.append(item)
+
+    tasks_text = '\n'.join(
+        f"{i + 1}. [{owner}] {text}" for i, (owner, text) in enumerate(candidates[:3])
+    )
+
+    agent_text = '\n'.join([
+        f"  - 趋势探测: 今日入队 {len(stats.get('trend_enqueued_today', []))} 条热点动作",
+        f"  - 监控/自愈: {stats.get('monetization_open', 0)} 个漏钱 flag 在 pending，今日自动销 {stats.get('monetization_resolved_today', 0)} 个",
+        f"  - 排名重写: 待执行 {stats.get('rewrites_pending', 0)} 条，今日完成 {stats.get('rewrites_done_today', 0)} 条",
+        f"  - 表现回看: 今日捕获 {stats.get('lookback_today', 0)} 个页面快照",
+    ])
+    errors_text = '\n'.join(f"  - {e}" for e in stats['errors']) if stats['errors'] else '  无'
+
+    return f"""**jilo.ai 日报 - {today}**
+
+**流量（昨日）**
+  PV: {stats.get('pv', 'N/A')}  UV: {stats.get('uv', 'N/A')}
+  {status['line']}{streak_note}
+
+**今日新增内容**
+  新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']} | 重写: {stats.get('rewrites_done_today', 0)}
+
+**今日变现**
+  出站点击: {stats['outbound_clicks']} | 联盟点击: {stats['affiliate_clicks']} | 已挂联盟工具: {stats.get('affiliate_tools', 0)}
+
+**Agent 自驱动状态（今日）**
+{agent_text}
+
+**今日 3 件事（已指派）**
+{tasks_text}
+
+**待优化页面**
+{pages_text}
+
+**有点击但无联盟链接的工具**
+{tools_text}
+
+**热门关键词**{kw_date_label}
+{kw_text}
+
+**策略动作**
+{action_text}
+
+**错误**
+{errors_text}"""
+
+
+def send_daily_report():
+    if not FEISHU_WEBHOOK_URL:
+        print("FEISHU_WEBHOOK_URL not configured, skipping report")
+        return
+
+    stats = get_today_stats()
+    content = format_daily_report(stats)
+    today = display_date()
+    pv_status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
+    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
+    color = {True: 'green', False: 'yellow', None: 'blue'}[pv_status['met']]
+
+    success = send_feishu_card(
+        FEISHU_WEBHOOK_URL,
+        f"jilo.ai 日报 - {today}",
+        content,
+        color=color,
+    )
+
+    if streak >= MISS_STREAK_ESCALATE:
+        send_feishu_card(
+            FEISHU_WEBHOOK_URL,
+            f"jilo.ai 业务结果变化：连续 {streak} 天未达 +{TARGET_GROWTH * 100:.0f}% PV 目标",
+            (
+                f"PV 增长已连续 {streak} 天低于目标。系统已自动加压（斜率预算随缺口放大、"
+                "低收益动作降级），但仍未追上。建议人工介入最高杠杆项：联盟变现缺口与高曝光零点击页。"
+            ),
+            color='red',
+        )
+
+    status = "success" if success else "error"
+    log_operation("daily_report", status, f"Report sent: {success}", {
+        'pv_target_met': pv_status['met'],
+        'miss_streak': streak,
+    })
+    print(f"Daily report sent: {success} (met={pv_status['met']} streak={streak})")
+
+
 if __name__ == "__main__":
     send_daily_report()

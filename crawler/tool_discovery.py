@@ -6,10 +6,10 @@ import requests
 import time
 from bs4 import BeautifulSoup
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
+from llm_client import get_openai_client
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; JiloBot/1.0; +https://jilo.ai)"}
 AI_KEYWORDS = ['ai', 'llm', 'gpt', 'machine learning', 'neural', 'transformer',
@@ -18,14 +18,13 @@ AI_KEYWORDS = ['ai', 'llm', 'gpt', 'machine learning', 'neural', 'transformer',
 
 
 def _get_openai_client():
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return get_openai_client()
 
 
 def crawl_github_trending():
     """Crawl GitHub trending repos filtered for AI/ML. Server-rendered, reliable."""
     tools = []
+    failed = 0
     try:
         url = "https://github.com/trending?since=daily&spoken_language_code=en"
         resp = requests.get(url, headers=HEADERS, timeout=30)
@@ -57,13 +56,15 @@ def crawl_github_trending():
 
         print(f"  GitHub Trending: {len(tools)} AI repos found")
     except Exception as e:
+        failed += 1
         print(f"  GitHub Trending error: {e}")
-    return tools
+    return tools, failed
 
 
 def crawl_hackernews_show():
     """Crawl HN Show HN posts for AI tools via Algolia API - reliable JSON endpoint."""
     tools = []
+    failed = 0
     try:
         url = "https://hn.algolia.com/api/v1/search"
         params = {
@@ -105,8 +106,9 @@ def crawl_hackernews_show():
 
         print(f"  Hacker News Show HN: {len(tools)} AI tools found")
     except Exception as e:
+        failed += 1
         print(f"  HN API error: {e}")
-    return tools
+    return tools, failed
 
 
 def generate_tool_description(name, tagline, source_url):
@@ -125,7 +127,7 @@ CATEGORY: [exactly one of: Writing, Coding, Design, Video, Business, Image, Audi
 PRICING: [one of: free, freemium, paid, open_source]"""
 
         response = _get_openai_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are a factual AI tool reviewer. Be concise and accurate."},
                 {"role": "user", "content": prompt}
@@ -152,10 +154,11 @@ PRICING: [one of: free, freemium, paid, open_source]"""
 def save_tools_to_db(tools):
     """Save discovered tools to Supabase as drafts. Skip duplicates by slug and URL."""
     if not tools:
-        return 0
+        return 0, 0
 
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     saved = 0
+    failed = 0
 
     for tool in tools:
         try:
@@ -191,6 +194,7 @@ def save_tools_to_db(tools):
             ai_result = generate_tool_description(raw_name, tool['tagline'], tool['source_url'])
 
             if not ai_result:
+                failed += 1
                 continue
 
             row = {
@@ -212,27 +216,35 @@ def save_tools_to_db(tools):
             time.sleep(1)
 
         except Exception as e:
+            failed += 1
             print(f"  Error saving {tool.get('name', '?')[:40]}: {e}")
             continue
 
-    return saved
+    return saved, failed
 
 
 if __name__ == "__main__":
     print("Starting AI tool discovery...")
     try:
-        gh_tools = crawl_github_trending()
-        hn_tools = crawl_hackernews_show()
+        gh_tools, gh_failed = crawl_github_trending()
+        hn_tools, hn_failed = crawl_hackernews_show()
         all_tools = gh_tools + hn_tools
+        source_failed = gh_failed + hn_failed
         print(f"\nTotal found: {len(all_tools)} tools ({len(gh_tools)} GH, {len(hn_tools)} HN)")
 
         if not all_tools:
-            log_operation("tool_discovery", "success", "No new tools found", {"saved": 0})
+            log_operation("tool_discovery", "success", "No new tools found", {
+                "saved": 0,
+                "failed": source_failed,
+                "gh_found": len(gh_tools),
+                "hn_found": len(hn_tools),
+            })
         else:
-            saved = save_tools_to_db(all_tools)
-            print(f"Saved {saved} new draft tools")
-            log_operation("tool_discovery", "success", f"Saved {saved} tools", {
-                "saved": saved, "gh_found": len(gh_tools), "hn_found": len(hn_tools),
+            saved, failed = save_tools_to_db(all_tools)
+            failed += source_failed
+            print(f"Saved {saved} new draft tools, failed {failed}")
+            log_operation("tool_discovery", "success", f"Saved {saved} tools, failed {failed}", {
+                "saved": saved, "failed": failed, "gh_found": len(gh_tools), "hn_found": len(hn_tools),
             })
 
     except Exception as e:

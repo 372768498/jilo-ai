@@ -20,6 +20,19 @@ def _now():
     return datetime.utcnow().isoformat()
 
 
+def _repair_score(row):
+    payload = row.get('payload') or {}
+    return 0 if payload.get('source_repair') else 1
+
+
+def _pick_sort_key(row):
+    return (
+        PRIORITY_SCORE.get(row.get('priority'), 9),
+        _repair_score(row),
+        row.get('created_at') or '',
+    )
+
+
 def pick_pending(supabase, action_type, limit=2, batch_window=50):
     """
     Claim up to `limit` pending actions of the given type.
@@ -39,7 +52,7 @@ def pick_pending(supabase, action_type, limit=2, batch_window=50):
 
     ordered = sorted(
         (rows.data or []),
-        key=lambda r: (PRIORITY_SCORE.get(r['priority'], 9), r['created_at']),
+        key=_pick_sort_key,
     )
 
     claimed = []
@@ -68,6 +81,11 @@ def mark_done(supabase, action, result):
         'completed_at': _now(),
         'updated_at': _now(),
     }).eq('id', action['id']).execute()
+    try:
+        import failure_chain
+        failure_chain.resolve_action_failure(supabase, action)
+    except Exception as e:
+        print(f"[ActionQueue] Failed to resolve action failure flag: {e}")
 
 
 def mark_failed(supabase, action, error_reason):
@@ -91,6 +109,25 @@ def mark_failed(supabase, action, error_reason):
             'completed_at': _now(),
             'updated_at': _now(),
         }).eq('id', action['id']).execute()
+        try:
+            import failure_chain
+            failure_chain.enqueue_action_failure(supabase, action, error_reason)
+        except Exception as e:
+            print(f"[ActionQueue] Failed to enqueue action failure flag: {e}")
+
+
+def release_pending(supabase, action, reason):
+    """Return a claimed action to pending without charging this claim attempt."""
+    attempts = max((action.get('attempts') or 1) - 1, 0)
+    supabase.table('action_queue').update({
+        'status': 'pending',
+        'attempts': attempts,
+        'picked_at': None,
+        'error_reason': reason,
+        'updated_at': _now(),
+    }).eq('id', action['id']).execute()
+    action['status'] = 'pending'
+    action['attempts'] = attempts
 
 
 def mark_skipped(supabase, action, reason):

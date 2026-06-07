@@ -15,13 +15,13 @@ import json
 from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import trend_sources
 from strategy_engine import brand_alternatives_keyword
+from llm_client import get_openai_client
 
 LOOKBACK_HOURS = 48
 MIN_SIGNALS = 8            # too little input → no reliable trend read
@@ -248,9 +248,9 @@ names and the peak engagement you saw for it:
 }}
 If nothing qualifies, return {{"trends": []}}."""
 
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = get_openai_client()
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": "You spot real trends and reject noise. Respond with a single valid JSON object only."},
             {"role": "user", "content": prompt},
@@ -337,13 +337,16 @@ if __name__ == "__main__":
         print(f"  GSC-rising: {len(emerging)} emerging, {gsc_enqueued} enqueued")
 
         signals = fetch_rss_signals(supabase) + trend_sources.gather_engagement_signals()
+        source_failures = trend_sources.get_last_failures()
         print(f"  {len(signals)} total signals (RSS + HN + Reddit + PH + GitHub)")
 
         if len(signals) < MIN_SIGNALS:
             print(f"  Too few signals (<{MIN_SIGNALS}); skipping LLM path.")
             enqueued = gsc_enqueued
             log_operation("trend_agent", "success", "LLM path skipped: too few signals",
-                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "signals": len(signals)})
+                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued,
+                           "signals": len(signals), "failed": len(source_failures),
+                           "source_failures": source_failures})
         else:
             trends = detect_trends(signals)
             print(f"  LLM surfaced {len(trends)} candidate trend(s)")
@@ -353,7 +356,8 @@ if __name__ == "__main__":
             enqueued += gsc_enqueued
             print(f"\n  Enqueued {enqueued} high-priority trend action(s)")
             log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
-                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends})
+                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends,
+                           "failed": len(source_failures), "source_failures": source_failures})
     except Exception as e:
         log_operation("trend_agent", "error", str(e))
         if FEISHU_WEBHOOK_URL:
