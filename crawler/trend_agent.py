@@ -15,13 +15,13 @@ import json
 from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import trend_sources
 from strategy_engine import brand_alternatives_keyword
+from llm_client import get_openai_client
 
 LOOKBACK_HOURS = 48
 MIN_SIGNALS = 8            # too little input → no reliable trend read
@@ -248,9 +248,9 @@ names and the peak engagement you saw for it:
 }}
 If nothing qualifies, return {{"trends": []}}."""
 
-    client = OpenAI(api_key=OPENAI_API_KEY)
+    client = get_openai_client()
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OPENAI_MODEL,
         messages=[
             {"role": "system", "content": "You spot real trends and reject noise. Respond with a single valid JSON object only."},
             {"role": "user", "content": prompt},

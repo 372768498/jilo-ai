@@ -6,10 +6,10 @@ import requests
 import time
 from bs4 import BeautifulSoup
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
+from llm_client import get_openai_client
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; JiloBot/1.0; +https://jilo.ai)"}
 AI_KEYWORDS = ['ai', 'llm', 'gpt', 'machine learning', 'neural', 'transformer',
@@ -18,9 +18,7 @@ AI_KEYWORDS = ['ai', 'llm', 'gpt', 'machine learning', 'neural', 'transformer',
 
 
 def _get_openai_client():
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return get_openai_client()
 
 
 def crawl_github_trending():
@@ -129,7 +127,7 @@ CATEGORY: [exactly one of: Writing, Coding, Design, Video, Business, Image, Audi
 PRICING: [one of: free, freemium, paid, open_source]"""
 
         response = _get_openai_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are a factual AI tool reviewer. Be concise and accurate."},
                 {"role": "user", "content": prompt}

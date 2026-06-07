@@ -10,21 +10,19 @@ import hashlib
 import os
 from datetime import datetime
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
+from llm_client import get_openai_client
 
 ACTIONS_PER_RUN = int(os.getenv("SEO_ACTIONS_PER_RUN", "5"))
 LAST_GENERATION_ERROR = None
 
 
 def _get_openai_client():
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return get_openai_client()
 
 
 def _record_generation_error(error):
@@ -132,7 +130,7 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
 
     try:
         response = _get_openai_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are an expert AI technology writer. Write in-depth, well-structured articles with genuine value, using markdown inside the content fields. Respond with a single valid JSON object only — no code fences, no commentary."},
                 {"role": "user", "content": prompt}
@@ -217,7 +215,7 @@ Return a single JSON object with EXACTLY these keys:
 
     try:
         response = _get_openai_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You create concise answer-engine-optimized pages that are useful, citeable, and factual. Respond with one valid JSON object only."},
                 {"role": "user", "content": prompt},
@@ -498,7 +496,7 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
 
     try:
         resp = _get_openai_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You write tight, useful category intros for an AI-tools site. Respond with a single valid JSON object only."},
                 {"role": "user", "content": prompt},

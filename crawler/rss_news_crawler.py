@@ -4,14 +4,14 @@ import hashlib
 import re
 from datetime import datetime
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, RSS_SOURCES
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, RSS_SOURCES
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 from config import FEISHU_WEBHOOK_URL
+from llm_client import get_openai_client
 
 def _get_openai_client():
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return get_openai_client()
 
 CATEGORY_KEYWORDS = {
     'product_launch': ['launch', 'release', 'announce', 'introduce', 'unveil', 'ship', 'available', 'new feature'],
@@ -70,7 +70,7 @@ TITLE_ZH: [Chinese translation of the new title]
 SUMMARY_ZH: [Chinese translation of the new summary]"""
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are an AI news editor. Rewrite news to be original while keeping facts accurate. Translate naturally to Chinese, keeping brand names in English."},
                 {"role": "user", "content": prompt}

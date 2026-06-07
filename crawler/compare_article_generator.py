@@ -9,20 +9,18 @@ import json
 import os
 from datetime import datetime
 from supabase import create_client
-from openai import OpenAI
-from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, FEISHU_WEBHOOK_URL
+from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
+from llm_client import get_openai_client
 
 ACTIONS_PER_RUN = int(os.getenv("COMPARE_ACTIONS_PER_RUN", "2"))
 
 
 def _get_openai_client():
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY not configured")
-    return OpenAI(api_key=OPENAI_API_KEY)
+    return get_openai_client()
 
 
 def get_tool_data(tool_name):
@@ -69,7 +67,7 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
 
     try:
         response = _get_openai_client().chat.completions.create(
-            model="gpt-4o",
+            model=OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": "You are an expert AI tool reviewer. Write fair, detailed comparisons. Respond with a single valid JSON object only — no markdown code fences, no commentary."},
                 {"role": "user", "content": prompt}

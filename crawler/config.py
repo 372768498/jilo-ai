@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-load_dotenv(".env.local")
+load_dotenv(".env.local", override=True)
 
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("NEXT_PUBLIC_SUPABASE_URL")
@@ -10,6 +10,8 @@ SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 # OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
 # Feishu
 FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL")
