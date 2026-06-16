@@ -73,6 +73,20 @@ def _slugify(text):
     return re.sub(r'[\s-]+', '-', s).strip('-')
 
 
+def _clean_error(err):
+    """Collapse a noisy upstream error into one readable line. The LLM proxy
+    (OPENAI_BASE_URL) sometimes returns a Cloudflare 'Just a moment' bot-check
+    HTML page instead of JSON; dumping that whole page into ops_log/Feishu is
+    useless noise. Detect it and summarize, otherwise just truncate."""
+    msg = str(err)
+    low = msg.lower()
+    if any(k in low for k in ('just a moment', '_cf_chl_opt', 'cf-chl',
+                              'cloudflare', 'cdn-cgi/challenge')):
+        return ("LLM endpoint returned a Cloudflare bot-check page instead of JSON "
+                "— the OPENAI_BASE_URL proxy is being blocked. Switch to a stable endpoint.")
+    return msg if len(msg) <= 300 else msg[:300].rstrip() + '…'
+
+
 def has_tool_shopper_intent(keyword):
     """Code-level guardrail so hot news does not become bad SEO work."""
     k = (keyword or '').lower().strip()
@@ -348,18 +362,45 @@ if __name__ == "__main__":
                            "signals": len(signals), "failed": len(source_failures),
                            "source_failures": source_failures})
         else:
-            trends = detect_trends(signals)
-            print(f"  LLM surfaced {len(trends)} candidate trend(s)")
-            enqueued = enqueue_trends(supabase, trends)
+            llm_error = None
+            trends = []
+            try:
+                trends = detect_trends(signals)
+                print(f"  LLM surfaced {len(trends)} candidate trend(s)")
+            except Exception as e:
+                # The LLM proxy is a known-flaky dependency (Cloudflare-blocked).
+                # Degrade instead of failing the whole job: GSC-rising work above
+                # is real, and curated fallbacks keep the forward loop moving.
+                llm_error = _clean_error(e)
+                print(f"  [degraded] LLM trend path failed: {llm_error}")
+
+            enqueued = enqueue_trends(supabase, trends) if trends else 0
             if enqueued == 0:
                 enqueued += enqueue_fallback_trends(supabase)
             enqueued += gsc_enqueued
             print(f"\n  Enqueued {enqueued} high-priority trend action(s)")
-            log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
-                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends,
-                           "failed": len(source_failures), "source_failures": source_failures})
+
+            if llm_error:
+                # Degraded, not failed: report as a warning and keep exit code 0
+                # (reuse the "success" ops status so ops_log consumers that gate
+                # on success/error are unaffected — same as the too-few-signals path).
+                if FEISHU_WEBHOOK_URL:
+                    send_feishu_alert(
+                        FEISHU_WEBHOOK_URL, "趋势 Agent 降级（LLM 不可用）",
+                        f"LLM 热点聚类失败，已降级到 GSC-rising + 兜底关键词，流水线未中断。\n原因：{llm_error}",
+                        "warning")
+                log_operation("trend_agent", "success",
+                              f"LLM degraded, enqueued {enqueued} via GSC+fallback",
+                              {"enqueued": enqueued, "gsc_rising": gsc_enqueued,
+                               "llm_error": llm_error, "failed": len(source_failures),
+                               "source_failures": source_failures})
+            else:
+                log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
+                              {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends,
+                               "failed": len(source_failures), "source_failures": source_failures})
     except Exception as e:
-        log_operation("trend_agent", "error", str(e))
+        clean = _clean_error(e)
+        log_operation("trend_agent", "error", clean)
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "趋势 Agent 出错", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "趋势 Agent 出错", clean, "error")
         raise
