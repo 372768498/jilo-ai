@@ -20,26 +20,6 @@ def display_date():
     return datetime.now(CN_TZ).strftime('%Y-%m-%d')
 
 
-def pv_growth_status(pv, pv_prev, target_growth=TARGET_GROWTH):
-    """Translate yesterday's PV vs the day before into a target/actual/gap line.
-    `met` is None when there's no baseline to judge against."""
-    target_pct = target_growth * 100
-    if not pv_prev:
-        return {'met': None, 'target_pct': target_pct, 'actual_pct': None,
-                'line': f"目标 +{target_pct:.0f}% / 实际 N/A（无前日基线）"}
-    actual = (pv - pv_prev) / pv_prev
-    actual_pct = actual * 100
-    met = actual >= target_growth
-    if met:
-        line = f"目标 +{target_pct:.0f}% / 实际 +{actual_pct:.0f}% ✅ 达标"
-    else:
-        target_pv = pv_prev * (1 + target_growth)
-        gap_pct = (target_growth - actual) * 100
-        gap_pv = max(int(round(target_pv - pv)), 0)
-        line = f"目标 +{target_pct:.0f}% / 实际 {actual_pct:+.0f}% ❌ 缺口 {gap_pct:.0f}%（~{gap_pv} PV）"
-    return {'met': met, 'target_pct': target_pct, 'actual_pct': actual_pct, 'line': line}
-
-
 def count_consecutive_misses(daily_rows, target_growth=TARGET_GROWTH):
     """Streak of most-recent consecutive days whose PV growth missed target.
     Walks back from the latest day; stops at the first day that met target."""
@@ -55,6 +35,43 @@ def count_consecutive_misses(daily_rows, target_growth=TARGET_GROWTH):
         else:
             break
     return streak
+
+
+def smoothed_growth(daily_rows, window=7, target_growth=TARGET_GROWTH):
+    """Week-over-week PV growth: mean(last `window` days) vs mean(prior `window`).
+
+    At 60-140 PV/day, day-over-day swings are statistical noise that flip the
+    +20% verdict constantly. Averaging two weeks of PV cancels that noise so the
+    target/actual/gap line and the red-card escalation only react to a real,
+    sustained shift. `met` is None when there isn't enough history (need 2 full
+    windows) to judge against."""
+    rows = sorted([r for r in daily_rows if r.get('date')], key=lambda r: r['date'])
+    pvs = [r.get('total_pageviews') or 0 for r in rows]
+    target_pct = target_growth * 100
+    if len(pvs) < 2 * window:
+        return {'met': None, 'target_pct': target_pct, 'actual_pct': None,
+                'recent_mean': None, 'prior_mean': None,
+                'line': f"目标 +{target_pct:.0f}% / 7日均值 N/A（历史不足 {2 * window} 天）"}
+    recent = pvs[-window:]
+    prior = pvs[-2 * window:-window]
+    recent_mean = sum(recent) / window
+    prior_mean = sum(prior) / window
+    if not prior_mean:
+        return {'met': None, 'target_pct': target_pct, 'actual_pct': None,
+                'recent_mean': recent_mean, 'prior_mean': prior_mean,
+                'line': f"目标 +{target_pct:.0f}% / 7日均值 N/A（无前周基线）"}
+    actual = (recent_mean - prior_mean) / prior_mean
+    actual_pct = actual * 100
+    met = actual >= target_growth
+    if met:
+        line = (f"目标 +{target_pct:.0f}% / 7日均值 {actual_pct:+.0f}%，达标"
+                f"（{prior_mean:.0f}→{recent_mean:.0f} PV/日）")
+    else:
+        gap_pct = (target_growth - actual) * 100
+        line = (f"目标 +{target_pct:.0f}% / 7日均值 {actual_pct:+.0f}%，缺口 {gap_pct:.0f}%"
+                f"（{prior_mean:.0f}→{recent_mean:.0f} PV/日）")
+    return {'met': met, 'target_pct': target_pct, 'actual_pct': actual_pct,
+            'recent_mean': recent_mean, 'prior_mean': prior_mean, 'line': line}
 
 
 def unresolved_errors(logs):
@@ -109,6 +126,23 @@ def get_today_stats():
                 stats['affiliate_clicks'] += 1
     stats['errors'] = unresolved_errors(log_rows)
 
+    # Monetization aligns with the YESTERDAY PV/UV window, not today's partial day.
+    # The today `logs` loop above only sees clicks since 00:00 UTC today, so pairing
+    # it with yesterday's PV compared apples (today's clicks) to oranges (yesterday's
+    # traffic). Re-count outbound/affiliate clicks over yesterday's full UTC day
+    # [yesterday 00:00Z, today 00:00Z) so the 变现 block lines up with PV/UV.
+    yest_logs = supabase.table('ops_logs').select('job_name, status, details').eq(
+        'job_name', 'outbound_click'
+    ).gte('created_at', f'{yesterday}T00:00:00Z').lt('created_at', f'{today}T00:00:00Z').execute()
+    stats['outbound_clicks_yesterday'] = 0
+    stats['affiliate_clicks_yesterday'] = 0
+    for log in (yest_logs.data or []):
+        if log['status'] == 'error':
+            continue
+        stats['outbound_clicks_yesterday'] += 1
+        if (log.get('details') or {}).get('has_affiliate'):
+            stats['affiliate_clicks_yesterday'] += 1
+
     tools = supabase.table('tools').select('id, affiliate_url').eq('status', 'published').execute()
     stats['affiliate_tools'] = sum(1 for t in (tools.data or []) if t.get('affiliate_url'))
 
@@ -129,9 +163,11 @@ def get_today_stats():
             stats['pv'] = 0
             stats['uv'] = 0
         stats['pv_prev'] = site_prev.data[0]['total_pageviews'] if site_prev.data else 0
+        # 14 days = two 7-day windows so smoothed_growth() can compare
+        # week-over-week instead of reacting to daily noise.
         recent = supabase.table('analytics_site_daily').select(
             'date, total_pageviews'
-        ).order('date', desc=True).limit(10).execute()
+        ).order('date', desc=True).limit(14).execute()
         stats['pv_recent_days'] = recent.data or []
     except Exception as e:
         print(f"analytics_site_daily unavailable, using analytics_daily fallback: {e}")
@@ -255,189 +291,6 @@ def get_today_stats():
     return stats
 
 
-def format_daily_report(stats):
-    today = display_date()
-
-    # rank8: target/actual/gap against the +20% north star, plus a miss-streak note.
-    status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
-    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
-    streak_note = f"\n  ⚠️ 已连续 {streak} 天未达标" if streak >= MISS_STREAK_ESCALATE else ""
-
-    # Keywords section (GSC lags 2-3 days; show most recent available date)
-    kw_lines = []
-    for kw in stats.get('top_keywords', [])[:5]:
-        kw_lines.append(f"  - \"{kw['query']}\" pos:{kw['position']:.0f} clicks:{kw['clicks']}")
-    kw_date_label = f" (数据日期: {stats.get('keywords_date', '?')})" if stats.get('keywords_date') else ""
-    kw_text = '\n'.join(kw_lines) if kw_lines else '  暂无数据（GSC 通常延迟 2~3 天）'
-
-    # Strategy actions
-    action_lines = []
-    for a in stats.get('strategy_actions', [])[:5]:
-        action_lines.append(f"  - [{a.get('priority', '?').upper()}] {a.get('reason', '')[:60]}")
-    action_text = '\n'.join(action_lines) if action_lines else '  今日无策略动作'
-
-    page_lines = []
-    for page in stats.get('pages_to_update', [])[:5]:
-        page_lines.append(
-            f"  - {page.get('page', '?')} | \"{page.get('query', '')}\" pos:{page.get('position', 0):.0f} imp:{page.get('impressions', 0)}"
-        )
-    pages_text = '\n'.join(page_lines) if page_lines else '  无'
-
-    tool_lines = []
-    for tool in stats.get('clicked_tools_without_affiliate', [])[:5]:
-        line = f"  - {tool.get('name_en') or tool.get('slug')} ({tool.get('slug')}): {tool.get('click_count', 0)} 次点击"
-        if tool.get('signup_url'):
-            net = f" · {tool['network']}" if tool.get('network') else ""
-            line += f" → 申请 {tool['signup_url']}{net}"
-        tool_lines.append(line)
-    tools_text = '\n'.join(tool_lines) if tool_lines else '  无'
-
-    # ==== Owned tasks: every item explicitly assigned to 你 or an Agent ====
-    candidates = []  # list of (owner, text), prioritized
-
-    # Joel — highest revenue lever first, with the verified application entry so
-    # it's one click from done (no_program tools already filtered upstream).
-    if stats.get('clicked_tools_without_affiliate'):
-        top = stats['clicked_tools_without_affiliate'][0]
-        name = top.get('name_en') or top.get('slug')
-        entry = ''
-        if top.get('signup_url'):
-            comm = f" · {top['commission']}" if top.get('commission') else ""
-            entry = f" → 申请入口 {top['signup_url']}{comm}"
-        candidates.append(('你', f"申请 {name} 联盟链接（{top.get('click_count', 0)} 次出站点击，最大漏钱口）{entry}"))
-
-    # Joel — high-intent page needing manual content fix
-    if stats.get('pages_to_update'):
-        p = stats['pages_to_update'][0]
-        candidates.append((
-            '你',
-            f"改 {p.get('page', '?')} 让 \"{p.get('query', '')}\" 真正吃下点击（曝光 {p.get('impressions', 0)} 但 0 点击）",
-        ))
-
-    # Agent — trend
-    if stats.get('trend_enqueued_today'):
-        candidates.append(('Agent · trend', f"今日已捕获 {len(stats['trend_enqueued_today'])} 个高优先级热点，SEO 生成器会自动消费"))
-    else:
-        candidates.append(('Agent · trend', "下次 00:45 / 08:45 / 16:45 UTC 扫 HN+Reddit 找新热点"))
-
-    # Agent — strategy rewrites (only if there's work queued or done today)
-    if stats.get('rewrites_pending', 0) > 0:
-        candidates.append(('Agent · strategy', f"队列里 {stats['rewrites_pending']} 条排名差页待自动重写"))
-    elif stats.get('rewrites_done_today', 0) > 0:
-        candidates.append(('Agent · strategy', f"今日已自动重写 {stats['rewrites_done_today']} 个排名差页"))
-
-    # Agent — monitor (only if it auto-resolved something today, shows the loop closing)
-    if stats.get('monetization_resolved_today', 0) > 0:
-        candidates.append(('Agent · monitor', f"今日自动销了 {stats['monetization_resolved_today']} 个漏钱 flag（你加好的联盟链接）"))
-
-    # If no Joel task surfaced, give a fallback so 你 always has something to do
-    if not any(o == '你' for o, _ in candidates):
-        candidates.insert(0, ('你', "去 /admin/queue 挑一个漏钱工具申请联盟链接"))
-
-    # Backfill with standing Agent activities so there are always 3 assigned items.
-    standing = [
-        ('Agent · strategy', "今晚 20:30 UTC 复审 GSC + lookback，自动决定新增/重写"),
-        ('Agent · lookback', "页面到 1/3/7 天龄自动拍快照，喂回策略层"),
-        ('Agent · monitor', f"持续监控 {stats.get('monetization_open', 0)} 个漏钱工具，你接一个它销一个"),
-    ]
-    for item in standing:
-        if len(candidates) >= 3:
-            break
-        if item not in candidates:
-            candidates.append(item)
-
-    owned_tasks = candidates[:3]
-    tasks_text = '\n'.join(
-        f"{i + 1}. [{owner}] {text}" for i, (owner, text) in enumerate(owned_tasks)
-    )
-
-    # ==== Agent self-driving status block ====
-    agent_lines = [
-        f"  • 趋势探测: 今日入队 {len(stats.get('trend_enqueued_today', []))} 条热点动作",
-        f"  • 监控/自愈: {stats.get('monetization_open', 0)} 个漏钱 flag 在 pending，今日自动销 {stats.get('monetization_resolved_today', 0)} 个",
-        f"  • 排名重写: 待执行 {stats.get('rewrites_pending', 0)} 条，今日完成 {stats.get('rewrites_done_today', 0)} 条",
-        f"  • 表现回看: 今日捕获 {stats.get('lookback_today', 0)} 个页面快照",
-    ]
-    agent_text = '\n'.join(agent_lines)
-
-    errors_text = '\n'.join(f"  - {e}" for e in stats['errors']) if stats['errors'] else '  无'
-
-    return f"""**jilo.ai 日报 - {today}**
-
-**流量（昨日）**
-  PV: {stats.get('pv', 'N/A')}  UV: {stats.get('uv', 'N/A')}
-  {status['line']}{streak_note}
-
-**今日新增内容**
-  新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']} | 重写: {stats.get('rewrites_done_today', 0)}
-
-**今日变现**
-  出站点击: {stats['outbound_clicks']} | 联盟点击: {stats['affiliate_clicks']} | 已挂联盟工具: {stats.get('affiliate_tools', 0)}
-
-**🤖 Agent 自驱动状态（今日）**
-{agent_text}
-
-**🧑 今日 3 件事（已指派）**
-{tasks_text}
-
-**待优化页面**
-{pages_text}
-
-**有点击但无联盟链接的工具**
-{tools_text}
-
-**热门关键词**{kw_date_label}
-{kw_text}
-
-**策略动作**
-{action_text}
-
-**错误**
-{errors_text}"""
-
-
-def send_daily_report():
-    """Generate and send daily report to Feishu."""
-    if not FEISHU_WEBHOOK_URL:
-        print("FEISHU_WEBHOOK_URL not configured, skipping report")
-        return
-
-    stats = get_today_stats()
-    content = format_daily_report(stats)
-    today = display_date()
-
-    # rank8: card color reflects whether we hit the +20% target — green met,
-    # yellow missed, blue when there's no baseline to judge.
-    pv_status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
-    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
-    color = {True: 'green', False: 'yellow', None: 'blue'}[pv_status['met']]
-
-    success = send_feishu_card(
-        FEISHU_WEBHOOK_URL,
-        f"jilo.ai 日报 - {today}",
-        content,
-        color=color,
-    )
-
-    # rank8: a sustained miss is a business-result change — escalate as its own
-    # card (one of the three notification classes that I6 permits).
-    if streak >= MISS_STREAK_ESCALATE:
-        send_feishu_card(
-            FEISHU_WEBHOOK_URL,
-            f"jilo.ai 业务结果变化：连续 {streak} 天未达 +{TARGET_GROWTH * 100:.0f}% PV 目标",
-            (f"PV 增长已连续 {streak} 天低于目标。系统已自动加压（梯度预算随缺口放大、"
-             f"低收益动作降级），但仍未追上。建议人工介入最高杠杆项：联盟变现缺口与高曝光零点击页。"),
-            color='red',
-        )
-
-    status = "success" if success else "error"
-    log_operation("daily_report", status, f"Report sent: {success}", {
-        'pv_target_met': pv_status['met'],
-        'miss_streak': streak,
-    })
-    print(f"Daily report sent: {success} (met={pv_status['met']} streak={streak})")
-
-
 def pv_growth_status(pv, pv_prev, target_growth=TARGET_GROWTH):
     target_pct = target_growth * 100
     if not pv_prev:
@@ -462,9 +315,14 @@ def pv_growth_status(pv, pv_prev, target_growth=TARGET_GROWTH):
 
 def format_daily_report(stats):
     today = display_date()
-    status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
-    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
-    streak_note = f"\n  注意：已连续 {streak} 天未达标" if streak >= MISS_STREAK_ESCALATE else ""
+    # Base the target/actual/gap verdict on the SMOOTHED (week-over-week) metric so
+    # the +20% line doesn't whipsaw on daily noise at 60-140 PV/day. Raw daily
+    # PV/UV are still shown verbatim below.
+    status = smoothed_growth(stats.get('pv_recent_days', []))
+    streak_note = (
+        "\n  注意：7日均值持续低于目标（已剔除单日波动）"
+        if status['met'] is False else ""
+    )
 
     kw_lines = [
         f"  - \"{kw['query']}\" pos:{kw['position']:.0f} clicks:{kw['clicks']}"
@@ -559,8 +417,8 @@ def format_daily_report(stats):
 **今日新增内容**
   新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']} | 重写: {stats.get('rewrites_done_today', 0)}
 
-**今日变现**
-  出站点击: {stats['outbound_clicks']} | 联盟点击: {stats['affiliate_clicks']} | 已挂联盟工具: {stats.get('affiliate_tools', 0)}
+**变现（昨日，与流量同窗口）**
+  出站点击: {stats.get('outbound_clicks_yesterday', 0)} | 联盟点击: {stats.get('affiliate_clicks_yesterday', 0)} | 已挂联盟工具: {stats.get('affiliate_tools', 0)}
 
 **Agent 自驱动状态（今日）**
 {agent_text}
@@ -592,8 +450,10 @@ def send_daily_report():
     stats = get_today_stats()
     content = format_daily_report(stats)
     today = display_date()
-    pv_status = pv_growth_status(stats.get('pv') or 0, stats.get('pv_prev') or 0)
-    streak = count_consecutive_misses(stats.get('pv_recent_days', []))
+    # Color + escalation track the SMOOTHED (week-over-week) verdict, so a single
+    # noisy day can't flip the card red. green = smoothed met, yellow = smoothed
+    # miss, blue = not enough history to judge.
+    pv_status = smoothed_growth(stats.get('pv_recent_days', []))
     color = {True: 'green', False: 'yellow', None: 'blue'}[pv_status['met']]
 
     success = send_feishu_card(
@@ -603,13 +463,15 @@ def send_daily_report():
         color=color,
     )
 
-    if streak >= MISS_STREAK_ESCALATE:
+    # Escalate only on a sustained SMOOTHED decline, not daily noise.
+    if pv_status['met'] is False:
         send_feishu_card(
             FEISHU_WEBHOOK_URL,
-            f"jilo.ai 业务结果变化：连续 {streak} 天未达 +{TARGET_GROWTH * 100:.0f}% PV 目标",
+            f"jilo.ai 业务结果变化：7日均值未达 +{TARGET_GROWTH * 100:.0f}% PV 目标",
             (
-                f"PV 增长已连续 {streak} 天低于目标。系统已自动加压（斜率预算随缺口放大、"
-                "低收益动作降级），但仍未追上。建议人工介入最高杠杆项：联盟变现缺口与高曝光零点击页。"
+                f"PV 周环比增长低于目标（{pv_status['line']}）。已剔除单日波动，仍是持续下行。"
+                "系统已自动加压（斜率预算随缺口放大、低收益动作降级），但仍未追上。"
+                "建议人工介入最高杠杆项：联盟变现缺口与高曝光零点击页。"
             ),
             color='red',
         )
@@ -617,9 +479,9 @@ def send_daily_report():
     status = "success" if success else "error"
     log_operation("daily_report", status, f"Report sent: {success}", {
         'pv_target_met': pv_status['met'],
-        'miss_streak': streak,
+        'smoothed_actual_pct': pv_status['actual_pct'],
     })
-    print(f"Daily report sent: {success} (met={pv_status['met']} streak={streak})")
+    print(f"Daily report sent: {success} (met={pv_status['met']})")
 
 
 if __name__ == "__main__":
