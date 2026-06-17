@@ -55,6 +55,15 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // For normal /(en|zh)/... requests, carry the locale as a request header so the
+  // root layout (which has no locale param) can set <html lang> per locale.
+  const localeMatch = pathname.match(/^\/(en|zh)(?:\/|$)/);
+  if (localeMatch) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-locale", localeMatch[1]);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   return NextResponse.next();
 }
 

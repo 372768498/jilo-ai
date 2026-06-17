@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
+import { headers } from "next/headers";
 import { PostHogAnalytics } from "@/components/analytics/posthog-provider";
 
 export const metadata: Metadata = {
@@ -16,8 +17,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Locale comes from the x-locale request header set in middleware for
+  // /(en|zh)/... routes (the root layout has no locale param). Reading headers()
+  // makes this layout dynamic, which is acceptable. Defaults to "en".
+  const locale = headers().get("x-locale") || "en";
   return (
-    <html lang="en">
+    <html lang={locale}>
       <head>
         <Script
           id="gtm-script"
@@ -38,7 +43,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             __html: `window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
 gtag('js', new Date());
-gtag('config', 'G-GZ8RJ2E0S4');`,
+gtag('config', 'G-GZ8RJ2E0S4', { send_page_view: false });`,
           }}
         />
       </head>

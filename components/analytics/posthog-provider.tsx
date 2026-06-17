@@ -37,6 +37,17 @@ function PageviewTracker() {
     if (qs) url += `?${qs}`;
 
     posthog.capture("$pageview", { $current_url: url });
+
+    // GA4 fires its own initial pageview only; client-side route changes send
+    // none (which inflates UV>PV). Fire a manual GA4 page_view on every route
+    // change. GA4 config has send_page_view:false so the first render is not
+    // double-counted.
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "page_view", {
+        page_path: pathname + (qs ? `?${qs}` : ""),
+        page_location: url,
+      });
+    }
   }, [pathname, searchParams]);
 
   return null;
