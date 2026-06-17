@@ -9,6 +9,7 @@ from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 from config import FEISHU_WEBHOOK_URL
 from llm_client import get_openai_client
+import content_verifier as cv
 
 def _get_openai_client():
     return get_openai_client()
@@ -93,8 +94,11 @@ SUMMARY_ZH: [Chinese translation of the new summary]"""
             result.get('summary_zh', ''),
         )
     except Exception as e:
+        # LLM rewrite failed: do NOT fall back to the raw, truncated source
+        # summary (that ships unrewritten source text as our own). Signal
+        # failure so the caller drops the item instead of publishing it.
         print(f"  AI rewrite error: {e}")
-        return title, summary[:200], '', ''
+        return None
 
 
 def crawl_rss_news():
@@ -116,14 +120,20 @@ def crawl_rss_news():
                     raw_summary = entry.get('summary', entry.get('description', ''))
 
                     print(f"  Rewriting: {entry.title[:50]}...")
-                    title_en, summary_en, title_zh, summary_zh = rewrite_and_translate(
+                    rewritten = rewrite_and_translate(
                         entry.title, raw_summary, source
                     )
+                    if rewritten is None:
+                        # LLM rewrite failed -> drop, never store raw source text.
+                        failed += 1
+                        print(f"  Dropped (rewrite failed): {entry.title[:50]}")
+                        continue
+                    title_en, summary_en, title_zh, summary_zh = rewritten
 
                     category_tags = classify_news(entry.title, raw_summary)
                     content_hash = generate_content_hash(title_en, entry.link)
 
-                    news_list.append({
+                    news_item = {
                         'title_en': title_en,
                         'summary_en': summary_en,
                         'title_zh': title_zh,
@@ -135,7 +145,17 @@ def crawl_rss_news():
                         'published_at': published_at,
                         'status': 'published',
                         'content_hash': content_hash,
-                    })
+                    }
+
+                    # Pre-publish gate: reject profanity / garbage before publish.
+                    verdict = cv.verify_publishable(news_item, 'news')
+                    if not verdict['ok']:
+                        failed += 1
+                        print(f"  Dropped (verifier {verdict['verdict']}): "
+                              f"{verdict['failed_gates']} {verdict['evidence']}")
+                        continue
+
+                    news_list.append(news_item)
                     print(f"  Done: {title_en[:50]}")
                     time.sleep(1)
                 except Exception as e:

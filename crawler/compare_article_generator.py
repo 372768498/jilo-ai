@@ -14,6 +14,7 @@ from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
+import content_verifier as cv
 from llm_client import get_openai_client
 
 ACTIONS_PER_RUN = int(os.getenv("COMPARE_ACTIONS_PER_RUN", "2"))
@@ -167,6 +168,14 @@ if __name__ == "__main__":
                             aq.mark_failed(supabase, action, gate.reason)
                             failed += 1
                             print(f"  FAIL gate: {gate.reason}")
+                        continue
+
+                    verdict = cv.verify_publishable(article, 'compare')
+                    if not verdict['ok']:
+                        reason = f"verifier {verdict['verdict']}: {verdict['failed_gates']} {verdict['evidence']}"
+                        aq.mark_skipped(supabase, action, reason)
+                        skipped += 1
+                        print(f"  BLOCKED by verifier: {reason}")
                         continue
 
                     save_comparison(article, supabase)

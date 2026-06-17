@@ -4,6 +4,7 @@ import json
 from openai import OpenAI
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY
+import content_verifier as cv
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -123,7 +124,21 @@ Return ONLY valid JSON with Chinese translations:
 def update_tool_in_db(tool_id, en_content, zh_content):
     """更新工具的SEO内容到数据库"""
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    
+
+    # Pre-publish gate: an independent verifier must say YES before this content
+    # goes live. Default = BLOCK (skip publishing) unless it proves publishable.
+    verifier_item = {
+        'long_description_en': en_content.get('long_description', ''),
+        'long_description_zh': zh_content.get('long_description_zh', ''),
+        'meta_description_en': en_content.get('meta_description', ''),
+        'meta_description_zh': zh_content.get('meta_description_zh', ''),
+    }
+    verdict = cv.verify_publishable(verifier_item, 'tool_seo')
+    if not verdict['ok']:
+        print(f"  ⛔ BLOCKED by verifier ({verdict['verdict']}): "
+              f"{verdict['failed_gates']} {verdict['evidence']}")
+        return False
+
     try:
         update_data = {
             # 英文内容
