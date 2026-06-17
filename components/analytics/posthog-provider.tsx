@@ -29,24 +29,27 @@ function PageviewTracker() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    ensureInit();
-    if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
-    let url = window.location.origin + pathname;
     const qs = searchParams?.toString();
-    if (qs) url += `?${qs}`;
+    const url = window.location.origin + pathname + (qs ? `?${qs}` : "");
 
-    posthog.capture("$pageview", { $current_url: url });
-
-    // GA4 fires its own initial pageview only; client-side route changes send
-    // none (which inflates UV>PV). Fire a manual GA4 page_view on every route
-    // change. GA4 config has send_page_view:false so the first render is not
-    // double-counted.
-    if (typeof window !== "undefined" && (window as any).gtag) {
+    // GA4 — fired INDEPENDENTLY of PostHog (must not depend on PostHog being
+    // configured/healthy, or the metric we're fixing silently records zero).
+    // GA4 config sets send_page_view:false, so this manual fire on first render
+    // + every client route change = exactly one pageview, fixing the UV>PV
+    // undercount from missing SPA pageviews.
+    if ((window as any).gtag) {
       (window as any).gtag("event", "page_view", {
         page_path: pathname + (qs ? `?${qs}` : ""),
         page_location: url,
       });
+    }
+
+    // PostHog — only when configured.
+    ensureInit();
+    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+      posthog.capture("$pageview", { $current_url: url });
     }
   }, [pathname, searchParams]);
 
