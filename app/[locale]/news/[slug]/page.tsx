@@ -1,6 +1,7 @@
 // app/[locale]/news/[slug]/page.tsx
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Metadata } from "next";
 import Navbar from "@/components/navbar";
@@ -88,10 +89,23 @@ async function getNews(slug: string): Promise<NewsItem | null> {
     .from("news")
     .select("*")
     .eq("slug", slug)
+    .eq("status", "published")
     .maybeSingle();
 
   if (error) throw error;
   return data as NewsItem | null;
+}
+
+// Real zh translation = zh title AND content both present, non-empty, and not
+// just an English fallback copy. Used to decide hreflang/canonical/noindex.
+function hasRealZh(n: NewsItem): boolean {
+  const titleZh = (n.title_zh || "").trim();
+  const contentZh = (n.content_zh || "").trim();
+  const titleEn = (n.title_en || "").trim();
+  const contentEn = (n.content_en || "").trim();
+  if (!titleZh || !contentZh) return false;
+  if (titleZh === titleEn || contentZh === contentEn) return false;
+  return true;
 }
 
 // ————— SEO: 动态 Metadata —————
@@ -107,9 +121,34 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description = rawDesc.length > 160 ? rawDesc.slice(0, 157) + "..." : rawDesc;
   const cover = (n.cover_url || n.cover_image_url) || "";
 
+  const base = "https://www.jilo.ai";
+  const enUrl = `${base}/en/news/${params.slug}`;
+  const zhUrl = `${base}/zh/news/${params.slug}`;
+  const realZh = hasRealZh(n);
+  const isZhLocale = params.locale === "zh";
+
+  // hreflang: only advertise a zh alternate when a genuine zh translation exists.
+  const languages: Record<string, string> = realZh
+    ? { en: enUrl, zh: zhUrl, "x-default": enUrl }
+    : { en: enUrl, "x-default": enUrl };
+
+  // canonical: a /zh page that is really English (no real zh) should point its
+  // canonical at the en URL; otherwise canonical is self (this locale's URL).
+  const canonical = !realZh && isZhLocale
+    ? enUrl
+    : `${base}/${params.locale}/news/${params.slug}`;
+
+  // Keep an English-on-/zh page out of the index (still followable).
+  const robots = !realZh && isZhLocale ? { index: false, follow: true } : undefined;
+
   return {
     title,
     description,
+    alternates: {
+      canonical,
+      languages,
+    },
+    ...(robots ? { robots } : {}),
     openGraph: {
       title,
       description,
@@ -130,21 +169,9 @@ export default async function NewsDetailPage({ params }: PageProps) {
   const { locale, slug } = params;
   const n = await getNews(slug);
 
+  // Unpublished/flagged/unknown slug → true 404 (not a 200 "not found" page).
   if (!n) {
-    return (
-      <>
-        <Navbar locale={locale} />
-        <div className="max-w-3xl mx-auto px-4 py-16">
-          <h1 className="text-2xl font-semibold mb-2">
-            {locale === "zh" ? "未找到该新闻" : "News not found"}
-          </h1>
-          <Link href={`/${locale}/news`} className="text-primary hover:underline">
-            {locale === "zh" ? "← 返回资讯" : "← Back to news"}
-          </Link>
-        </div>
-        <Footer locale={locale} />
-      </>
-    );
+    notFound();
   }
 
   const title = coalesceByLocale(locale, n.title_en, n.title_zh);

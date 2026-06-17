@@ -87,11 +87,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ── Dynamic: News / SEO articles ───────────────────────────────
+  // A real zh translation = zh title AND content both present, non-empty, and
+  // not just an English fallback copy. Only then do we emit the /zh URL — this
+  // matches the per-page hreflang/canonical logic and avoids listing English
+  // pages under /zh in the sitemap.
   const newsRoutes: MetadataRoute.Sitemap = []
   try {
     const { data: articles } = await supabase
       .from('news')
-      .select('slug, published_at, updated_at')
+      .select('slug, published_at, updated_at, title_en, title_zh, content_en, content_zh')
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .limit(500)
@@ -102,10 +106,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         : article.published_at
           ? new Date(article.published_at)
           : new Date()
+      const titleZh = (article.title_zh || '').trim()
+      const contentZh = (article.content_zh || '').trim()
+      const titleEn = (article.title_en || '').trim()
+      const contentEn = (article.content_en || '').trim()
+      const realZh =
+        Boolean(titleZh && contentZh) &&
+        titleZh !== titleEn &&
+        contentZh !== contentEn
       newsRoutes.push(
         { url: `${baseUrl}/en/news/${article.slug}`, lastModified: lastMod, changeFrequency: 'monthly', priority: 0.7 },
-        { url: `${baseUrl}/zh/news/${article.slug}`, lastModified: lastMod, changeFrequency: 'monthly', priority: 0.7 },
       )
+      if (realZh) {
+        newsRoutes.push(
+          { url: `${baseUrl}/zh/news/${article.slug}`, lastModified: lastMod, changeFrequency: 'monthly', priority: 0.7 },
+        )
+      }
     }
   } catch (e) {
     console.error('Sitemap: failed to fetch news', e)
@@ -121,18 +137,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .order('published_at', { ascending: false })
       .limit(500)
 
+    // compare_articles with a -zh suffix ARE the Chinese versions; base slug is
+    // English. A real zh translation exists for a base slug only when its
+    // "{slug}-zh" published sibling exists — only then do we emit the /zh URL.
+    const compareSlugs = new Set((compares || []).map((a) => a.slug))
     for (const article of compares || []) {
       const lastMod = article.published_at
         ? new Date(article.published_at)
         : article.created_at
           ? new Date(article.created_at)
           : new Date()
-      // compare_articles with -zh suffix are Chinese versions; base slug is English
       if (!article.slug.endsWith('-zh')) {
         compareRoutes.push(
           { url: `${baseUrl}/en/compare/${article.slug}`, lastModified: lastMod, changeFrequency: 'monthly', priority: 0.7 },
-          { url: `${baseUrl}/zh/compare/${article.slug}`, lastModified: lastMod, changeFrequency: 'monthly', priority: 0.7 },
         )
+        if (compareSlugs.has(`${article.slug}-zh`)) {
+          compareRoutes.push(
+            { url: `${baseUrl}/zh/compare/${article.slug}`, lastModified: lastMod, changeFrequency: 'monthly', priority: 0.7 },
+          )
+        }
       }
     }
   } catch (e) {
