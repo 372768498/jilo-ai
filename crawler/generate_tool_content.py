@@ -9,6 +9,7 @@ from pathlib import Path
 from openai import OpenAI
 from supabase import create_client
 import json
+import content_verifier as cv
 
 # 加载.env文件
 from dotenv import load_dotenv, dotenv_values
@@ -206,7 +207,22 @@ def process_tool(tool, supabase):
         'meta_description_zh': translate_to_chinese(content.get('meta_description_en', ''), 'meta_description'),
         'updated_at': 'now()'
     }
-    
+
+    # Pre-publish gate: an independent verifier must say YES before this content
+    # goes live. Default = BLOCK (skip publishing) unless it proves publishable.
+    verifier_item = {
+        'name_en': tool_name,
+        'long_description_en': update_data['long_description_en'],
+        'long_description_zh': update_data['long_description_zh'],
+        'meta_description_en': update_data['meta_description_en'],
+        'meta_description_zh': update_data['meta_description_zh'],
+    }
+    verdict = cv.verify_publishable(verifier_item, 'tool')
+    if not verdict['ok']:
+        print(f"⛔ BLOCKED by verifier ({verdict['verdict']}): "
+              f"{verdict['failed_gates']} {verdict['evidence']}")
+        return False
+
     # 保存到数据库
     try:
         result = supabase.table('tools').update(update_data).eq('id', tool['id']).execute()
