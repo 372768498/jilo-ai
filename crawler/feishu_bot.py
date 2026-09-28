@@ -17,9 +17,14 @@ def send_feishu_card(webhook_url: str, title: str, content: str, color: str = "b
     }
     try:
         resp = requests.post(webhook_url, json=payload, timeout=10)
-        return resp.status_code == 200
+        acknowledgement = resp.json()
+        code = acknowledgement.get('code', acknowledgement.get('StatusCode'))
+        accepted = resp.status_code == 200 and type(code) is int and code == 0
+        # 只输出验收状态，不输出 webhook 或响应正文。
+        print(f"[Feishu] HTTP={resp.status_code} accepted={accepted}")
+        return accepted
     except Exception as e:
-        print(f"[Feishu] Send failed: {e}")
+        print(f"[Feishu] Send failed: {type(e).__name__}")
         return False
 
 

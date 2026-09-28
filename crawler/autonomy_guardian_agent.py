@@ -224,12 +224,14 @@ def run():
 
     if FEISHU_WEBHOOK_URL:
         color = 'green' if result['verdict'] == 'healthy' else 'yellow'
-        send_feishu_card(
+        sent = send_feishu_card(
             FEISHU_WEBHOOK_URL,
             f"jilo.ai 自驱动总控检查 - {display_date()}",
             format_report(result),
             color=color,
         )
+        if not sent:
+            raise RuntimeError('Feishu did not acknowledge the guardian notification')
     log_operation('autonomy_guardian_agent', 'success', result['verdict'], {
         'blockers': result['blockers'],
         'analytics': result['analytics'],
