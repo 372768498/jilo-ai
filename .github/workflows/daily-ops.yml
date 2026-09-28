@@ -50,6 +50,7 @@ on:
           - seo
           - compare
           - analytics
+          - analytics-backfill
           - lookback
           - affiliate-autofill
           - monitor
@@ -62,6 +63,14 @@ on:
           - report
           - manual-blockers
           - weekly
+      start_date:
+        description: 'Backfill start date (YYYY-MM-DD, inclusive, maximum 62 days)'
+        type: string
+        required: false
+      end_date:
+        description: 'Backfill end date (YYYY-MM-DD, inclusive, before today)'
+        type: string
+        required: false
 
 env:
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -200,6 +209,9 @@ jobs:
 
   # 鈹€鈹€鈹€ Job 5: Analytics Collector 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   analytics:
+    concurrency:
+      group: jilo-analytics-collection
+      cancel-in-progress: false
     name: "馃搳 Analytics Collector"
     if: |
       (github.event_name == 'schedule' && github.event.schedule == '0 20 * * *') ||
@@ -218,6 +230,30 @@ jobs:
           cache: 'pip'
       - run: pip install -r crawler/requirements.txt
       - run: cd crawler && python analytics_collector.py
+
+  # 独立补采，不触发 all 的内容发布链路。与日常采集共用锁，避免覆盖写入。
+  analytics-backfill:
+    name: "Analytics Backfill"
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.job == 'analytics-backfill'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    concurrency:
+      group: jilo-analytics-collection
+      cancel-in-progress: false
+    env:
+      GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+      GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
+      GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+      ANALYTICS_START_DATE: ${{ inputs.start_date }}
+      ANALYTICS_END_DATE: ${{ inputs.end_date }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - run: pip install -r crawler/requirements.txt
+      - run: cd crawler && python analytics_collector.py --require-window
 
   # 鈹€鈹€鈹€ Job 4b: China-access Agent 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
   # Manual-only. China accessibility is useful context, but not a growth
@@ -469,7 +505,10 @@ jobs:
       - compare-articles
       - indexnow-submit
       - analytics
+      - analytics-backfill
       - lookback-agent
+      - affiliate-autofill
+      - monetization-worklist
       - monitor-agent
       - strategy-engine
       - traffic-growth

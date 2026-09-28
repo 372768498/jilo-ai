@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
-from ops_logger import log_operation
+from ops_logger import log_operation, complete_batch
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
@@ -767,10 +767,7 @@ if __name__ == "__main__":
             }
             if fatal_generation_error:
                 details["fatal_generation_error"] = fatal_generation_error
-                log_operation("seo_articles", "error", fatal_generation_error, details)
-            else:
-                log_operation("seo_articles", "success",
-                              f"saved={saved} failed={failed} skipped={skipped}", details)
+            raise SystemExit(complete_batch('seo_articles', details))
 
     except Exception as e:
         log_operation("seo_articles", "error", str(e))

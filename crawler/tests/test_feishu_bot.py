@@ -40,5 +40,17 @@ class TestFeishuBot(unittest.TestCase):
         result = send_feishu_card("https://example.com", "Title", "Content")
         self.assertFalse(result)
 
+    @patch('feishu_bot.requests.post')
+    def test_http_success_with_rejected_message_is_failure(self, mock_post):
+        mock_post.return_value = MagicMock(status_code=200, json=lambda: {'code': 19024, 'msg': 'rejected'})
+        from feishu_bot import send_feishu_card
+        self.assertFalse(send_feishu_card('https://example.com', 'Title', 'Content'))
+
+    @patch('feishu_bot.requests.post')
+    def test_http_success_without_business_acknowledgement_is_failure(self, mock_post):
+        mock_post.return_value = MagicMock(status_code=200, json=lambda: {})
+        from feishu_bot import send_feishu_card
+        self.assertFalse(send_feishu_card('https://example.com', 'Title', 'Content'))
+
 if __name__ == '__main__':
     unittest.main()

@@ -4,6 +4,6 @@ lxml==5.2.2
 supabase==1.2.0
 python-dotenv==1.0.0
 openai==1.10.0
-feedparser==6.0.10
+feedparser==6.0.12
 google-analytics-data==0.18.0
 google-auth==2.27.0

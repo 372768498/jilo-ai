@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from supabase import create_client
 
 import growth_state
+from data_health import analytics_health
 import monitor_agent
 import self_iteration_agent
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
@@ -86,6 +87,7 @@ def _required_table_status(supabase):
 
 
 def evaluate_autonomy(supabase):
+    data_health = analytics_health(supabase)
     self_results = self_iteration_agent.run()
     monitor_opened, monitor_resolved = monitor_agent.check_monetization_gaps(supabase)
     queue = _queue_snapshot(supabase)
@@ -112,6 +114,8 @@ def evaluate_autonomy(supabase):
     )
 
     blockers = []
+    if not data_health['ready']:
+        blockers.append('analytics_unavailable')
     if missing_tables:
         blockers.append('database_schema')
     if failed_jobs:
@@ -138,6 +142,7 @@ def evaluate_autonomy(supabase):
         'queue': queue,
         'missing_tables': missing_tables,
         'failed_jobs': failed_jobs,
+        'analytics': data_health,
     }
 
 
@@ -159,6 +164,10 @@ def format_report(result):
     lines = [
         f"**结论：** {verdict_map.get(result['verdict'], result['verdict'])}",
         f"**阻塞类型：** {', '.join(result['blockers']) if result['blockers'] else '无'}",
+        '',
+        '**数据新鲜度**',
+        f"- GA: {result['analytics']['ga_date'] or '缺测'}；GSC: {result['analytics']['gsc_date'] or '缺测'}",
+        f"- {'; '.join(result['analytics']['issues']) or '正常'}",
         '',
         '**自动处理结果**',
         f"- self-iteration: {result['self_results']}",
@@ -194,7 +203,7 @@ def format_report(result):
             lines.append(f"- {job.get('job_name')}: {job.get('message')}")
 
     lines.append('')
-    lines.append('系统会继续自动消费 SEO/AEO/Compare 队列；人工项只通过飞书提醒，不再要求你在对话里补。')
+    lines.append('数据缺测或过期时暂停基于流量的策略与回看；采集恢复后自动继续。')
     return '\n'.join(lines)
 
 
@@ -206,112 +215,26 @@ def run():
     # gate their output on system health (invariant I2 — this write has live
     # consumers: strategy_engine.filter_actions_for_health and
     # traffic_growth_agent.apply_verdict_gate).
-    growth_state.set_state(supabase, growth_state.VERDICT_KEY, {
+    if not growth_state.set_state(supabase, growth_state.VERDICT_KEY, {
         'verdict': result['verdict'],
         'blockers': result['blockers'],
         'updated': datetime.utcnow().isoformat(),
-    })
+    }):
+        raise RuntimeError('Failed to persist autonomy verdict')
 
     if FEISHU_WEBHOOK_URL:
         color = 'green' if result['verdict'] == 'healthy' else 'yellow'
-        send_feishu_card(
+        sent = send_feishu_card(
             FEISHU_WEBHOOK_URL,
             f"jilo.ai 自驱动总控检查 - {display_date()}",
             format_report(result),
             color=color,
         )
+        if not sent:
+            raise RuntimeError('Feishu did not acknowledge the guardian notification')
     log_operation('autonomy_guardian_agent', 'success', result['verdict'], {
         'blockers': result['blockers'],
-        'self_results': result['self_results'],
-        'monitor': result['monitor'],
-        'queue_counts': {str(k): v for k, v in result['queue']['counts'].items()},
-        'missing_tables': result['missing_tables'],
-        'failed_jobs': [
-            {'job_name': j.get('job_name'), 'message': j.get('message')}
-            for j in result['failed_jobs']
-        ],
-    })
-    print(result)
-    return result
-
-
-def _format_counter(counter):
-    if not counter:
-        return '- 无'
-    lines = []
-    for key, count in sorted(counter.items(), key=lambda x: str(x[0])):
-        lines.append(f'- {key}: {count}')
-    return '\n'.join(lines)
-
-
-def format_report(result):
-    verdict_map = {
-        'healthy': '健康：系统可以自驱动运行',
-        'degraded_manual_blocker': '降级但可运行：有人工权限事项，其它增长闭环继续跑',
-        'degraded_needs_attention': '降级：存在会影响闭环的问题',
-    }
-    lines = [
-        f"**结论：** {verdict_map.get(result['verdict'], result['verdict'])}",
-        f"**阻塞类型：** {', '.join(result['blockers']) if result['blockers'] else '无'}",
-        '',
-        '**自动处理结果**',
-        f"- self-iteration: {result['self_results']}",
-        f"- monitor: opened={result['monitor']['opened']} resolved={result['monitor']['resolved']}",
-        '',
-        '**队列状态**',
-        _format_counter(result['queue']['counts']),
-        '',
-        '**人工事项**',
-    ]
-
-    if result['missing_tables']:
-        lines.append('- 数据库 migration:')
-        for item in result['missing_tables']:
-            lines.append(f"  - 缺表 `{item['table_name']}`，执行 `{item['migration_script']}`")
-    else:
-        lines.append('- 数据库 migration: 无')
-
-    monetization = result['queue']['top_monetization']
-    if monetization:
-        lines.append('- 联盟链接优先处理:')
-        for item in monetization[:5]:
-            lines.append(
-                f"  - {item['name']} (`{item['slug']}`): {item['click_count']} 次出站点击，优先级 {item['priority']}"
-            )
-    else:
-        lines.append('- 联盟链接: 无待处理')
-
-    if result['failed_jobs']:
-        lines.append('')
-        lines.append('**仍未恢复的失败 job**')
-        for job in result['failed_jobs'][:8]:
-            lines.append(f"- {job.get('job_name')}: {job.get('message')}")
-
-    lines.append('')
-    lines.append('系统会继续自动消费 SEO/AEO/Compare 队列；人工项只通过飞书提醒，不再要求你在对话里补。')
-    return '\n'.join(lines)
-
-
-def run():
-    supabase = get_supabase()
-    result = evaluate_autonomy(supabase)
-
-    growth_state.set_state(supabase, growth_state.VERDICT_KEY, {
-        'verdict': result['verdict'],
-        'blockers': result['blockers'],
-        'updated': datetime.utcnow().isoformat(),
-    })
-
-    if FEISHU_WEBHOOK_URL:
-        color = 'green' if result['verdict'] == 'healthy' else 'yellow'
-        send_feishu_card(
-            FEISHU_WEBHOOK_URL,
-            f"jilo.ai 自驱动总控检查 - {display_date()}",
-            format_report(result),
-            color=color,
-        )
-    log_operation('autonomy_guardian_agent', 'success', result['verdict'], {
-        'blockers': result['blockers'],
+        'analytics': result['analytics'],
         'self_results': result['self_results'],
         'monitor': result['monitor'],
         'queue_counts': {str(k): v for k, v in result['queue']['counts'].items()},

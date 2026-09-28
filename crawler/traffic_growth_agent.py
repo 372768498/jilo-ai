@@ -13,6 +13,7 @@ from supabase import create_client
 
 import action_queue as aq
 import growth_state
+from data_health import require_fresh_analytics
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_alert
 from ops_logger import log_operation
@@ -176,7 +177,7 @@ def robust_baseline(pv_series):
     pv_series is newest-first. Uses max(yesterday, 7-day average) so a single
     weekend dip or dropped-collection day can't make a real decline look like it
     hit target. Returns (latest_pv, previous_pv) or (None, None)."""
-    clean = [pv for pv in pv_series if pv]  # drop 0 / missing days
+    clean = [pv for pv in pv_series if pv is not None]  # 真实零值不能被当作缺测丢弃。
     if len(clean) < 2:
         return None, None
     latest = clean[0]
@@ -185,35 +186,26 @@ def robust_baseline(pv_series):
     return latest, previous
 
 
-def latest_pv_pair(supabase):
-    """Return (latest, previous) site-level PV, with a noise-resistant baseline."""
-    try:
-        rows = supabase.table('analytics_site_daily').select(
-            'date, total_pageviews'
-        ).order('date', desc=True).limit(8).execute()
-        data = [r for r in (rows.data or []) if (r.get('total_pageviews') or 0) > 0]
-        if len(data) >= 2:
-            latest_pv, previous_pv = robust_baseline(
-                [r.get('total_pageviews') or 0 for r in data]
-            )
-            if latest_pv is not None:
-                return (
-                    {'date': _date_from_iso(data[0]['date']), 'pv': latest_pv},
-                    {'date': _date_from_iso(data[1]['date']), 'pv': int(round(previous_pv))},
-                )
-    except Exception as e:
-        print(f"analytics_site_daily unavailable, falling back to analytics_daily: {e}")
-
-    rows = supabase.table('analytics_daily').select('date, pageviews').order(
-        'date', desc=True
-    ).limit(500).execute()
-    by_date = defaultdict(int)
-    for row in rows.data or []:
-        by_date[_date_from_iso(row.get('date'))] += row.get('pageviews') or 0
-    dates = sorted([d for d in by_date if d], reverse=True)
-    if len(dates) < 2:
+def latest_pv_pair(supabase, expected_date=None):
+    """只采用已验证日期起的连续全站数据；缺口不以旧日或截断明细补齐。"""
+    rows = supabase.table('analytics_site_daily').select(
+        'date, total_pageviews'
+    ).order('date', desc=True).limit(8).execute()
+    data = rows.data or []
+    if not data or (expected_date and data[0]['date'] != expected_date):
         return None, None
-    return {'date': dates[0], 'pv': by_date[dates[0]]}, {'date': dates[1], 'pv': by_date[dates[1]]}
+    consecutive = []
+    next_day = datetime.fromisoformat(data[0]['date']).date()
+    for row in data:
+        if row['date'] != next_day.isoformat() or row.get('total_pageviews') is None:
+            break
+        consecutive.append(row)
+        next_day -= timedelta(days=1)
+    if len(consecutive) < 2:
+        return None, None
+    latest, previous = robust_baseline([r['total_pageviews'] for r in consecutive])
+    return ({'date': consecutive[0]['date'], 'pv': latest},
+            {'date': consecutive[1]['date'], 'pv': int(round(previous))})
 
 
 def _already_handled(supabase, dedup_key):
@@ -440,6 +432,7 @@ def enqueue_rewrite_actions(supabase, deficit, limit):
 
 def run():
     supabase = get_supabase()
+    health = require_fresh_analytics(supabase)
 
     # Turn-head read of the shared decision state (G0 foundation). Surfaced into
     # the result for observability now; rank1 turns effectiveness into a scalable
@@ -448,7 +441,7 @@ def run():
     effectiveness = growth_state.get_mode_effectiveness(supabase)
     suppress = growth_state.get_suppress(supabase)
 
-    latest, previous = latest_pv_pair(supabase)
+    latest, previous = latest_pv_pair(supabase, expected_date=health['ga_date'])
     if not latest or not previous:
         return {'status': 'no_pv_baseline', 'opened': 0,
                 'autonomy_verdict': state['verdict']}

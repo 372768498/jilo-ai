@@ -1,20 +1,23 @@
-$ErrorActionPreference = "Continue"
-
+﻿param([string]$PythonExecutable = $env:JILO_PYTHON, [switch]$CheckOnly, [switch]$RepairCloud)
+$ErrorActionPreference = "Stop"
 $Repo = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 Set-Location $Repo
-
 $env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUTF8 = "1"
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $LogDir = Join-Path $Repo "logs"
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
-$Stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$Log = Join-Path $LogDir "autonomous-growth-$Stamp.log"
+$Log = Join-Path $LogDir ("autonomous-growth-" + (Get-Date -Format "yyyyMMdd-HHmmss") + ".log")
 $Results = New-Object System.Collections.Generic.List[object]
 $StartedAt = Get-Date
 
-function Import-DotEnv {
-  param([string]$Path)
+function Write-Log([string]$Message) {
+  Add-Content -LiteralPath $Log -Value $Message -Encoding UTF8
+  Write-Host $Message
+}
+function Import-DotEnv([string]$Path) {
   if (-not (Test-Path -LiteralPath $Path)) { return }
-  Get-Content -LiteralPath $Path | ForEach-Object {
+  Get-Content -LiteralPath $Path -Encoding UTF8 | ForEach-Object {
     if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$') {
       $name = $matches[1]
       $value = $matches[2].Trim()
@@ -27,102 +30,84 @@ function Import-DotEnv {
     }
   }
 }
-
-function Send-Feishu {
-  param(
-    [string]$Title,
-    [string]$Content,
-    [string]$Color = "blue"
-  )
+function Send-Feishu([string]$Title, [string]$Content) {
   $webhook = [Environment]::GetEnvironmentVariable("FEISHU_WEBHOOK_URL", "Process")
   if (-not $webhook) {
-    Add-Content -Path $Log -Value "[Feishu] FEISHU_WEBHOOK_URL not configured"
+    Write-Log "[Feishu] FEISHU_WEBHOOK_URL not configured; notification unavailable"
     return
   }
   $payload = @{
     msg_type = "interactive"
     card = @{
-      header = @{
-        title = @{ tag = "plain_text"; content = $Title }
-        template = $Color
-      }
-      elements = @(
-        @{ tag = "markdown"; content = $Content }
-      )
+      header = @{ title = @{ tag = "plain_text"; content = $Title }; template = "yellow" }
+      elements = @(@{ tag = "markdown"; content = $Content })
     }
   } | ConvertTo-Json -Depth 10
   try {
-    Invoke-RestMethod -Uri $webhook -Method Post -ContentType "application/json" -Body $payload -TimeoutSec 10 | Out-Null
+    $response = Invoke-RestMethod -Uri $webhook -Method Post -ContentType "application/json; charset=utf-8" -Body ([Text.Encoding]::UTF8.GetBytes($payload)) -TimeoutSec 10
+    if ($null -eq $response.code -or $response.code -ne 0) { throw "Feishu response rejected" }
   } catch {
-    Add-Content -Path $Log -Value "[Feishu] Send failed: $($_.Exception.Message)"
+    Write-Log "[Feishu] Notification failed"
   }
 }
-
-function Run-Step {
-  param(
-    [string]$Name,
-    [string]$Command
-  )
-  Add-Content -Path $Log -Value ""
-  Add-Content -Path $Log -Value "===== $Name ====="
-  Add-Content -Path $Log -Value "$(Get-Date -Format o)"
+function Run-Step([string]$Name, [string[]]$Arguments) {
+  Write-Log ([Environment]::NewLine + "===== " + $Name + " =====")
+  Write-Log (Get-Date -Format o)
   $stepStartedAt = Get-Date
+  $code = 1
   try {
-    powershell -NoProfile -ExecutionPolicy Bypass -Command $Command 2>&1 |
-      Tee-Object -FilePath $Log -Append
-    $code = $LASTEXITCODE
-    if ($null -eq $code) { $code = 0 }
-    $durationSeconds = [int]((Get-Date) - $stepStartedAt).TotalSeconds
-    $Results.Add([pscustomobject]@{ Name = $Name; ExitCode = $code; DurationSeconds = $durationSeconds }) | Out-Null
-    Add-Content -Path $Log -Value "ExitCode: $code"
-    Add-Content -Path $Log -Value "DurationSeconds: $durationSeconds"
+    # 直接启动解释器，避免中间 PowerShell 吞掉 Python 的非零退出码。
+    $global:LASTEXITCODE = $null
+    $ErrorActionPreference = "Continue"
+    & $PythonExecutable @Arguments 2>&1 | ForEach-Object { Write-Log ([string]$_) }
+    $code = $global:LASTEXITCODE
+    if ($null -eq $code) { $code = 1 }
   } catch {
-    Add-Content -Path $Log -Value "FAILED: $($_.Exception.Message)"
-    $durationSeconds = [int]((Get-Date) - $stepStartedAt).TotalSeconds
-    $Results.Add([pscustomobject]@{ Name = $Name; ExitCode = 999; DurationSeconds = $durationSeconds }) | Out-Null
+    Write-Log ("Process start failed: " + $_.Exception.GetType().Name)
+    $code = 1
+  } finally {
+    $ErrorActionPreference = "Stop"
   }
+  $duration = [int]((Get-Date) - $stepStartedAt).TotalSeconds
+  $Results.Add([pscustomobject]@{ Name = $Name; ExitCode = $code; DurationSeconds = $duration }) | Out-Null
+  Write-Log "ExitCode: $code"
+  Write-Log "DurationSeconds: $duration"
 }
-
 Import-DotEnv (Join-Path $Repo ".env.local")
 Import-DotEnv (Join-Path $Repo ".env")
-
-Send-Feishu `
-  -Title "jilo.ai 自动增长循环启动" `
-  -Content "**时间：** $(Get-Date -Format o)`n`n**仓库：** $Repo`n`n**日志：** $Log" `
-  -Color "blue"
-
-Run-Step "新闻抓取" "python crawler/rss_news_crawler.py"
-Run-Step "工具发现" "python crawler/tool_discovery.py"
-Run-Step "热点探测" "python crawler/trend_agent.py"
-Run-Step "数据采集" "python crawler/analytics_collector.py"
-Run-Step "策略引擎" "python crawler/strategy_engine.py"
-Run-Step "PV 增长控制器" "python crawler/traffic_growth_agent.py"
-Run-Step "SEO/AEO 内容生成" "`$env:SEO_ACTIONS_PER_RUN='16'; python crawler/seo_article_generator.py"
-Run-Step "对比文章生成" "`$env:COMPARE_ACTIONS_PER_RUN='5'; python crawler/compare_article_generator.py"
-Run-Step "IndexNow 提交" "python crawler/indexnow_submitter.py"
-Run-Step "页面表现回看" "python crawler/lookback_agent.py"
-Run-Step "变现/系统监控" "python crawler/monitor_agent.py"
-Run-Step "自修复/自迭代" "python crawler/self_iteration_agent.py"
-
-Add-Content -Path $Log -Value ""
-Add-Content -Path $Log -Value "Completed autonomous growth loop at $(Get-Date -Format o)"
-
-$failed = @($Results | Where-Object { $_.ExitCode -ne 0 })
-$totalDurationSeconds = [int]((Get-Date) - $StartedAt).TotalSeconds
-$summary = ($Results | ForEach-Object {
-  $minutes = [math]::Round($_.DurationSeconds / 60, 1)
-  if ($_.ExitCode -eq 0) { "- 通过：$($_.Name)（${minutes} 分钟）" } else { "- 失败（退出码 $($_.ExitCode)）：$($_.Name)（${minutes} 分钟）" }
-}) -join "`n"
-$totalMinutes = [math]::Round($totalDurationSeconds / 60, 1)
-
-if ($failed.Count -gt 0) {
-  Send-Feishu `
-    -Title "jilo.ai 自动增长循环完成：有失败" `
-    -Content "**时间：** $(Get-Date -Format o)`n`n**总耗时：** ${totalMinutes} 分钟`n`n**失败步骤：** $($failed.Count)`n`n$summary`n`n**日志：** $Log" `
-    -Color "yellow"
-} else {
-  Send-Feishu `
-    -Title "jilo.ai 自动增长循环完成：全部通过" `
-    -Content "**时间：** $(Get-Date -Format o)`n`n**总耗时：** ${totalMinutes} 分钟`n`n$summary`n`n**日志：** $Log" `
-    -Color "green"
+if (-not $PythonExecutable) { $PythonExecutable = $env:JILO_PYTHON }
+if (-not $PythonExecutable) { $PythonExecutable = Join-Path $Repo ".venv-crawler\Scripts\python.exe" }
+if (-not (Test-Path -LiteralPath $PythonExecutable -PathType Leaf)) {
+  Write-Log "Python environment missing. Create .venv-crawler with Python 3.11 and install crawler/requirements.txt, or set JILO_PYTHON."
+  exit 1
 }
+Run-Step "运行环境预检" @("-c", "import sys, feedparser, httpx, supabase, openai; assert sys.version_info[:2] == (3,11), 'Use Python 3.11'; print('Python', sys.version.split()[0], 'feedparser', feedparser.__version__)")
+if ($Results[0].ExitCode -ne 0) { exit 1 }
+if ($CheckOnly) { exit 0 }
+$watchdogArguments = @("crawler/cloud_watchdog.py")
+if ($RepairCloud) { $watchdogArguments += "--repair" }
+Run-Step "云端定时任务监督" $watchdogArguments
+Run-Step "新闻抓取" @("crawler/rss_news_crawler.py")
+Run-Step "工具发现" @("crawler/tool_discovery.py")
+Run-Step "热点探测" @("crawler/trend_agent.py")
+Run-Step "数据采集" @("crawler/analytics_collector.py")
+Run-Step "策略引擎" @("crawler/strategy_engine.py")
+Run-Step "PV 增长控制器" @("crawler/traffic_growth_agent.py")
+$env:SEO_ACTIONS_PER_RUN = "16"
+Run-Step "SEO/AEO 内容生成" @("crawler/seo_article_generator.py")
+$env:COMPARE_ACTIONS_PER_RUN = "5"
+Run-Step "对比文章生成" @("crawler/compare_article_generator.py")
+Run-Step "IndexNow 提交" @("crawler/indexnow_submitter.py")
+Run-Step "页面表现回看" @("crawler/lookback_agent.py")
+Run-Step "变现/系统监控" @("crawler/monitor_agent.py")
+Run-Step "自修复/自迭代" @("crawler/self_iteration_agent.py")
+Run-Step "自驱动总控" @("crawler/autonomy_guardian_agent.py")
+$failed = @($Results | Where-Object { $_.ExitCode -ne 0 })
+$summary = ($Results | ForEach-Object { "- $($_.Name): ExitCode=$($_.ExitCode), $($_.DurationSeconds)s" }) -join [Environment]::NewLine
+Write-Log ("Completed: failures=" + $failed.Count + ", elapsed=" + [int]((Get-Date) - $StartedAt).TotalSeconds + "s")
+# 例行成功静默，故障才提醒；任务计划程序读取真实退出码。
+if ($failed.Count -gt 0) {
+  Send-Feishu "jilo.ai 自动增长循环失败" $summary
+  exit 1
+}
+exit 0

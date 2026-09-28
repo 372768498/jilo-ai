@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, OPENAI_API_KEY, OPENAI_MODEL, FEISHU_WEBHOOK_URL
-from ops_logger import log_operation
+from ops_logger import log_operation, complete_batch
 from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
@@ -192,11 +192,10 @@ if __name__ == "__main__":
                     print(f"  FAIL: {gen_err}")
                 time.sleep(2)
 
-            log_operation("compare_articles", "success",
-                          f"saved={saved} failed={failed} skipped={skipped}", {
+            raise SystemExit(complete_batch("compare_articles", {
                               "saved": saved, "failed": failed, "skipped": skipped,
                               "actions": [{"id": a['id'], "pair": f"{(a.get('payload') or {}).get('tool_a')} vs {(a.get('payload') or {}).get('tool_b')}"} for a in actions],
-                          })
+                          }))
     except Exception as e:
         log_operation("compare_articles", "error", str(e))
         if FEISHU_WEBHOOK_URL:

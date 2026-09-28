@@ -83,14 +83,14 @@ class TestRobustBaseline(unittest.TestCase):
         latest, prev = tga.robust_baseline([60, 50, 100, 100, 100])
         self.assertGreater(prev, 50)  # not fooled by the dip
 
-    def test_drops_zero_days(self):
+    def test_preserves_measured_zero_days(self):
         latest, prev = tga.robust_baseline([120, 0, 100])
         self.assertEqual(latest, 120)
-        self.assertEqual(prev, 100)  # the 0 day is ignored
+        self.assertEqual(prev, 50)  # 零值参与连续日期窗口的均值。
 
     def test_insufficient_data(self):
         self.assertEqual(tga.robust_baseline([100]), (None, None))
-        self.assertEqual(tga.robust_baseline([0, 0]), (None, None))
+        self.assertEqual(tga.robust_baseline([0, 0]), (0, 0))
 
 
 if __name__ == '__main__':

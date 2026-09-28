@@ -11,6 +11,7 @@ from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
+from data_health import require_fresh_analytics
 
 # Content-type-aware cadence. GSC ranking data is inherently lagged (Google
 # needs days to index + accumulate search impressions), so fast feedback can
@@ -47,11 +48,11 @@ def _collect_pages(supabase):
     return pages
 
 
-def _gsc_snapshot(supabase, slug):
+def _gsc_snapshot(supabase, slug, data_date):
     """Aggregate the most recent GSC rows whose page contains the slug."""
     rows = supabase.table('search_console_daily').select(
         'clicks, impressions, position, date'
-    ).ilike('page', f'%/{slug}%').execute()
+    ).eq('date', data_date).ilike('page', f'%/{slug}%').execute()
     data = rows.data or []
     if not data:
         return None
@@ -69,11 +70,11 @@ def _gsc_snapshot(supabase, slug):
             'ctr': round(ctr, 4)}
 
 
-def _ga_pageviews(supabase, slug):
+def _ga_pageviews(supabase, slug, data_date):
     """Sum recent pageviews whose page_path contains the slug."""
     rows = supabase.table('analytics_daily').select(
         'pageviews, page_path, date'
-    ).ilike('page_path', f'%/{slug}%').execute()
+    ).eq('date', data_date).ilike('page_path', f'%/{slug}%').execute()
     data = rows.data or []
     if not data:
         return 0
@@ -84,6 +85,7 @@ def _ga_pageviews(supabase, slug):
 def capture_due_snapshots(supabase):
     """For each page that hit an age bucket today, upsert a performance snapshot."""
     today = datetime.utcnow().date()
+    health = require_fresh_analytics(supabase)
     pages = _collect_pages(supabase)
     captured = 0
 
@@ -99,8 +101,12 @@ def capture_due_snapshots(supabase):
             continue
 
         slug = page['slug']
-        gsc = _gsc_snapshot(supabase, slug)
-        pv = _ga_pageviews(supabase, slug)
+        # 页面发布后的数据还没到，留待观察，不能保存为已证实的零。
+        if health['ga_date'] < pub_date.isoformat():
+            continue
+        gsc_observed = health['gsc_date'] >= pub_date.isoformat()
+        gsc = _gsc_snapshot(supabase, slug, health['gsc_date']) if gsc_observed else None
+        pv = _ga_pageviews(supabase, slug, health['ga_date'])
 
         snapshot = {
             'content_type': page['content_type'],
@@ -108,9 +114,9 @@ def capture_due_snapshots(supabase):
             'published_at': page['published_at'],
             'age_bucket': age,
             'position': gsc['position'] if gsc else None,
-            'ctr': gsc['ctr'] if gsc else 0.0,
-            'clicks': gsc['clicks'] if gsc else 0,
-            'impressions': gsc['impressions'] if gsc else 0,
+            'ctr': gsc['ctr'] if gsc else (0.0 if gsc_observed else None),
+            'clicks': gsc['clicks'] if gsc else (0 if gsc_observed else None),
+            'impressions': gsc['impressions'] if gsc else (0 if gsc_observed else None),
             'pageviews': pv,
             'captured_at': datetime.utcnow().isoformat(),
         }
