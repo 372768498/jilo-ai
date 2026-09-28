@@ -10,7 +10,7 @@ MAX_SCHEDULE_AGE_HOURS = 30
 
 
 def gh(args):
-    result = subprocess.run(['gh', *args], capture_output=True, text=True, timeout=60)
+    result = subprocess.run(['gh', *args], capture_output=True, text=True, encoding='utf-8', timeout=60)
     if result.returncode:
         # gh 错误输出可能含 URL/账号信息，只报告退出码。
         raise RuntimeError(f'GitHub CLI failed (exit={result.returncode})')
