@@ -1,219 +1,178 @@
-# crawler/analytics_collector.py
+"""GA/GSC 日采集与有界补采；关键写入全部成功后才报告成功。"""
+import argparse
 import json
-from datetime import datetime, timedelta
+import os
+from datetime import date, datetime, timedelta
+from urllib.parse import quote
 from google.analytics.data_v1beta import BetaAnalyticsDataClient
-from google.analytics.data_v1beta.types import (
-    RunReportRequest, DateRange, Metric, Dimension
-)
+from google.analytics.data_v1beta.types import RunReportRequest, DateRange, Metric, Dimension, OrderBy
 from google.oauth2 import service_account
 from google.auth.transport.requests import Request
 import requests as http_requests
 from supabase import create_client
-from config import (
-    SUPABASE_URL, SUPABASE_KEY, GOOGLE_SERVICE_ACCOUNT_JSON,
-    GA_PROPERTY_ID, GSC_SITE_URL, FEISHU_WEBHOOK_URL
-)
+from config import SUPABASE_URL, SUPABASE_KEY, GOOGLE_SERVICE_ACCOUNT_JSON, GA_PROPERTY_ID, GSC_SITE_URL, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
 
+GA_PAGE_SIZE = 10000
+GSC_PAGE_SIZE = 25000
+MAX_BACKFILL_DAYS = 62
+MAX_ROWS_PER_REPORT = 500000
+AI_SOURCES = ('chatgpt', 'openai', 'perplexity', 'claude', 'anthropic', 'gemini', 'copilot', 'you.com', 'phind', 'poe')
+
 
 def get_google_credentials():
-    """Get Google service account credentials from env JSON."""
     if not GOOGLE_SERVICE_ACCOUNT_JSON:
-        raise ValueError("GOOGLE_SERVICE_ACCOUNT_JSON not configured")
-    info = json.loads(GOOGLE_SERVICE_ACCOUNT_JSON)
+        raise ValueError('GOOGLE_SERVICE_ACCOUNT_JSON not configured')
     return service_account.Credentials.from_service_account_info(
-        info,
-        scopes=[
+        json.loads(GOOGLE_SERVICE_ACCOUNT_JSON), scopes=[
             'https://www.googleapis.com/auth/analytics.readonly',
-            'https://www.googleapis.com/auth/webmasters.readonly',
-        ]
-    )
+            'https://www.googleapis.com/auth/webmasters.readonly'])
 
 
-def collect_ga_data():
-    """Pull yesterday's GA4 data and store in Supabase."""
-    credentials = get_google_credentials()
-    ga_client = BetaAnalyticsDataClient(credentials=credentials)
-
-    yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    # ── Query 1: page-level breakdown (for top-page analysis) ──────────────
-    page_request = RunReportRequest(
-        property=f"properties/{GA_PROPERTY_ID}",
-        date_ranges=[DateRange(start_date=yesterday, end_date=yesterday)],
-        dimensions=[
-            Dimension(name="pagePath"),
-            Dimension(name="sessionDefaultChannelGroup"),
-        ],
-        metrics=[
-            Metric(name="screenPageViews"),
-            Metric(name="totalUsers"),
-            Metric(name="averageSessionDuration"),
-            Metric(name="bounceRate"),
-        ],
-    )
-
-    page_response = ga_client.run_report(page_request)
-    rows_saved = 0
-
-    for row in page_response.rows:
-        page_path = row.dimension_values[0].value
-        traffic_source = row.dimension_values[1].value
-
-        data = {
-            'date': yesterday,
-            'page_path': page_path,
-            'pageviews': int(row.metric_values[0].value),
-            'unique_pageviews': int(row.metric_values[1].value),
-            'avg_session_duration': float(row.metric_values[2].value),
-            'bounce_rate': float(row.metric_values[3].value),
-            'traffic_source': traffic_source,
-        }
-
-        supabase.table('analytics_daily').upsert(
-            data, on_conflict='date,page_path,traffic_source'
-        ).execute()
-        rows_saved += 1
-
-    # ── Query 2: site-level totals (correct PV and UV without double-count) ─
-    # No page/channel dimensions → GA4 deduplicates users across all pages.
-    site_request = RunReportRequest(
-        property=f"properties/{GA_PROPERTY_ID}",
-        date_ranges=[DateRange(start_date=yesterday, end_date=yesterday)],
-        dimensions=[],
-        metrics=[
-            Metric(name="screenPageViews"),
-            Metric(name="totalUsers"),
-            Metric(name="sessions"),
-        ],
-    )
-
-    site_response = ga_client.run_report(site_request)
-    if site_response.rows:
-        r = site_response.rows[0]
-        try:
-            supabase.table('analytics_site_daily').upsert({
-                'date': yesterday,
-                'total_pageviews': int(r.metric_values[0].value),
-                'total_users': int(r.metric_values[1].value),
-                'total_sessions': int(r.metric_values[2].value),
-            }, on_conflict='date').execute()
-        except Exception as e:
-            print(f"  GA4 site totals skipped: {e}")
-
-    # Query 3: referrer/sourceMedium breakdown. This is the external loop for
-    # answer-engine traffic (ChatGPT, Perplexity, Claude, Gemini, etc.).
-    ref_request = RunReportRequest(
-        property=f"properties/{GA_PROPERTY_ID}",
-        date_ranges=[DateRange(start_date=yesterday, end_date=yesterday)],
-        dimensions=[
-            Dimension(name="pagePath"),
-            Dimension(name="sessionSourceMedium"),
-        ],
-        metrics=[
-            Metric(name="screenPageViews"),
-            Metric(name="sessions"),
-            Metric(name="totalUsers"),
-        ],
-    )
-    ref_response = ga_client.run_report(ref_request)
-    for row in ref_response.rows:
-        source_medium = row.dimension_values[1].value
-        lower = source_medium.lower()
-        is_ai_source = any(
-            marker in lower
-            for marker in [
-                'chatgpt', 'openai', 'perplexity', 'claude', 'anthropic',
-                'gemini', 'copilot', 'you.com', 'phind', 'poe',
-            ]
-        )
-        if not is_ai_source:
-            continue
-        try:
-            supabase.table('analytics_referrers_daily').upsert({
-                'date': yesterday,
-                'page_path': row.dimension_values[0].value,
-                'source_medium': source_medium,
-                'pageviews': int(row.metric_values[0].value),
-                'sessions': int(row.metric_values[1].value),
-                'users': int(row.metric_values[2].value),
-                'source_type': 'ai_answer_engine',
-            }, on_conflict='date,page_path,source_medium').execute()
-        except Exception as e:
-            print(f"  AI referrer tracking skipped: {e}")
-
-    return rows_saved
+def validate_window(start, end):
+    if not start and not end:
+        return None
+    if not start or not end:
+        raise ValueError('start-date and end-date must be supplied together')
+    first, last = date.fromisoformat(start), date.fromisoformat(end)
+    if first > last or (last - first).days >= MAX_BACKFILL_DAYS:
+        raise ValueError(f'Backfill must cover 1..{MAX_BACKFILL_DAYS} days')
+    if last >= datetime.utcnow().date():
+        raise ValueError('Only complete past dates can be collected')
+    return first, last
 
 
-def collect_gsc_data():
-    """Pull last 3 days of GSC data and store in Supabase."""
+def dates_between(first, last):
+    return [(first + timedelta(days=i)).isoformat() for i in range((last - first).days + 1)]
+
+
+def _upsert(db, table, records, conflict):
+    for offset in range(0, len(records), 500):
+        db.table(table).upsert(records[offset:offset + 500], on_conflict=conflict).execute()
+
+
+def _ga_rows(client, request):
+    offset = 0
+    while True:
+        page_request = RunReportRequest(request)
+        page_request.offset = offset
+        page_request.limit = GA_PAGE_SIZE
+        response = client.run_report(page_request, timeout=60)
+        rows = list(response.rows)
+        if not rows and offset < response.row_count:
+            raise RuntimeError('GA returned an incomplete page')
+        yield from rows
+        offset += len(rows)
+        if offset >= response.row_count:
+            return
+        if offset >= MAX_ROWS_PER_REPORT:
+            raise RuntimeError('GA report exceeded safety limit; collection incomplete')
+
+
+def collect_ga_data(target_date=None):
+    target_date = target_date or (datetime.utcnow().date() - timedelta(days=1)).isoformat()
+    validate_window(target_date, target_date)
+    client = BetaAnalyticsDataClient(credentials=get_google_credentials())
+    db = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+    def report(dimensions, metrics):
+        return RunReportRequest(
+            property=f'properties/{GA_PROPERTY_ID}',
+            date_ranges=[DateRange(start_date=target_date, end_date=target_date)],
+            dimensions=[Dimension(name=n) for n in dimensions],
+            metrics=[Metric(name=n) for n in metrics],
+            order_bys=[OrderBy(dimension=OrderBy.DimensionOrderBy(dimension_name=n)) for n in dimensions])
+
+    pages = []
+    for r in _ga_rows(client, report(['pagePath', 'sessionDefaultChannelGroup'],
+                                    ['screenPageViews', 'totalUsers', 'averageSessionDuration', 'bounceRate'])):
+        pages.append({'date': target_date, 'page_path': r.dimension_values[0].value,
+                      'traffic_source': r.dimension_values[1].value,
+                      'pageviews': int(r.metric_values[0].value), 'unique_pageviews': int(r.metric_values[1].value),
+                      'avg_session_duration': float(r.metric_values[2].value), 'bounce_rate': float(r.metric_values[3].value)})
+    _upsert(db, 'analytics_daily', pages, 'date,page_path,traffic_source')
+    totals = list(_ga_rows(client, report([], ['screenPageViews', 'totalUsers', 'sessions'])))
+    site = {'date': target_date, 'total_pageviews': 0, 'total_users': 0, 'total_sessions': 0}
+    if totals:
+        for field, value in zip(['total_pageviews', 'total_users', 'total_sessions'], totals[0].metric_values):
+            site[field] = int(value.value)
+    referrers = []
+    for r in _ga_rows(client, report(['pagePath', 'sessionSourceMedium'], ['screenPageViews', 'sessions', 'totalUsers'])):
+        source = r.dimension_values[1].value
+        if any(n in source.lower() for n in AI_SOURCES):
+            referrers.append({'date': target_date, 'page_path': r.dimension_values[0].value,
+                              'source_medium': source, 'source_type': 'ai_answer_engine',
+                              'pageviews': int(r.metric_values[0].value), 'sessions': int(r.metric_values[1].value),
+                              'users': int(r.metric_values[2].value)})
+    _upsert(db, 'analytics_referrers_daily', referrers, 'date,page_path,source_medium')
+    # 全站日期最后落库，避免明细失败但下游认为当天已完成。
+    db.table('analytics_site_daily').upsert(site, on_conflict='date').execute()
+    return len(pages)
+
+
+def collect_gsc_data(start_date=None, end_date=None):
+    today = datetime.utcnow().date()
+    window = validate_window(start_date, end_date) or (today - timedelta(days=3), today - timedelta(days=1))
     credentials = get_google_credentials()
     credentials.refresh(Request())
-    token = credentials.token
-
-    three_days_ago = (datetime.utcnow() - timedelta(days=3)).strftime('%Y-%m-%d')
-    yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
-
-    from urllib.parse import quote
-    encoded_site = quote(GSC_SITE_URL, safe='')
-    url = f"https://www.googleapis.com/webmasters/v3/sites/{encoded_site}/searchAnalytics/query"
-    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-    payload = {
-        "startDate": three_days_ago,
-        "endDate": yesterday,
-        "dimensions": ["query", "page", "date"],
-        "rowLimit": 500,
-    }
-
-    resp = http_requests.post(url, json=payload, headers=headers, timeout=30)
-    resp.raise_for_status()
-    data = resp.json()
-
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    rows_saved = 0
-
-    for row in data.get('rows', []):
-        keys = row['keys']
-        record = {
-            'query': keys[0],
-            'page': keys[1],
-            'date': keys[2],
-            'clicks': row['clicks'],
-            'impressions': row['impressions'],
-            'ctr': round(row['ctr'], 4),
-            'position': round(row['position'], 1),
-        }
-
-        supabase.table('search_console_daily').upsert(
-            record, on_conflict='date,query,page'
-        ).execute()
-        rows_saved += 1
-
-    return rows_saved
+    headers = {'Authorization': f'Bearer {credentials.token}', 'Content-Type': 'application/json'}
+    url = f'https://www.googleapis.com/webmasters/v3/sites/{quote(GSC_SITE_URL, safe="")}/searchAnalytics/query'
+    db = create_client(SUPABASE_URL, SUPABASE_KEY)
+    saved = 0
+    for day in dates_between(*window):
+        offset = 0
+        while True:
+            response = http_requests.post(url, headers=headers, timeout=60, json={
+                'startDate': day, 'endDate': day, 'dimensions': ['query', 'page', 'date'],
+                'dataState': 'final', 'type': 'web', 'rowLimit': GSC_PAGE_SIZE, 'startRow': offset})
+            response.raise_for_status()
+            rows = response.json().get('rows', [])
+            records = [{'query': r['keys'][0], 'page': r['keys'][1], 'date': r['keys'][2],
+                        'clicks': r['clicks'], 'impressions': r['impressions'],
+                        'ctr': round(r['ctr'], 4), 'position': round(r['position'], 1)} for r in rows]
+            _upsert(db, 'search_console_daily', records, 'date,query,page')
+            saved += len(records)
+            offset += len(records)
+            if len(rows) < GSC_PAGE_SIZE:
+                break
+            if offset >= MAX_ROWS_PER_REPORT:
+                raise RuntimeError('GSC report exceeded safety limit; collection incomplete')
+        # 最近三天 final 空结果可能仍在处理，不能冒充真实零流量。
+        if offset > 0 or day <= (today - timedelta(days=3)).isoformat():
+            db.table('growth_state').upsert({'key': 'gsc_collection:' + day,
+                'value': {'date': day, 'rows': offset, 'data_state': 'final'},
+                'updated_at': datetime.utcnow().isoformat()}, on_conflict='key').execute()
+    return saved
 
 
-if __name__ == "__main__":
-    print("Starting analytics data collection...")
-    ga_rows = 0
-    gsc_rows = 0
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--start-date', default=os.getenv('ANALYTICS_START_DATE') or None)
+    parser.add_argument('--end-date', default=os.getenv('ANALYTICS_END_DATE') or None)
+    parser.add_argument('--require-window', action='store_true', help='Backfill jobs must specify both dates')
+    args = parser.parse_args(argv)
     try:
-        if GA_PROPERTY_ID:
-            print("Collecting GA4 data...")
-            ga_rows = collect_ga_data()
-            print(f"  GA4: {ga_rows} rows saved")
-
-        if GSC_SITE_URL:
-            print("Collecting GSC data...")
-            gsc_rows = collect_gsc_data()
-            print(f"  GSC: {gsc_rows} rows saved")
-
-        log_operation("analytics_collector", "success", f"GA:{ga_rows}, GSC:{gsc_rows}", {
-            "ga_rows": ga_rows, "gsc_rows": gsc_rows
-        })
-    except Exception as e:
-        log_operation("analytics_collector", "error", str(e))
+        window = validate_window(args.start_date, args.end_date)
+        if args.require_window and not window:
+            raise ValueError('Backfill requires start-date and end-date')
+        if not GA_PROPERTY_ID or not GSC_SITE_URL:
+            raise ValueError('GA_PROPERTY_ID and GSC_SITE_URL must both be configured')
+        get_google_credentials()
+        yesterday = datetime.utcnow().date() - timedelta(days=1)
+        ga_days = dates_between(*(window or (yesterday, yesterday)))
+        ga_rows = sum(collect_ga_data(day) for day in ga_days)
+        gsc_rows = collect_gsc_data(args.start_date, args.end_date)
+        details = {'ga_rows': ga_rows, 'gsc_rows': gsc_rows, 'ga_dates': ga_days, 'backfill': bool(window)}
+        if not log_operation('analytics_collector', 'success', f'GA:{ga_rows}, GSC:{gsc_rows}', details):
+            return 1
+        return 0
+    except Exception as exc:
+        log_operation('analytics_collector', 'error', str(exc))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "数据采集出错", str(e), "error")
-        raise
+            send_feishu_alert(FEISHU_WEBHOOK_URL, '数据采集出错', str(exc), 'error')
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

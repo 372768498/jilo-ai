@@ -4,6 +4,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from supabase import create_client
 import growth_state
+from data_health import require_fresh_analytics
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from ops_logger import log_operation
 from feishu_bot import send_feishu_alert
@@ -668,6 +669,7 @@ def execute_actions(actions):
 if __name__ == "__main__":
     print("Starting L2 strategy engine...")
     try:
+        require_fresh_analytics(get_supabase())
         # Turn-head read of the shared decision state (G0 foundation). Logged for
         # observability now; rank4 turns the verdict into quota gating and rank2
         # adds monetization-driven actions keyed off this same state.

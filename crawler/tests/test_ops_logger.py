@@ -52,6 +52,8 @@ class TestOpsLogger(unittest.TestCase):
 
         mock_failure_chain.enqueue_partial_failure.assert_called_once()
         mock_failure_chain.resolve_ops_failure.assert_not_called()
+        record = mock_supabase.table.return_value.insert.call_args.args[0]
+        self.assertEqual(record['status'], 'error')
 
     @patch('ops_logger.create_client')
     def test_log_error_does_not_raise(self, mock_create):
