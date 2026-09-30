@@ -11,9 +11,10 @@ OPS_JOBS = (
 
 
 def fetch_all(query, page_size=500):
+    # 锁定 SDK 的 range(end) 不含 end；兼容含 end 版本时按实收条数推进。
     rows = []
     while True:
-        page = query.range(len(rows), len(rows) + page_size - 1).execute().data or []
+        page = query.range(len(rows), len(rows) + page_size).execute().data or []
         rows.extend(page)
         if len(page) < page_size:
             return rows
@@ -25,7 +26,7 @@ def latest_job_logs(supabase, jobs=OPS_JOBS):
         while True:
             rows = supabase.table('ops_logs').select(
                 'job_name,status,message,details,created_at'
-            ).eq('job_name', job).order('created_at', desc=True).range(offset, offset + 49).execute().data or []
+            ).eq('job_name', job).order('created_at', desc=True).range(offset, offset + 50).execute().data or []
             for row in rows:
                 if ((row.get('details') or {}).get('reason') != 'queue_empty'
                         and not (row.get('status') == 'success' and (row.get('details') or {}).get('llm_checked') is False)):
