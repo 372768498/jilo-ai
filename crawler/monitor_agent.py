@@ -14,6 +14,8 @@ from feishu_bot import send_feishu_alert
 import action_queue as aq
 import affiliate_registry as ar
 import monetization_kit as mk
+from reporting_data import fetch_all
+from datetime import datetime, timedelta
 
 # Below this click count an affiliate application isn't worth the effort yet.
 MIN_CLICKS = 5
@@ -54,19 +56,21 @@ def check_monetization_gaps(supabase):
       - clicks >= MIN_CLICKS, no affiliate → open/refresh a dedup'd flag
     Returns (opened, resolved).
     """
-    tools = supabase.table('tools').select(
+    tools = fetch_all(supabase.table('tools').select(
         'slug, name_en, click_count, affiliate_url, category, official_url'
-    ).eq('status', 'published').execute()
+    ).eq('status', 'published').order('id'))
 
     # Rough monthly PV for the application pitch (best-effort).
     site_pv_monthly = None
     try:
         recent = supabase.table('analytics_site_daily').select(
-            'total_pageviews'
+            'date, total_pageviews'
         ).order('date', desc=True).limit(30).execute()
         pvs = [r.get('total_pageviews') or 0 for r in (recent.data or [])]
-        if pvs:
-            site_pv_monthly = int(round(sum(pvs) / len(pvs) * 30))
+        dates = [r.get('date') for r in (recent.data or [])]
+        expected = [(datetime.utcnow() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(1,31)]
+        if len(pvs) == 30 and dates == expected:
+            site_pv_monthly = sum(pvs)
     except Exception:
         pass
 
@@ -79,7 +83,7 @@ def check_monetization_gaps(supabase):
     opened = 0
     resolved = 0
     candidates = []
-    for t in (tools.data or []):
+    for t in tools:
         clicks = t.get('click_count') or 0
         if t['slug'] in no_program:
             continue
@@ -87,11 +91,11 @@ def check_monetization_gaps(supabase):
             candidates.append(t)
     # rank2: order leaks by expected revenue (ROI), not raw click volume, so the
     # human's limited application time goes to the highest-earning gaps first.
-    candidates.sort(key=lambda t: mk.roi_score(t), reverse=True)
+    candidates.sort(key=lambda t: (mk.build_application_pack(t)['application_ready'], mk.roi_score(t)), reverse=True)
     active_slugs = {t['slug'] for t in candidates[:MAX_ACTIVE_MONETIZATION_FLAGS]}
-    tools_by_slug = {t['slug']: t for t in (tools.data or [])}
+    tools_by_slug = {t['slug']: t for t in tools}
 
-    for t in (tools.data or []):
+    for t in tools:
         slug = t['slug']
         clicks = t.get('click_count') or 0
         dedup_key = f"flag:monetization:{slug}"
@@ -104,7 +108,7 @@ def check_monetization_gaps(supabase):
             continue
 
         if is_valid_affiliate_url(raw):
-            resolved += aq.resolve(supabase, dedup_key, {'resolved': 'valid tracked affiliate_url'})
+            resolved += aq.resolve(supabase, dedup_key, {'resolved': 'affiliate link configured; commission unverified'})
             continue
 
         if clicks >= MIN_CLICKS and slug in active_slugs:
@@ -118,18 +122,18 @@ def check_monetization_gaps(supabase):
             # than a missing one — surface it as its own subtype so it gets fixed
             # rather than silently counted as monetized.
             broken = bool(raw)
-            subtype = 'affiliate_link_broken' if broken else 'monetization_gap'
+            subtype = 'affiliate_link_broken' if broken else ('monetization_gap' if pack['application_ready'] else 'monetization_research')
             reason = (
                 f"{name}: affiliate_url 不含 tracking 参数（{raw[:60]}），点击不计佣金 — 修正联盟链接"
                 if broken else
-                f"{name}: {clicks} 出站点击 / 预估漏钱 ${roi} — 申请联盟（材料已备好）"
+                f"{name}: {clicks} 出站点击 / 假设EPC排序值 ${roi}（非真实佣金）；入口已核实={pack['application_ready']}"
             )
-            if aq.enqueue(
+            if aq.refresh_flag(
                 supabase,
                 action_type='flag_for_review',
                 payload={'subtype': subtype, 'slug': slug, 'name': name,
                          'click_count': clicks, 'affiliate_url': raw or None,
-                         'roi': roi, 'application_pack': pack},
+                         'roi': roi, 'application_pack': pack, 'observed_at': datetime.utcnow().isoformat()},
                 reason=reason,
                 priority=priority,
                 dedup_key=dedup_key,

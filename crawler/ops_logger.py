@@ -2,6 +2,7 @@
 from supabase import create_client
 from config import SUPABASE_URL, SUPABASE_KEY
 import failure_chain
+from llm_client import safe_model_error, sanitize_details
 
 
 HIGH_VOLUME_SUCCESS_JOBS = {"outbound_click"}
@@ -21,6 +22,8 @@ def log_operation(job_name: str, status: str, message: str, details: dict = None
     the business job. If the error path cannot enqueue its review flag, it prints
     the secondary failure so the GitHub log still carries evidence.
     """
+    message = safe_model_error(message)
+    details = sanitize_details(details)
     partial_failure = status == 'success' and _has_failed_subitems(details)
     if partial_failure:
         status = 'error'
@@ -36,7 +39,9 @@ def log_operation(job_name: str, status: str, message: str, details: dict = None
             failure_chain.enqueue_partial_failure(supabase, job_name, message, details)
         elif status == "error":
             failure_chain.enqueue_ops_failure(supabase, job_name, message, details)
-        elif status == "success" and job_name not in HIGH_VOLUME_SUCCESS_JOBS:
+        elif (status == "success" and job_name not in HIGH_VOLUME_SUCCESS_JOBS
+              and (details or {}).get('reason') != 'queue_empty'
+              and (details or {}).get('llm_checked') is not False):
             failure_chain.resolve_ops_failure(supabase, job_name)
         return True
     except Exception as e:

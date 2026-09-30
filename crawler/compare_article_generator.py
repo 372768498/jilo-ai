@@ -15,7 +15,8 @@ from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
 import content_verifier as cv
-from llm_client import get_openai_client
+from llm_client import (get_openai_client, check_llm_health, safe_model_error,
+                        is_auth_error, ModelAuthenticationError, release_auth_failure)
 
 ACTIONS_PER_RUN = int(os.getenv("COMPARE_ACTIONS_PER_RUN", "2"))
 
@@ -95,7 +96,9 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
             'content_zh': data.get('content_zh', ''),
         }
     except Exception as e:
-        print(f"  GPT-4o comparison error: {e}")
+        if is_auth_error(e):
+            raise ModelAuthenticationError(safe_model_error(e)) from None
+        print(f"  comparison error: {safe_model_error(e)}")
         return None
 
 
@@ -131,6 +134,7 @@ if __name__ == "__main__":
     print("Starting compare article generator (queue consumer)...")
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        check_llm_health()
         actions = aq.pick_pending(supabase, 'generate_comparison', limit=ACTIONS_PER_RUN)
 
         if not actions:
@@ -141,7 +145,11 @@ if __name__ == "__main__":
             saved = 0
             failed = 0
             skipped = 0
+            fatal_generation_error = None
             for action in actions:
+                if fatal_generation_error:
+                    aq.release_pending(supabase, action, fatal_generation_error)
+                    continue
                 payload = action.get('payload') or {}
                 tool_a = payload.get('tool_a')
                 tool_b = payload.get('tool_b')
@@ -187,17 +195,22 @@ if __name__ == "__main__":
                     saved += 1
                     print(f"  DONE: {article['slug']}")
                 except Exception as gen_err:
-                    aq.mark_failed(supabase, action, str(gen_err))
+                    if is_auth_error(gen_err):
+                        fatal_generation_error = safe_model_error(gen_err)
+                        release_auth_failure(supabase, action, gen_err)
+                    else:
+                        aq.mark_failed(supabase, action, safe_model_error(gen_err))
                     failed += 1
-                    print(f"  FAIL: {gen_err}")
+                    print(f"  FAIL: {safe_model_error(gen_err)}")
                 time.sleep(2)
 
             raise SystemExit(complete_batch("compare_articles", {
                               "saved": saved, "failed": failed, "skipped": skipped,
+                              "fatal_generation_error": fatal_generation_error,
                               "actions": [{"id": a['id'], "pair": f"{(a.get('payload') or {}).get('tool_a')} vs {(a.get('payload') or {}).get('tool_b')}"} for a in actions],
                           }))
     except Exception as e:
-        log_operation("compare_articles", "error", str(e))
+        log_operation("compare_articles", "error", safe_model_error(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "对比文章生成出错", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "对比文章生成出错", safe_model_error(e), "error")
         raise

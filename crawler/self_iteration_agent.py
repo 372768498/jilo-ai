@@ -3,7 +3,7 @@
 # Self-iteration layer. It watches the operating system itself, closes loops
 # that can be closed safely, and turns non-automatic fixes into persistent,
 # deduplicated action_queue items.
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import hashlib
 import re
 
@@ -11,6 +11,7 @@ from supabase import create_client
 
 import action_queue as aq
 import failure_chain
+from reporting_data import fetch_all, latest_job_logs, job_succeeded
 from config import SUPABASE_URL, SUPABASE_KEY, FEISHU_WEBHOOK_URL
 from feishu_bot import send_feishu_alert
 from ops_logger import log_operation
@@ -48,6 +49,8 @@ ACTIVE_OPS_JOBS = {
     'lookback_agent',
     'monitor_agent',
     'rss_news_crawler',
+    'news_crawler',
+    'llm_health',
     'seo_articles',
     'strategy_engine',
     'tool_discovery',
@@ -74,67 +77,21 @@ def _slug(text):
     return re.sub(r'[\s:-]+', '-', s).strip('-')[:80] or 'unknown'
 
 
-def classify_error(job_name, message):
-    msg = message or ''
-    if 'Could not find the table' in msg or 'PGRST205' in msg:
-        return {
-            'subtype': 'system_schema_missing',
-            'priority': 'high',
-            'summary': f'{job_name} references a missing database table',
-            'repair_hint': 'Apply the relevant SQL migration under scripts/ and rerun the job.',
-        }
-    if 'OPENAI_API_KEY not configured' in msg:
-        return {
-            'subtype': 'system_env_missing',
-            'priority': 'high',
-            'summary': 'OPENAI_API_KEY is missing',
-            'repair_hint': 'Add OPENAI_API_KEY to GitHub Actions secrets.',
-        }
-    if 'GOOGLE_SERVICE_ACCOUNT_JSON not configured' in msg:
-        return {
-            'subtype': 'system_env_missing',
-            'priority': 'high',
-            'summary': 'GOOGLE_SERVICE_ACCOUNT_JSON is missing',
-            'repair_hint': 'Add GOOGLE_SERVICE_ACCOUNT_JSON to GitHub Actions secrets, or disable analytics-dependent decisions.',
-        }
-    if '_ssl.c' in msg or 'SSL:' in msg or 'handshake operation timed out' in msg:
-        return {
-            'subtype': 'system_transient_network',
-            'priority': 'medium',
-            'summary': f'{job_name} hit a transient network/SSL failure',
-            'repair_hint': 'Rerun automatically on the next schedule; only escalate if it remains unresolved after the next successful run window.',
-        }
-    if '403 Client Error' in msg and 'googleapis.com' in msg:
-        return {
-            'subtype': 'system_external_access',
-            'priority': 'medium',
-            'summary': 'Google API access is denied',
-            'repair_hint': 'Check GSC/GA permissions for the service account.',
-        }
-    return {
-        'subtype': 'system_error',
-        'priority': 'medium',
-        'summary': f'{job_name} is failing',
-        'repair_hint': 'Inspect ops_logs and the GitHub Actions run output.',
-    }
+def classify_error(job_name, message, details=None):
+    return failure_chain.classify_failure(job_name, message, details)
 
 
 def open_system_error_flags(supabase):
-    since = (datetime.utcnow() - timedelta(hours=ERROR_LOOKBACK_HOURS)).isoformat()
-    rows = supabase.table('ops_logs').select(
-        'job_name, message, created_at'
-    ).eq('status', 'error').gte('created_at', since).order(
-        'created_at', desc=True
-    ).limit(50).execute()
+    rows = [r for r in latest_job_logs(supabase) if not job_succeeded(r)]
 
     opened = 0
     seen = set()
-    for row in (rows.data or []):
+    for row in rows:
         job = row.get('job_name') or 'unknown_job'
         if job not in ACTIVE_OPS_JOBS:
             continue
         msg = row.get('message') or ''
-        info = classify_error(job, msg)
+        info = classify_error(job, msg, row.get('details'))
         key_base = f"{job}:{info['subtype']}:{_hash(msg)}"
         if key_base in seen:
             continue
@@ -191,32 +148,52 @@ def open_partial_failure_flags(supabase):
 
 def resolve_recovered_system_flags(supabase):
     """Close system error flags once the same job has a later success log."""
-    since = (datetime.utcnow() - timedelta(hours=ERROR_LOOKBACK_HOURS)).isoformat()
-    logs = supabase.table('ops_logs').select(
-        'job_name, status, created_at'
-    ).gte('created_at', since).order('created_at', desc=True).limit(1000).execute()
-
-    latest_success = {}
-    for row in (logs.data or []):
-        if row.get('status') == 'success' and row.get('job_name') not in latest_success:
-            latest_success[row.get('job_name')] = row.get('created_at')
-
-    rows = supabase.table('action_queue').select(
-        'id, payload, created_at'
-    ).eq('action_type', 'flag_for_review').in_(
-        'status', ['pending', 'in_progress']
-    ).execute()
+    latest = {r['job_name']: r for r in latest_job_logs(supabase)}
+    rows = fetch_all(supabase.table('action_queue').select('id,payload,created_at')
+                     .eq('action_type', 'flag_for_review')
+                     .in_('status', ['pending', 'in_progress']).order('id'))
 
     resolved = 0
-    for row in (rows.data or []):
+    for row in rows:
         payload = row.get('payload') or {}
         subtype = payload.get('subtype') or ''
         job_name = payload.get('job_name')
+        if subtype == 'system_action_failed':
+            source_id = payload.get('source_action_id')
+            source = supabase.table('action_queue').select('*').eq('id', source_id).limit(1).execute().data if source_id else []
+            if source and source[0].get('status') == 'done':
+                resolved += failure_chain.resolve_action_failure(supabase, source[0])
+            elif source and (source[0].get('status') == 'failed' or (
+                    source[0].get('status') == 'skipped' and
+                    (source[0].get('result') or {}).get('resolved') == 'explicit repair replacement completed')):
+                original = source[0]
+                replacements = fetch_all(supabase.table('action_queue').select('*')
+                                         .eq('dedup_key', original.get('dedup_key'))
+                                         .eq('status', 'done').order('id'))
+                replacement = next((r for r in replacements if
+                    ((r.get('payload') or {}).get('source_repair') or {}).get('failed_action_id') == source_id
+                    and (original.get('status') == 'failed' or
+                         (original.get('result') or {}).get('replacement_action_id') == r['id'])), None)
+                if replacement:
+                    changed = supabase.table('action_queue').update({
+                        'status': 'skipped', 'result': {'resolved': 'explicit repair replacement completed',
+                                                       'replacement_action_id': replacement['id']},
+                        'updated_at': _now(), 'completed_at': _now(),
+                    }).eq('id', source_id).eq('status', original['status']).execute()
+                    if changed.data:
+                        supabase.table('action_queue').update({
+                            'status': 'done', 'result': {'resolved': 'explicit repair replacement completed',
+                                                       'replacement_action_id': replacement['id']},
+                            'updated_at': _now(), 'completed_at': _now(),
+                        }).eq('id', row['id']).in_('status', ['pending', 'in_progress']).execute()
+                        resolved += 1
+            continue
         if not subtype.startswith('system_') or not job_name:
             continue
-        success_at = latest_success.get(job_name)
+        outcome = latest.get(job_name) or {}
+        success_at = outcome.get('created_at') if job_succeeded(outcome) else None
         error_seen_at = payload.get('first_seen_in_window') or row.get('created_at') or ''
-        if not success_at or success_at <= error_seen_at:
+        if not success_at or _utc(success_at) <= _utc(error_seen_at):
             continue
         supabase.table('action_queue').update({
             'status': 'done',
@@ -300,46 +277,54 @@ def open_failed_action_flags(supabase):
     return opened
 
 
+def _utc(value):
+    parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+
 def requeue_repairable_seo_failures(supabase):
-    """Re-open SEO actions that the generator can now repair deterministically."""
-    rows = supabase.table('action_queue').select(
-        'id, action_type, priority, payload, dedup_key, error_reason, created_at, completed_at'
-    ).eq('action_type', 'generate_seo_content').eq(
-        'status', 'failed'
-    ).order('updated_at', desc=True).limit(100).execute()
-
+    """修复已验证后，每轮最多恢复 5 个原动作，每个只增加一轮重试额度。"""
+    health = latest_job_logs(supabase, jobs=('llm_health',))
+    if not health or not job_succeeded(health[0]):
+        return 0
+    if datetime.now(timezone.utc) - _utc(health[0]['created_at']) > timedelta(hours=6):
+        return 0
+    active = fetch_all(supabase.table('action_queue').select('id')
+                       .eq('action_type', 'generate_seo_content')
+                       .in_('status', ['pending', 'in_progress']).order('id'))
+    allowance = max(0, min(5, 16 - len(active)))
+    if not allowance:
+        return 0
+    rows = fetch_all(supabase.table('action_queue').select('*')
+                     .eq('action_type', 'generate_seo_content').eq('status', 'failed')
+                     .order('created_at').order('id'))
     requeued = 0
-    for row in (rows.data or []):
+    for row in rows:
+        if requeued >= allowance:
+            break
         reason = row.get('error_reason') or ''
-        if not any(term in reason for term in REPAIRABLE_SEO_FAILURE_TERMS):
-            continue
-        dedup_key = row.get('dedup_key')
-        if not dedup_key:
-            continue
-
-        newer = supabase.table('action_queue').select('id, status, created_at').eq(
-            'dedup_key', dedup_key
-        ).gt('created_at', row.get('created_at') or '').limit(1).execute()
-        if newer.data:
-            continue
-
+        kind = failure_chain.classify_failure('seo_articles', reason)['subtype']
+        repairable = kind in ('system_env_invalid', 'system_env_missing', 'system_transient_network')
+        repairable = repairable or any(term in reason for term in REPAIRABLE_SEO_FAILURE_TERMS)
         payload = dict(row.get('payload') or {})
+        if not repairable or payload.get('source_repair') or not row.get('dedup_key'):
+            continue
+        competing = supabase.table('action_queue').select('id').eq('dedup_key', row['dedup_key']).in_(
+            'status', ['pending', 'in_progress', 'done']).limit(1).execute().data
+        if competing:
+            continue
         payload['source_repair'] = {
-            'failed_action_id': row.get('id'),
-            'failed_reason': reason,
-            'repair': 'seo_article_generator deterministic gate repair',
-            'queued_at': _now(),
+            'version': '2026-09-30', 'failed_action_id': row['id'],
+            'failed_reason': reason, 'previous_attempts': row.get('attempts') or 0,
+            'previous_max_attempts': row.get('max_attempts') or 3,
+            'health_verified_at': health[0]['created_at'], 'queued_at': _now(),
         }
-        if aq.enqueue(
-            supabase,
-            action_type='generate_seo_content',
-            payload=payload,
-            reason=f"Retry after SEO repair support: {reason}",
-            priority=row.get('priority') or 'medium',
-            dedup_key=dedup_key,
-        ):
-            requeued += 1
-            print(f"  Requeued repairable SEO action: {dedup_key}")
+        changed = supabase.table('action_queue').update({
+            'status': 'pending', 'payload': payload,
+            'max_attempts': (row.get('attempts') or 0) + 3,
+            'picked_at': None, 'completed_at': None, 'updated_at': _now(),
+        }).eq('id', row['id']).eq('status', 'failed').eq('updated_at', row.get('updated_at')).execute()
+        requeued += bool(changed.data)
     return requeued
 
 
@@ -444,6 +429,11 @@ def run():
 if __name__ == "__main__":
     print("Starting self-iteration agent...")
     try:
+        from llm_client import check_llm_health
+        try:
+            check_llm_health()
+        except RuntimeError:
+            pass  # 预检已记录权限阻塞；继续处理不依赖模型的自愈。
         result = run()
         print(f"Self-iteration result: {result}")
         log_operation("self_iteration_agent", "success", "self-iteration pass complete", result)

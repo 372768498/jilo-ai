@@ -121,10 +121,12 @@ def apply_verdict_gate(budget, verdict, blockers):
     out = dict(budget)
     blockers = blockers or []
     if isinstance(verdict, str) and verdict.startswith('degraded'):
+        review_only = set(blockers) == {'review_backlog'}
         for mode in ('aeo', 'seo', 'compare'):
-            out[mode] = 0
+            out[mode] = min(out.get(mode, 0), 1) if review_only else 0
     if 'seo_backlog' in blockers:
         out['seo'] = 0
+        out['aeo'] = 0
     if 'compare_backlog' in blockers:
         out['compare'] = 0
     return out
@@ -288,7 +290,9 @@ def enqueue_gsc_growth_actions(supabase, deficit, budget):
 
     opened = 0
     actions = []
-    for _, query, impressions, position, clicks in aeo_candidates[:budget['aeo']]:
+    for _, query, impressions, position, clicks in aeo_candidates:
+        if sum(a['type'] == 'aeo' for a in actions) >= budget['aeo']:
+            break
         dedup_key = f"aeo:{_slugify(query)}"
         if _already_handled(supabase, dedup_key):
             continue
@@ -313,7 +317,9 @@ def enqueue_gsc_growth_actions(supabase, deficit, budget):
             opened += 1
             actions.append({'type': 'aeo', 'query': query, 'impressions': impressions, 'position': round(position, 1)})
 
-    for _, query, impressions, position, clicks in seo_candidates[:budget['seo']]:
+    for _, query, impressions, position, clicks in seo_candidates:
+        if sum(a['type'] == 'seo' for a in actions) >= budget['seo']:
+            break
         dedup_key = f"seo:{_slugify(query)}"
         if _already_handled(supabase, dedup_key):
             continue
@@ -337,7 +343,9 @@ def enqueue_gsc_growth_actions(supabase, deficit, budget):
             opened += 1
             actions.append({'type': 'seo', 'query': query, 'impressions': impressions, 'position': round(position, 1)})
 
-    for _, query, pair, impressions, position, clicks in compare_candidates[:budget['compare']]:
+    for _, query, pair, impressions, position, clicks in compare_candidates:
+        if sum(a['type'] == 'compare' for a in actions) >= budget['compare']:
+            break
         tool_a, tool_b = pair
         a, b = sorted([_slugify(tool_a), _slugify(tool_b)])
         dedup_key = f"compare:{a}|{b}"
@@ -405,7 +413,9 @@ def enqueue_rewrite_actions(supabase, deficit, limit):
     candidates.sort(reverse=True)
 
     opened, actions = 0, []
-    for _, slug, snap in candidates[:limit]:
+    for _, slug, snap in candidates:
+        if opened >= limit:
+            break
         dedup_key = f"rewrite:{slug}"
         if _already_handled(supabase, dedup_key):
             continue

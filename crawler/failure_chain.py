@@ -1,8 +1,10 @@
 from datetime import datetime
 import hashlib
 import re
+import json
 
 import action_queue as aq
+from reporting_data import fetch_all
 
 
 def _now():
@@ -18,8 +20,8 @@ def _slug(text):
     return re.sub(r"[\s:-]+", "-", s).strip("-")[:80] or "unknown"
 
 
-def classify_failure(job_name, message):
-    msg = message or ""
+def classify_failure(job_name, message, details=None):
+    msg = (message or "") + ' ' + json.dumps(details or {}, ensure_ascii=False)
     if "Could not find the table" in msg or "PGRST205" in msg:
         return {
             "subtype": "system_schema_missing",
@@ -34,12 +36,15 @@ def classify_failure(job_name, message):
             "summary": "OPENAI_API_KEY is missing",
             "repair_hint": "Add OPENAI_API_KEY to GitHub Actions secrets.",
         }
-    if "Incorrect API key provided" in msg or "invalid_api_key" in msg:
+    if any(term in msg.lower() for term in (
+        'incorrect api key provided', 'invalid_api_key', 'hmac signature',
+        'apikey not found', 'auth_unavailable', 'no auth available', 'model authentication unavailable',
+    )):
         return {
             "subtype": "system_env_invalid",
             "priority": "high",
-            "summary": "OPENAI_API_KEY is invalid",
-            "repair_hint": "Replace OPENAI_API_KEY in GitHub Actions secrets and local env, then rerun the generator.",
+            "summary": "模型服务或上游通道鉴权不可用",
+            "repair_hint": "核对云端 OPENAI_BASE_URL、OPENAI_MODEL、OPENAI_API_KEY 与上游通道权限；通过真实请求后重试。",
         }
     if "GOOGLE_SERVICE_ACCOUNT_JSON not configured" in msg:
         return {
@@ -48,7 +53,7 @@ def classify_failure(job_name, message):
             "summary": "GOOGLE_SERVICE_ACCOUNT_JSON is missing",
             "repair_hint": "Add GOOGLE_SERVICE_ACCOUNT_JSON to GitHub Actions secrets.",
         }
-    if "_ssl.c" in msg or "SSL:" in msg or "handshake operation timed out" in msg:
+    if any(term in msg.lower() for term in ('_ssl.c', 'ssl:', 'timed out', 'connection error', 'connection reset')):
         return {
             "subtype": "system_transient_network",
             "priority": "medium",
@@ -73,7 +78,7 @@ def classify_failure(job_name, message):
 def enqueue_ops_failure(supabase, job_name, message, details=None):
     """Put an ops error into action_queue immediately. Never raises."""
     try:
-        info = classify_failure(job_name, message)
+        info = classify_failure(job_name, message, details)
         key_base = f"{job_name}:{info['subtype']}:{_hash(message)}"
         payload = {
             "subtype": info["subtype"],
@@ -140,6 +145,8 @@ def resolve_ops_failure(supabase, job_name):
                 continue
             if not (payload.get("subtype") or "").startswith("system_"):
                 continue
+            if payload.get('subtype') == 'system_action_failed':
+                continue  # 源动作成功才销账，不能用同类 job 的成功代替。
             supabase.table("action_queue").update({
                 "status": "done",
                 "result": {"resolved": "job later succeeded", "job_name": job_name},
@@ -188,15 +195,20 @@ def enqueue_action_failure(supabase, action, error_reason):
 
 def resolve_action_failure(supabase, action):
     try:
-        return aq.resolve(
-            supabase,
-            action_failure_dedup_key(action),
-            {
-                "resolved": "source action later completed",
-                "source_action_id": action.get("id"),
-                "source_action_dedup_key": action.get("dedup_key"),
-            },
-        )
+        rows = fetch_all(supabase.table('action_queue').select('id,payload')
+                         .eq('dedup_key', action_failure_dedup_key(action))
+                         .in_('status', ['pending', 'in_progress']).order('id'))
+        closed = 0
+        for row in rows:
+            if (row.get('payload') or {}).get('source_action_id') != action.get('id'):
+                continue
+            changed = supabase.table('action_queue').update({
+                'status': 'done', 'result': {'resolved': 'source action later completed',
+                                           'source_action_id': action['id']},
+                'completed_at': _now(), 'updated_at': _now(),
+            }).eq('id', row['id']).in_('status', ['pending', 'in_progress']).execute()
+            closed += bool(changed.data)
+        return closed
     except Exception as e:
         print(f"[FailureChain] Failed to resolve action failure: {e}")
         return 0

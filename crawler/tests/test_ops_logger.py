@@ -5,6 +5,12 @@ from unittest.mock import MagicMock, patch
 class TestOpsLogger(unittest.TestCase):
     @patch('ops_logger.failure_chain')
     @patch('ops_logger.create_client')
+    def test_empty_queue_does_not_close_failures(self, client, chain):
+        from ops_logger import log_operation
+        log_operation('seo_articles','success','No pending actions',{'reason':'queue_empty'})
+        chain.resolve_ops_failure.assert_not_called()
+    @patch('ops_logger.failure_chain')
+    @patch('ops_logger.create_client')
     def test_log_success(self, mock_create, mock_failure_chain):
         mock_supabase = MagicMock()
         mock_create.return_value = mock_supabase

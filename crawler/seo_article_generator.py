@@ -16,7 +16,7 @@ from feishu_bot import send_feishu_alert
 import action_queue as aq
 import quality_gates as qg
 import content_verifier as cv
-from llm_client import get_openai_client
+from llm_client import get_openai_client, check_llm_health, safe_model_error, release_auth_failure, ModelAuthenticationError
 
 ACTIONS_PER_RUN = int(os.getenv("SEO_ACTIONS_PER_RUN", "5"))
 LAST_GENERATION_ERROR = None
@@ -28,7 +28,7 @@ def _get_openai_client():
 
 def _record_generation_error(error):
     global LAST_GENERATION_ERROR
-    LAST_GENERATION_ERROR = str(error)
+    LAST_GENERATION_ERROR = safe_model_error(error)
 
 
 def _generation_failure_reason(default):
@@ -36,12 +36,15 @@ def _generation_failure_reason(default):
 
 
 def _is_fatal_generation_env_error(reason):
-    reason = reason or ''
-    return (
-        'OPENAI_API_KEY not configured' in reason
-        or 'Incorrect API key provided' in reason
-        or 'invalid_api_key' in reason
-    )
+    from failure_chain import classify_failure
+    return classify_failure('seo_articles', reason)['subtype'] in ('system_env_missing', 'system_env_invalid')
+
+
+def record_action_failure(supabase, action, reason):
+    if _is_fatal_generation_env_error(reason):
+        release_auth_failure(supabase, action, reason)
+    else:
+        aq.mark_failed(supabase, action, reason)
 
 
 def get_related_tools(keyword):
@@ -155,7 +158,7 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
 
     except Exception as e:
         _record_generation_error(e)
-        print(f"  GPT-4o-mini article generation error: {e}")
+        print(f"  GPT-4o-mini article generation error: {safe_model_error(e)}")
         return None
 
 
@@ -237,7 +240,7 @@ Return a single JSON object with EXACTLY these keys:
         }
     except Exception as e:
         _record_generation_error(e)
-        print(f"  GPT-4o-mini AEO generation error: {e}")
+        print(f"  GPT-4o-mini AEO generation error: {safe_model_error(e)}")
         return None
 
 
@@ -518,7 +521,9 @@ Return a single JSON object with EXACTLY these keys (all required, none empty):
         }).eq('slug', category_slug).execute()
         return True
     except Exception as e:
-        print(f"  Hub intro generation error for {category_slug}: {e}")
+        if _is_fatal_generation_env_error(str(e)):
+            raise ModelAuthenticationError(safe_model_error(e)) from None
+        print(f"  Hub intro generation error for {category_slug}: {safe_model_error(e)}")
         return False
 
 
@@ -526,6 +531,7 @@ if __name__ == "__main__":
     print("Starting SEO article generator (queue consumer)...")
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        check_llm_health()
         actions = aq.pick_pending(supabase, 'generate_seo_content', limit=ACTIONS_PER_RUN)
 
         if not actions:
@@ -563,9 +569,13 @@ if __name__ == "__main__":
                             aq.mark_failed(supabase, action, f"hub intro generation failed for {cat_slug}")
                             failed += 1
                     except Exception as hub_err:
-                        aq.mark_failed(supabase, action, str(hub_err))
+                        reason = safe_model_error(hub_err)
+                        if _is_fatal_generation_env_error(reason):
+                            fatal_generation_error = reason
+                        record_action_failure(supabase, action, reason)
+                        failure_reasons.append(reason)
                         failed += 1
-                        print(f"  FAIL: {hub_err}")
+                        print(f"  FAIL: {safe_model_error(hub_err)}")
                     time.sleep(2)
                     continue
 
@@ -578,7 +588,7 @@ if __name__ == "__main__":
                         )
                         if not article:
                             reason = _generation_failure_reason("AEO generation returned None")
-                            aq.mark_failed(supabase, action, reason)
+                            record_action_failure(supabase, action, reason)
                             failure_reasons.append(reason)
                             if _is_fatal_generation_env_error(reason):
                                 fatal_generation_error = reason
@@ -616,11 +626,13 @@ if __name__ == "__main__":
                         saved += 1
                         print(f"  DONE (aeo_answer): {article['title_en'][:60]}")
                     except Exception as aeo_err:
-                        reason = str(aeo_err)
-                        aq.mark_failed(supabase, action, reason)
+                        reason = safe_model_error(aeo_err)
+                        if _is_fatal_generation_env_error(reason):
+                            fatal_generation_error = reason
+                        record_action_failure(supabase, action, reason)
                         failure_reasons.append(reason)
                         failed += 1
-                        print(f"  FAIL: {aeo_err}")
+                        print(f"  FAIL: {safe_model_error(aeo_err)}")
                     time.sleep(2)
                     continue
 
@@ -642,7 +654,7 @@ if __name__ == "__main__":
                         )
                         if not article:
                             reason = _generation_failure_reason("AEO rewrite returned None")
-                            aq.mark_failed(supabase, action, reason)
+                            record_action_failure(supabase, action, reason)
                             failure_reasons.append(reason)
                             if _is_fatal_generation_env_error(reason):
                                 fatal_generation_error = reason
@@ -681,11 +693,13 @@ if __name__ == "__main__":
                         saved += 1
                         print(f"  DONE (rewritten_aeo): {article['title_en'][:60]}")
                     except Exception as aeo_rw_err:
-                        reason = str(aeo_rw_err)
-                        aq.mark_failed(supabase, action, reason)
+                        reason = safe_model_error(aeo_rw_err)
+                        if _is_fatal_generation_env_error(reason):
+                            fatal_generation_error = reason
+                        record_action_failure(supabase, action, reason)
                         failure_reasons.append(reason)
                         failed += 1
-                        print(f"  FAIL: {aeo_rw_err}")
+                        print(f"  FAIL: {safe_model_error(aeo_rw_err)}")
                     time.sleep(2)
                     continue
 
@@ -698,7 +712,7 @@ if __name__ == "__main__":
                     )
                     if not article:
                         reason = _generation_failure_reason("generation returned None (API error or parse failure)")
-                        aq.mark_failed(supabase, action, reason)
+                        record_action_failure(supabase, action, reason)
                         failure_reasons.append(reason)
                         if _is_fatal_generation_env_error(reason):
                             fatal_generation_error = reason
@@ -751,11 +765,13 @@ if __name__ == "__main__":
                     saved += 1
                     print(f"  DONE ({outcome}): {article['title_en'][:60]}")
                 except Exception as gen_err:
-                    reason = str(gen_err)
-                    aq.mark_failed(supabase, action, reason)
+                    reason = safe_model_error(gen_err)
+                    if _is_fatal_generation_env_error(reason):
+                        fatal_generation_error = reason
+                    record_action_failure(supabase, action, reason)
                     failure_reasons.append(reason)
                     failed += 1
-                    print(f"  FAIL: {gen_err}")
+                    print(f"  FAIL: {safe_model_error(gen_err)}")
                 time.sleep(2)
 
             details = {
@@ -770,7 +786,7 @@ if __name__ == "__main__":
             raise SystemExit(complete_batch('seo_articles', details))
 
     except Exception as e:
-        log_operation("seo_articles", "error", str(e))
+        log_operation("seo_articles", "error", safe_model_error(e))
         if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "SEO 文章生成出错", str(e), "error")
+            send_feishu_alert(FEISHU_WEBHOOK_URL, "SEO 文章生成出错", safe_model_error(e), "error")
         raise
