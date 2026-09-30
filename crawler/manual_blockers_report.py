@@ -8,7 +8,7 @@ from ops_logger import log_operation
 import affiliate_registry as ar
 import monetization_kit as mk
 import failure_chain
-from reporting_data import fetch_all
+from reporting_data import fetch_all, latest_job_logs, job_succeeded
 from monitor_agent import is_valid_affiliate_url
 from llm_client import safe_model_error
 
@@ -31,17 +31,40 @@ def get_supabase():
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
+def historical_model_auth_recovered(row, health):
+    payload = row.get('payload') or {}
+    if (payload.get('subtype') != 'system_action_failed'
+            or payload.get('queue_action_type') not in ('generate_seo_content', 'generate_comparison')
+            or not health or not job_succeeded(health)):
+        return False
+    if failure_chain.classify_failure(payload.get('job_name', ''), payload.get('message'),
+                                      payload.get('details'))['subtype'] != 'system_env_invalid':
+        return False
+    def instant(value):
+        parsed = datetime.fromisoformat(value.replace('Z', '+00:00'))
+        return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
+    try:
+        return instant(health['created_at']) > instant(row['created_at'])
+    except (ValueError, TypeError, KeyError, AttributeError):
+        return False
+
+
 def load_manual_blockers():
     supabase = get_supabase()
     rows = fetch_all(supabase.table('action_queue').select('*')
                      .eq('action_type', 'flag_for_review').in_('status', ['pending', 'in_progress']).order('id'))
     tools = {t['slug']: t for t in fetch_all(supabase.table('tools').select(
         'slug,name_en,status,click_count,affiliate_url,category,official_url').eq('status', 'published').order('id'))}
+    health_logs = latest_job_logs(supabase, jobs=('llm_health',))
+    health = health_logs[0] if health_logs else None
     research = []
     schema_flags = []
     monetization_flags = []
     system_flags = []
     for row in rows:
+        # 健康恢复只撤下旧权限提醒；原动作失败记录仍待真实重试后销账。
+        if historical_model_auth_recovered(row, health):
+            continue
         payload = row.get('payload') or {}
         subtype = payload.get('subtype')
         classified = failure_chain.classify_failure(payload.get('job_name', ''), payload.get('message'), payload.get('details'))
