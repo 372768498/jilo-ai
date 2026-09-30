@@ -56,5 +56,33 @@ class MonetizationReportingTests(unittest.TestCase):
         self.assertEqual(len(db.tables['action_queue']),1)
         self.assertEqual(db.tables['action_queue'][0]['payload']['click_count'],1623)
 
+    def test_recovered_model_auth_is_not_a_manual_permission_request(self):
+        flag = {'id':'auth','action_type':'flag_for_review','status':'pending',
+                'created_at':'2026-09-30T08:00:00+08:00',
+                'payload':{'subtype':'system_action_failed','queue_action_type':'generate_seo_content',
+                           'message':'auth_unavailable'}}
+        health = {'job_name':'llm_health','status':'success','created_at':'2026-09-30T01:00:00Z'}
+        for status,at,expected in [('success','2026-09-30T01:00:00Z',0),
+                                   ('error','2026-09-30T01:00:00Z',1),
+                                   ('success','2026-09-29T23:00:00Z',1)]:
+            with self.subTest(status=status,at=at):
+                db = Database(action_queue=[flag],tools=[],ops_logs=[dict(health,status=status,created_at=at)])
+                with patch.object(manual,'get_supabase',return_value=db):
+                    report = manual.load_manual_blockers()
+                self.assertEqual(len(report['system_flags']),expected)
+                self.assertEqual(db.tables['action_queue'][0]['status'],'pending')
+
+    def test_auth_recovery_never_hides_schema_or_invalid_dates(self):
+        health = {'status':'success','created_at':'2026-09-30T01:00:00Z'}
+        row = {'created_at':'2026-09-30T00:00:00Z','payload':{
+            'subtype':'system_action_failed','queue_action_type':'generate_seo_content',
+            'message':'auth_unavailable PGRST205 Could not find table'}}
+        self.assertFalse(manual.historical_model_auth_recovered(row,health))
+        row['payload']['message'] = 'auth_not_found: no auth available'
+        self.assertTrue(manual.historical_model_auth_recovered(row,health))
+        row['payload']['message'] = 'auth_unavailable'
+        for invalid in (None, 123, '', 'bad-date'):
+            self.assertFalse(manual.historical_model_auth_recovered(dict(row,created_at=invalid),health))
+
 
 if __name__ == '__main__': unittest.main()
