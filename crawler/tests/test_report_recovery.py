@@ -8,6 +8,14 @@ from fake_database import Database
 
 
 class ReportRecoveryTests(unittest.TestCase):
+    def test_queue_counts_use_timestamp_instant_not_offset_text(self):
+        today = datetime.utcnow().strftime('%Y-%m-%d')
+        db = Database(action_queue=[{'id':'a','action_type':'generate_seo_content','status':'pending',
+                  'payload':{'source':'trend'}, 'created_at':today+'T02:00:00+08:00'}])
+        with patch.object(dr,'create_client',return_value=db):
+            stats=dr.get_today_stats()
+        self.assertEqual(len(stats['trend_enqueued_today']),1)
+
     def test_queue_read_failure_is_not_reported_as_zero(self):
         db = Database()
         original = db.table

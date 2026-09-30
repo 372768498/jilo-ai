@@ -93,6 +93,15 @@ def unresolved_errors(logs):
     return errors
 
 
+def in_utc_window(value, start, end):
+    if not value:
+        return False
+    def parse(text):
+        dt = datetime.fromisoformat(text.replace('Z', '+00:00'))
+        return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+    return parse(start) <= parse(value) < parse(end)
+
+
 def get_today_stats():
     """Get today's content + analytics stats."""
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -135,6 +144,7 @@ def get_today_stats():
                 stats['affiliate_clicks'] += 1
     stats['errors'] = unresolved_errors(latest)
     stats['report_window'] = f'{yesterday} UTC'
+    stats['ga_requested_date'] = yesterday
     growth = next((r for r in latest if r['job_name'] == 'traffic_growth_agent'), {})
     stats['growth_execution'] = growth.get('details') or {}
     stats['growth_execution_at'] = growth.get('created_at')
@@ -265,7 +275,7 @@ def get_today_stats():
         r for r in queue
         if r['action_type'] == 'generate_seo_content'
         and (r.get('payload') or {}).get('source') in ('trend', 'trend_fallback')
-        and today_start <= (r.get('created_at') or '') < window_end
+        and in_utc_window(r.get('created_at'), today_start, window_end)
     ]
     stats['rewrites_pending'] = sum(
         1 for r in queue
@@ -276,7 +286,7 @@ def get_today_stats():
         1 for r in queue
         if (r.get('dedup_key') or '').startswith('rewrite:')
         and r['status'] == 'done'
-        and today_start <= (r.get('completed_at') or '') < window_end
+        and in_utc_window(r.get('completed_at'), today_start, window_end)
     )
     monetization_flags = [
         r for r in queue
@@ -287,7 +297,7 @@ def get_today_stats():
     stats['monetization_resolved_today'] = sum(
         1 for r in monetization_flags
         if r['status'] == 'done'
-        and today_start <= (r.get('completed_at') or '') < window_end
+        and in_utc_window(r.get('completed_at'), today_start, window_end)
     )
 
     try:
@@ -437,7 +447,7 @@ def format_daily_report(stats):
     data_date = stats.get('latest_ga_date') or '未知'
     return f"""**jilo.ai 日报 - {today}**
 
-**流量（昨日；{window}）**
+**流量（GA 数据日期：{stats.get('ga_requested_date', '昨日')}）**
   PV: {pv_text}  UV: {uv_text}
   最近可用 GA 日期：{data_date}；缺测不等于零流量
   {status['line']}{streak_note}（周比较截至 {data_date}）
@@ -446,7 +456,7 @@ def format_daily_report(stats):
 **新增内容（{window}）**
   新闻: {stats['news_saved']} | 工具: {stats['tools_saved']} | SEO文章: {stats['seo_articles']} | 对比文章: {stats['compare_articles']} | 重写: {stats.get('rewrites_done_today', 0) if stats.get('queue_available') is not False else '未知'}
 
-**变现（昨日；{window}；仅流量完整时可同窗口比较）**
+**变现（昨日；{window}；独立点击窗口，非 GA 归因转化）**
   出站点击: {stats.get('outbound_clicks_yesterday', 0)} | 联盟点击: {stats.get('affiliate_clicks_yesterday', 0)} | 已挂联盟工具: {stats.get('affiliate_tools', 0)}
 
 **Agent 自驱动状态（{window}）**
