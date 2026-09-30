@@ -35,7 +35,7 @@ class TestTrafficGrowthVerdictGate(unittest.TestCase):
     def test_seo_backlog_blocker_zeros_seo_only(self):
         out = tga.apply_verdict_gate(self.full, 'healthy', ['seo_backlog'])
         self.assertEqual(out['seo'], 0)
-        self.assertEqual(out['aeo'], self.full['aeo'])  # other modes still run
+        self.assertEqual(out['aeo'], 0)  # AEO shares the SEO queue
 
     def test_toggling_verdict_changes_output(self):
         healthy = tga.apply_verdict_gate(self.full, 'healthy', [])

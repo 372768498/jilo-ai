@@ -586,12 +586,17 @@ def filter_actions_for_health(actions, verdict, blockers):
     """
     degraded = isinstance(verdict, str) and verdict.startswith('degraded')
     blockers = blockers or []
+    review_only = degraded and set(blockers) == {'review_backlog'}
+    admitted = set()
     kept = []
     for a in actions:
         is_rewrite = a.get('mode') == 'rewrite'
         is_new_content = a['type'] in ('generate_seo_content', 'generate_comparison') and not is_rewrite
         if degraded and is_new_content:
-            continue
+            mode = a.get('mode') or a['type']
+            if not review_only or mode in admitted:
+                continue
+            admitted.add(mode)
         if 'seo_backlog' in blockers and a['type'] == 'generate_seo_content' and not is_rewrite:
             continue
         if 'compare_backlog' in blockers and a['type'] == 'generate_comparison':

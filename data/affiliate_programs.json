@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated": "2026-06-05",
+  "updated": "2026-09-30",
   "_README": [
     "Affiliate program registry — the monetization last-mile.",
     "monitor_agent detects which tools leak revenue (clicks, no tracked link).",
@@ -46,6 +46,30 @@
     "own":           { "template": null, "opaque": true, "note": "In-house program. Paste the full tracked link you get after signing up into affiliate_url." }
   },
   "programs": {
+    "tome": {
+      "name": "Tome",
+      "status": "needs_check",
+      "signup_url": null,
+      "source_url": "https://tome.app/",
+      "verified_at": "2026-09-30",
+      "notes": "当前产品及可申请联盟入口未核实，不指派申请。"
+    },
+    "gemini": {
+      "name": "Gemini",
+      "status": "needs_check",
+      "signup_url": null,
+      "source_url": "https://gemini.google.com/",
+      "verified_at": "2026-09-30",
+      "notes": "未核实可申请联盟计划，不推断不存在，不指派申请。"
+    },
+    "canva-ai": {
+      "name": "Canva AI",
+      "status": "needs_check",
+      "signup_url": null,
+      "source_url": "https://www.canva.com/help/canva-affiliate-marketing-program/",
+      "verified_at": "2026-09-30",
+      "notes": "与 Canva 同一计划；需先核实 Canvassador 资格。"
+    },
     "elevenlabs": {
       "name": "ElevenLabs", "status": "ready", "network": "partnerstack",
       "signup_url": "https://elevenlabs.io/affiliates/app/sign-up",
@@ -71,12 +95,17 @@
       "notes": "Verified open. FirstPromoter -> can use templated link ?fpr={affiliate_id}, or paste full link."
     },
     "manychat": {
-      "name": "ManyChat", "status": "ready", "network": "partnerstack",
-      "signup_url": "https://dash.partnerstack.com/application?company=manychat&gref=page",
+      "name": "ManyChat",
+      "status": "ready",
+      "network": "partnerstack",
+      "signup_url": "https://manychat.partnerstack.com/",
       "signup_search": "ManyChat affiliate program PartnerStack",
-      "commission": "Tiered 30% / 40% / 50% recurring for 12 months",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified open. Vanity: https://manychat.partnerstack.com/ . Referral must upgrade to Pro within 90 days."
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://affiliate.manychat.com/",
+      "verified_at": "2026-09-30"
     },
     "surfer-seo": {
       "name": "Surfer SEO", "status": "ready", "network": "partnerstack",
@@ -87,12 +116,17 @@
       "notes": "Verified open. Public page: https://surferseo.partnerstack.com/"
     },
     "canva": {
-      "name": "Canva", "status": "ready", "network": "impact",
-      "signup_url": "https://app.impact.com/campaign-promo-signup/Canva.brand?execution=e1s1",
+      "name": "Canva",
+      "status": "needs_check",
+      "network": "impact",
+      "signup_url": null,
       "signup_search": "Canva affiliate program Impact",
       "commission": "~$150 CPS per Pro subscription, 30-day cookie",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified open (Impact). Individual creators may be routed via Canvassador (periodically closed)."
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "需先成为 Canvassador，不能视为普通开放联盟申请。",
+      "source_url": "https://www.canva.com/help/canva-affiliate-marketing-program/",
+      "verified_at": "2026-09-30"
     },
     "photoroom": {
       "name": "Photoroom", "status": "ready", "network": "awin",
@@ -111,20 +145,30 @@
       "notes": "Verified open (Impact)."
     },
     "pixlr-ai": {
-      "name": "Pixlr AI", "status": "ready", "network": "awin",
-      "signup_url": "https://ui.awin.com/merchant-profile/65758",
+      "name": "Pixlr AI",
+      "status": "ready",
+      "network": "awin",
+      "signup_url": "https://pixlr.com/affiliate/",
       "signup_search": "Pixlr affiliate program Awin",
-      "commission": "Up to 25% on new Premium/Plus subscriptions",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified open (Awin merchant 65758, approval required). Official: https://pixlr.com/affiliate/"
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://pixlr.com/es/affiliate/",
+      "verified_at": "2026-09-30"
     },
     "quillbot": {
-      "name": "QuillBot", "status": "ready", "network": "partnerstack",
-      "signup_url": "https://quillbot.partnerstack.com/",
+      "name": "QuillBot",
+      "status": "ready",
+      "network": "partnerstack",
+      "signup_url": "https://quillbot.com/affiliates",
       "signup_search": "QuillBot affiliate program PartnerStack",
-      "commission": "Up to 20% (up to $20/subscriber), 30-day cookie",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified open (PartnerStack). Official: quillbot.com/affiliates"
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://quillbot.com/affiliates",
+      "verified_at": "2026-09-30"
     },
     "copy-ai": {
       "name": "Copy.ai", "status": "ready", "network": "partnerstack",
@@ -151,12 +195,17 @@
       "notes": "Verified open. In-house program — application form embedded on the page."
     },
     "gamma": {
-      "name": "Gamma", "status": "ready", "network": "partnerstack",
+      "name": "Gamma",
+      "status": "ready",
+      "network": "partnerstack",
       "signup_url": "https://gammaapp.partnerstack.com/?group=affiliates",
       "signup_search": "Gamma app affiliate program PartnerStack",
-      "commission": "30% of all referred payments, uncapped",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified open (PartnerStack affiliate group). Separate reseller 'Partner Program' exists too."
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://help.gamma.app/en/articles/11048092-how-do-i-join-the-gamma-affiliate-program",
+      "verified_at": "2026-09-30"
     },
     "heygen": {
       "name": "HeyGen", "status": "ready", "network": "rewardful",
@@ -167,12 +216,17 @@
       "notes": "Program confirmed via official help center; signup URL from search (Rewardful pages 403 to bots, so confirm on click). Contact: affiliates@heygen.com"
     },
     "nightcafe": {
-      "name": "NightCafe", "status": "ready", "network": "own",
-      "signup_url": "https://nightcafe.studio/pages/partner-program",
+      "name": "NightCafe",
+      "status": "needs_check",
+      "network": "own",
+      "signup_url": null,
       "signup_search": "NightCafe Creator partner program",
       "commission": "Up to 10% commission + 5% follower discount; requires 10k+ followers",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified. No self-serve form — apply by email via their feedback/contact channel. Separate referral program at creator.nightcafe.studio/referrals."
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "官方要求一个平台至少 10,000 位高互动关注者；当前资格未核实。",
+      "source_url": "https://nightcafe.studio/pages/partner-program",
+      "verified_at": "2026-09-30"
     },
     "ideogram": {
       "name": "Ideogram", "status": "ready", "network": "own",
@@ -211,12 +265,17 @@
       "notes": "Verified open (PartnerStack). Landing: reclaim.ai/affiliate-program"
     },
     "speechify": {
-      "name": "Speechify", "status": "ready", "network": "impact",
+      "name": "Speechify",
+      "status": "ready",
+      "network": "impact",
       "signup_url": "https://speechify.com/affiliates/",
       "signup_search": "Speechify affiliate program Impact",
-      "commission": "30% per sale, 30-day cookie (e.g. $42-$154 per plan)",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified open. On-page application form; backed by Impact."
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://speechify.com/affiliates/",
+      "verified_at": "2026-09-30"
     },
     "anyword": {
       "name": "Anyword", "status": "ready", "network": "firstpromoter",
@@ -243,28 +302,43 @@
       "notes": "Verified open. Self-hosted program by Kaleido. Needs >=1 paying referral/year to stay active."
     },
     "looka": {
-      "name": "Looka", "status": "ready", "network": "partnerstack",
-      "signup_url": "https://dash.partnerstack.com/application?company=looka",
+      "name": "Looka",
+      "status": "ready",
+      "network": "partnerstack",
+      "signup_url": "https://looka.com/affiliate-program/",
       "signup_search": "Looka affiliate program PartnerStack",
-      "commission": "25%-35% tiered/lifetime, 90-day cookie, no minimum payout",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "PartnerStack (confirmed via PartnerStack case study). Landing: looka.com/affiliate-program"
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://looka.com/affiliate-program/",
+      "verified_at": "2026-09-30"
     },
     "grammarly": {
-      "name": "Grammarly", "status": "ready", "network": "impact",
-      "signup_url": "https://app.impact.com/advertiser-advertiser-info/Grammarly.brand",
+      "name": "Grammarly",
+      "status": "ready",
+      "network": "impact",
+      "signup_url": "https://www.grammarly.com/affiliates",
       "signup_search": "Grammarly affiliate program Impact",
-      "commission": "$0.20 per free signup + $20 per Premium upgrade, 90-day cookie, $25 activation bonus",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified. CURRENT program is on Impact (not legacy ShareASale/CJ). Official: grammarly.com/affiliates"
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://www.grammarly.com/affiliates",
+      "verified_at": "2026-09-30"
     },
     "fliki": {
-      "name": "Fliki", "status": "ready", "network": "tolt",
+      "name": "Fliki",
+      "status": "ready",
+      "network": "tolt",
       "signup_url": "https://affiliates.fliki.ai/signup",
       "signup_search": "Fliki affiliate program",
-      "commission": "30% lifetime recurring, 30-day cookie, min payout $50",
-      "affiliate_id": null, "affiliate_url": null,
-      "notes": "Verified open. Tolt-hosted (?via={id}) -> can template or paste full link."
+      "commission": "以申请时平台条款和审核结果为准",
+      "affiliate_id": null,
+      "affiliate_url": null,
+      "notes": "2026-09-30 官方页面核实入口；资格、佣金及批准仍需平台确认。",
+      "source_url": "https://fliki.ai/affiliate-program",
+      "verified_at": "2026-09-30"
     },
     "play-ht": {
       "name": "Play.ht", "status": "no_program", "network": "none",

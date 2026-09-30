@@ -12,6 +12,8 @@ inherently human. Everything up to it is automated here:
 EPC values are rough, tunable seeds — their job is to order the queue toward
 revenue. Adjust CATEGORY_EPC as real affiliate data comes in.
 """
+import affiliate_registry as ar
+
 SITE = "https://www.jilo.ai"
 
 # Rough earnings-per-outbound-click by tool category (USD).
@@ -74,13 +76,18 @@ def build_application_pack(tool, site_pv_monthly=None):
     epc = category_epc(tool.get('category'))
     roi = round(clicks * epc, 2)
     pitch = (
-        f"jilo.ai is an AI-tools directory. We currently send {clicks} outbound clicks "
+        f"jilo.ai is an AI-tools directory. Our cumulative outbound click count is {clicks} "
         f"to {name} that we cannot monetize. We'd like to join your affiliate/partner "
         f"program, feature {name} prominently on {SITE}/en/tools/{slug}, and track conversions."
     )
     if site_pv_monthly:
-        pitch += f" Our site serves ~{site_pv_monthly} pageviews/month."
+        pitch += f" Our measured recent 30-day pageviews total {site_pv_monthly}."
+    program = ar.program_for(slug) or {}
+    ready = ar.application_ready(program)
     return {
+        'application_ready': ready,
+        'estimate_basis': 'heuristic EPC ranking, not measured commission or loss',
+        'click_window': 'cumulative',
         'tool': name,
         'slug': slug,
         'our_page': f"{SITE}/en/tools/{slug}",
@@ -94,6 +101,6 @@ def build_application_pack(tool, site_pv_monthly=None):
         'pitch': pitch,
         'next_step': (
             "申请通过后，把 tracking link 填进 tools.affiliate_url —— "
-            "monitor agent 检测到带 tracking 参数的有效链接会自动销账。"
+            "monitor agent 检测链接配置后关闭配置缺口；是否计佣需平台后台验证。"
         ),
     }

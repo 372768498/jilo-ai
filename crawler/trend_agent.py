@@ -78,7 +78,8 @@ def _clean_error(err):
     (OPENAI_BASE_URL) sometimes returns a Cloudflare 'Just a moment' bot-check
     HTML page instead of JSON; dumping that whole page into ops_log/Feishu is
     useless noise. Detect it and summarize, otherwise just truncate."""
-    msg = str(err)
+    from llm_client import safe_model_error
+    msg = safe_model_error(err)
     low = msg.lower()
     if any(k in low for k in ('just a moment', '_cf_chl_opt', 'cf-chl',
                               'cloudflare', 'cdn-cgi/challenge')):
@@ -339,68 +340,42 @@ def enqueue_fallback_trends(supabase, limit=2):
     return opened
 
 
-if __name__ == "__main__":
-    print("Starting trend agent...")
+def record_trend_result(enqueued, gsc_enqueued, trends, llm_error, source_failures, llm_checked=True):
+    # 可选来源不可用仍保留证据；模型失败不可伪装成 success。
+    details = {'llm_checked': llm_checked, 'enqueued': enqueued, 'gsc_rising': gsc_enqueued, 'trends': trends,
+               'llm_error': llm_error, 'failed': int(bool(llm_error)),
+               'source_failures': source_failures}
+    message = (f'LLM degraded, enqueued {enqueued} via GSC+fallback' if llm_error
+               else f'enqueued {enqueued} trend actions; unavailable sources={len(source_failures)}')
+    logged = log_operation('trend_agent', 'error' if llm_error else 'success', message, details)
+    return 1 if llm_error or not logged else 0
+
+
+def run():
+    supabase = get_supabase()
+    emerging = fetch_gsc_emerging_signals(supabase)
+    gsc_enqueued = enqueue_gsc_emerging(supabase, emerging)
+    signals = fetch_rss_signals(supabase) + trend_sources.gather_engagement_signals()
+    source_failures = trend_sources.get_last_failures()
+    trends, llm_error = [], None
+    if len(signals) >= MIN_SIGNALS:
+        try:
+            trends = detect_trends(signals)
+        except Exception as error:
+            llm_error = _clean_error(error)
+    enqueued = enqueue_trends(supabase, trends) if trends else 0
+    if not enqueued:
+        enqueued = enqueue_fallback_trends(supabase)
+    enqueued += gsc_enqueued
+    if not signals and not enqueued:
+        llm_error = llm_error or 'No usable trend signals or new fallback actions'
+    print(f'Trend output: signals={len(signals)} enqueued={enqueued} unavailable_sources={len(source_failures)}')
+    return record_trend_result(enqueued, gsc_enqueued, trends, llm_error, source_failures, len(signals) >= MIN_SIGNALS)
+
+
+if __name__ == '__main__':
     try:
-        supabase = get_supabase()
-
-        # rank5: first-party breakout demand goes straight to the queue, ahead of
-        # (and independent of) the LLM community-trend path.
-        emerging = fetch_gsc_emerging_signals(supabase)
-        gsc_enqueued = enqueue_gsc_emerging(supabase, emerging)
-        print(f"  GSC-rising: {len(emerging)} emerging, {gsc_enqueued} enqueued")
-
-        signals = fetch_rss_signals(supabase) + trend_sources.gather_engagement_signals()
-        source_failures = trend_sources.get_last_failures()
-        print(f"  {len(signals)} total signals (RSS + HN + Reddit + PH + GitHub)")
-
-        if len(signals) < MIN_SIGNALS:
-            print(f"  Too few signals (<{MIN_SIGNALS}); skipping LLM path.")
-            enqueued = gsc_enqueued
-            log_operation("trend_agent", "success", "LLM path skipped: too few signals",
-                          {"enqueued": enqueued, "gsc_rising": gsc_enqueued,
-                           "signals": len(signals), "failed": len(source_failures),
-                           "source_failures": source_failures})
-        else:
-            llm_error = None
-            trends = []
-            try:
-                trends = detect_trends(signals)
-                print(f"  LLM surfaced {len(trends)} candidate trend(s)")
-            except Exception as e:
-                # The LLM proxy is a known-flaky dependency (Cloudflare-blocked).
-                # Degrade instead of failing the whole job: GSC-rising work above
-                # is real, and curated fallbacks keep the forward loop moving.
-                llm_error = _clean_error(e)
-                print(f"  [degraded] LLM trend path failed: {llm_error}")
-
-            enqueued = enqueue_trends(supabase, trends) if trends else 0
-            if enqueued == 0:
-                enqueued += enqueue_fallback_trends(supabase)
-            enqueued += gsc_enqueued
-            print(f"\n  Enqueued {enqueued} high-priority trend action(s)")
-
-            if llm_error:
-                # Degraded, not failed: report as a warning and keep exit code 0
-                # (reuse the "success" ops status so ops_log consumers that gate
-                # on success/error are unaffected — same as the too-few-signals path).
-                if FEISHU_WEBHOOK_URL:
-                    send_feishu_alert(
-                        FEISHU_WEBHOOK_URL, "趋势 Agent 降级（LLM 不可用）",
-                        f"LLM 热点聚类失败，已降级到 GSC-rising + 兜底关键词，流水线未中断。\n原因：{llm_error}",
-                        "warning")
-                log_operation("trend_agent", "success",
-                              f"LLM degraded, enqueued {enqueued} via GSC+fallback",
-                              {"enqueued": enqueued, "gsc_rising": gsc_enqueued,
-                               "llm_error": llm_error, "failed": len(source_failures),
-                               "source_failures": source_failures})
-            else:
-                log_operation("trend_agent", "success", f"enqueued {enqueued} trend actions",
-                              {"enqueued": enqueued, "gsc_rising": gsc_enqueued, "trends": trends,
-                               "failed": len(source_failures), "source_failures": source_failures})
-    except Exception as e:
-        clean = _clean_error(e)
-        log_operation("trend_agent", "error", clean)
-        if FEISHU_WEBHOOK_URL:
-            send_feishu_alert(FEISHU_WEBHOOK_URL, "趋势 Agent 出错", clean, "error")
+        raise SystemExit(run())
+    except Exception as error:
+        log_operation('trend_agent', 'error', _clean_error(error))
         raise

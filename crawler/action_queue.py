@@ -183,6 +183,21 @@ def resolve(supabase, dedup_key, result):
     return len(rows.data or [])
 
 
+def refresh_flag(supabase, action_type, payload, reason, priority, dedup_key):
+    """刷新持续存在的观测快照；不新增重复 flag，也不重置创建时间。"""
+    if action_type != 'flag_for_review':
+        raise ValueError('Only observational flags may be refreshed')
+    rows = supabase.table('action_queue').select('id').eq('dedup_key', dedup_key).in_(
+        'status', ['pending', 'in_progress']).execute().data or []
+    if rows:
+        for row in rows:
+            supabase.table('action_queue').update({
+                'payload': payload, 'reason': reason, 'priority': priority, 'updated_at': _now(),
+            }).eq('id', row['id']).in_('status', ['pending', 'in_progress']).execute()
+        return False
+    return enqueue(supabase, action_type, payload, reason, priority, dedup_key)
+
+
 def recover_stale_in_progress(supabase, older_than_minutes=120):
     """
     Return stale in_progress actions to pending.

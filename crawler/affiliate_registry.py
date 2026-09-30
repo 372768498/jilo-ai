@@ -18,6 +18,7 @@ new tools on the same program get the same treatment automatically.
 """
 import json
 import os
+from datetime import date
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 REGISTRY_PATH = os.path.normpath(
@@ -54,6 +55,18 @@ def program_for(slug, registry=None):
 def is_no_program(slug, registry=None):
     prog = program_for(slug, registry)
     return bool(prog) and (prog.get("status") in NO_PROGRAM_STATUSES)
+
+
+def application_ready(program, today=None):
+    """仅近期核实、有具体入口的项目可以指派申请；未知不等于无计划。"""
+    program = program or {}
+    if program.get('status') != 'ready' or not program.get('signup_url') or not program.get('source_url'):
+        return False
+    try:
+        age = ((today or date.today()) - date.fromisoformat(program.get('verified_at', ''))).days
+        return 0 <= age <= 90
+    except ValueError:
+        return False
 
 
 def no_program_slugs(registry=None):

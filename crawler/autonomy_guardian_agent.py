@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from supabase import create_client
 
 import growth_state
+from reporting_data import fetch_all, latest_job_logs, job_succeeded
 from data_health import analytics_health
 import monitor_agent
 import self_iteration_agent
@@ -24,24 +25,13 @@ def get_supabase():
 
 
 def _latest_job_statuses(supabase):
-    since = (datetime.utcnow() - timedelta(hours=24)).isoformat()
-    rows = supabase.table('ops_logs').select(
-        'job_name, status, message, created_at'
-    ).gte('created_at', since).order('created_at', desc=True).limit(500).execute()
-
-    latest = {}
-    for row in rows.data or []:
-        job = row.get('job_name')
-        if job and job not in latest:
-            latest[job] = row
-    return latest
+    return {row['job_name']: row for row in latest_job_logs(supabase)}
 
 
 def _queue_snapshot(supabase):
-    rows = supabase.table('action_queue').select(
+    open_rows = fetch_all(supabase.table('action_queue').select(
         'action_type, status, priority, payload, dedup_key, created_at'
-    ).in_('status', ['pending', 'in_progress']).limit(500).execute()
-    open_rows = rows.data or []
+    ).in_('status', ['pending', 'in_progress']).order('id'))
     counts = Counter((r.get('action_type'), r.get('status')) for r in open_rows)
     flag_subtypes = Counter(
         (r.get('payload') or {}).get('subtype') or 'manual_review'
@@ -96,7 +86,7 @@ def evaluate_autonomy(supabase):
 
     failed_jobs = [
         row for row in latest_jobs.values()
-        if row.get('status') == 'error'
+        if not job_succeeded(row)
         and row.get('job_name') in self_iteration_agent.ACTIVE_OPS_JOBS
     ]
 
@@ -143,6 +133,7 @@ def evaluate_autonomy(supabase):
         'missing_tables': missing_tables,
         'failed_jobs': failed_jobs,
         'analytics': data_health,
+        'source_warnings': ((latest_jobs.get('trend_agent') or {}).get('details') or {}).get('source_failures', []),
     }
 
 
@@ -196,6 +187,10 @@ def format_report(result):
     else:
         lines.append('- 联盟链接: 无待处理')
 
+    if result.get('source_warnings'):
+        lines.extend(['', '**趋势来源降级（保留其它可用来源）**'])
+        for issue in result['source_warnings'][:10]:
+            lines.append(f"- {issue.get('source')}: {issue.get('error', '')[:160]}")
     if result['failed_jobs']:
         lines.append('')
         lines.append('**仍未恢复的失败 job**')
